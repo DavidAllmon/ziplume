@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { buttonClasses } from "@/components/ui/Button";
 import { useSession } from "@/features/auth/useSession";
+import { MediaOwnerContext } from "@/features/pages/editor/MediaOwner";
 import { PageEditor } from "@/features/pages/editor/PageEditor";
 import { accountsEnabled } from "@/lib/env";
 import { PAGE_TYPES, type PageContentMap } from "@/lib/pages/types";
@@ -66,12 +67,14 @@ export function HostedPageForm({ generator, type }: { generator: Generator; type
   }
 
   return (
-    <PageEditor
-      key={type}
-      type={type}
-      page={generator.state.pages[type]}
-      errors={generator.pageErrors}
-      onChange={(page) => generator.setPage(type, page as PageContentMap[PageTypeId])}
-    />
+    <MediaOwnerContext value={generator.workspace?.ownerId ?? null}>
+      <PageEditor
+        key={type}
+        type={type}
+        page={generator.state.pages[type]}
+        errors={generator.pageErrors}
+        onChange={(page) => generator.setPage(type, page as PageContentMap[PageTypeId])}
+      />
+    </MediaOwnerContext>
   );
 }

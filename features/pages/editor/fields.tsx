@@ -11,7 +11,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useId, useState, type ReactNode } from "react";
+import { useContext, useId, useState, type ReactNode } from "react";
 
 import { Button, IconButton } from "@/components/ui/Button";
 import { ColorField } from "@/components/ui/ColorField";
@@ -24,6 +24,7 @@ import { SOCIAL_NETWORKS } from "@/lib/pages/types";
 import { mediaUrl } from "@/lib/pages/urls";
 
 import { fileSize, socialLabel } from "../parts";
+import { MediaOwnerContext } from "./MediaOwner";
 import { ACCEPT, uploadMedia, type MediaKind } from "./upload";
 
 /** Shows a field's error once it has been left (or after a save attempt). */
@@ -206,6 +207,7 @@ export function MediaField({
   error,
 }: MediaFieldProps) {
   const inputId = useId();
+  const ownerId = useContext(MediaOwnerContext);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const Icon = KIND_ICON[kind];
@@ -214,7 +216,7 @@ export function MediaField({
     if (!file) return;
     setBusy(true);
     setProblem(null);
-    const result = await uploadMedia(file, kind, { maxSide });
+    const result = await uploadMedia(file, kind, { maxSide, ownerId });
     setBusy(false);
     if (result.ok) onChange(result.media);
     else setProblem(result.error);
@@ -304,6 +306,7 @@ export function ImagesField({
   error?: string;
 }) {
   const inputId = useId();
+  const ownerId = useContext(MediaOwnerContext);
   const [busy, setBusy] = useState(0);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -315,7 +318,7 @@ export function ImagesField({
     setBusy(chosen.length);
     let next = [...value];
     for (const file of chosen) {
-      const result = await uploadMedia(file, "image");
+      const result = await uploadMedia(file, "image", { ownerId });
       setBusy((n) => n - 1);
       if (result.ok) {
         next = [...next, result.media];

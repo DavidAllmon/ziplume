@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { createCode, designForStorage, updateCode } from "@/features/codes/api";
+import { editableWorkspace, type Workspace } from "@/features/teams/workspace";
 import { dynamicPayload } from "@/lib/dynamic/slug";
 import { normalizeUrl } from "@/lib/qr/normalize";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -63,6 +64,8 @@ export function useGenerator() {
   const [saved, setSaved] = useState<SavedCode | null>(null);
   /** True when the user switched a new Link code to dynamic (before it is saved). */
   const [wantsDynamic, setWantsDynamic] = useState(false);
+  /** A team workspace new codes are saved into (/?workspace=<owner id>); null = your own. */
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
 
   // Declared before the loading effect so the defaults from the first render are never saved
   // over the user's stored settings.
@@ -78,18 +81,29 @@ export function useGenerator() {
     hydrated.current = true;
   }, []);
 
-  // Opening /?edit=<id> from the dashboard loads that saved code for editing.
+  // Opening /?edit=<id> from the dashboard loads that saved code for editing, and
+  // /?workspace=<owner id> saves new codes into a team workspace.
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("edit");
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("edit");
+    const owner = params.get("workspace");
     const supabase = getBrowserSupabase();
-    if (!id || !supabase) return;
+    if (!supabase) return;
+    if (!id) {
+      if (owner) void editableWorkspace(owner).then(setWorkspace);
+      return;
+    }
     supabase
       .from("qr_codes")
-      .select("id, name, qr_type, content, design, is_dynamic, slug, destination")
+      .select("id, user_id, name, qr_type, content, design, is_dynamic, slug, destination")
       .eq("id", id)
       .maybeSingle()
-      .then(({ data: code }) => {
+      .then(async ({ data: code }) => {
         if (!code || !isCodeType(code.qr_type)) return;
+        const { data: session } = await supabase.auth.getSession();
+        if (code.user_id !== session.session?.user.id) {
+          setWorkspace(await editableWorkspace(code.user_id));
+        }
         const linkCode = code.is_dynamic && code.qr_type === "url";
         dispatch({
           type: "loadCode",
@@ -211,6 +225,7 @@ export function useGenerator() {
         return { ok: true, message: `Saved changes to “${result.value.name}”.${note}` };
       }
       const result = await createCode({
+        ownerId: workspace?.ownerId,
         name: label,
         qrType: activeType,
         content: pageType ? page : values,
@@ -223,15 +238,32 @@ export function useGenerator() {
       window.history.replaceState(null, "", `/?edit=${code.id}`);
       return { ok: true, message: `Saved “${code.name}” to your codes.${note}` };
     },
-    [saved, design, destination, values, page, pageType, activeType, isDynamic, defaultName],
+    [
+      saved,
+      design,
+      destination,
+      values,
+      page,
+      pageType,
+      activeType,
+      isDynamic,
+      defaultName,
+      workspace,
+    ],
   );
 
   /** Leaves edit mode and starts a fresh, unsaved code with the current design. */
   const startNew = useCallback(() => {
     setSaved(null);
     setWantsDynamic(false);
-    window.history.replaceState(null, "", "/");
-  }, []);
+    window.history.replaceState(null, "", workspace ? `/?workspace=${workspace.ownerId}` : "/");
+  }, [workspace]);
+
+  /** Saves new codes to your own account instead of a team workspace. */
+  const leaveWorkspace = useCallback(() => {
+    setWorkspace(null);
+    if (!saved) window.history.replaceState(null, "", "/");
+  }, [saved]);
 
   const setField = useCallback(
     (qrType: QrTypeId, field: string, value: string | boolean) =>
@@ -265,6 +297,8 @@ export function useGenerator() {
     destination,
     saved,
     defaultName,
+    workspace,
+    leaveWorkspace,
     setDynamic: setWantsDynamic,
     save,
     startNew,

@@ -40,7 +40,22 @@ export default function PrivacyPage() {
           <strong>Design templates:</strong> designs you save to reuse later.
         </li>
         <li>
-          <strong>Sign-in cookies:</strong> strictly necessary cookies that keep you signed in.
+          <strong>Teams:</strong> people you invite can see your codes, analytics and feedback
+          (viewers) or also change them (editors). An invite keeps the email address you entered
+          until it’s used, revoked or expires after 14 days. Teams you join can see your name and
+          email address.
+        </li>
+        <li>
+          <strong>API keys:</strong> only a one-way hash of each key is stored, with the name you
+          gave it and when it was last used.
+        </li>
+        <li>
+          <strong>Code passwords:</strong> stored only as a secure one-way hash.
+        </li>
+        <li>
+          <strong>Cookies:</strong> strictly necessary cookies that keep you signed in. When a
+          visitor enters a code’s password, a cookie remembers that for 12 hours so they aren’t
+          asked again.
         </li>
       </ul>
 

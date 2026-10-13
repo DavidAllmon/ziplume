@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { PageView } from "@/features/pages/PageView";
 import { isValidSlug } from "@/lib/dynamic/slug";
@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: PageProps<"/p/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const page = isValidSlug(slug) ? await getPublicPage(slug) : null;
-  if (!page || page === "unavailable") return { title: "QuickQReate", robots: { index: false } };
+  if (!page || page === "unavailable" || page.locked)
+    return { title: "QuickQReate", robots: { index: false } };
   const title = pageSummary(page.type, page.content) || PAGE_TYPES[page.type].label;
   return {
     title,
@@ -54,6 +55,24 @@ export default async function PublicPage({ params }: PageProps<"/p/[slug]">) {
       />
     );
   }
+  if (page.status === "scheduled") {
+    return (
+      <Notice
+        title="This page isn’t open yet"
+        message="It hasn’t started yet. Please try again later."
+      />
+    );
+  }
+  if (page.status === "expired") {
+    return (
+      <Notice
+        title="This page has expired"
+        message="Its owner set it to stop working after a certain date."
+      />
+    );
+  }
+  // The short link asks for the password, then sends the visitor back here.
+  if (page.locked) redirect(`/r/${page.slug}`);
   return (
     <PageView
       type={page.type}

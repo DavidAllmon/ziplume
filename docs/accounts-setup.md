@@ -41,8 +41,11 @@ those. Today that is:
 2. `20261013130000_design_templates.sql` (saved design templates)
 3. `20261013140000_hosted_pages.sql` (new code types, hosted pages, feedback responses)
 4. `20261013140100_page_media_storage.sql` (the `page-media` Storage bucket for uploads)
+5. `20261013150000_power_tools.sql` (folders, teams, active dates, password-protected codes
+   and API keys; uses the `pgcrypto` extension, which Supabase installs in the `extensions`
+   schema by default)
 
-The last one needs the project's **Storage** service. If it fails because the `storage`
+The fourth one needs the project's **Storage** service. If it fails because the `storage`
 schema doesn't exist, enable Storage for the project and run it again; everything else works
 without it, except uploading files to hosted pages (PDF, images, video, audio, logos).
 

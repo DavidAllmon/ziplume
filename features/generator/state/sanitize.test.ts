@@ -39,6 +39,14 @@ describe("sanitizeContent", () => {
       hidden: false,
     });
   });
+
+  it("keeps fixed-choice fields to their allowed values", () => {
+    expect(sanitizeContent("wifi", { security: "WPA9" }).security).toBe("WPA");
+    expect(sanitizeContent("wifi", { security: "nopass" }).security).toBe("nopass");
+    expect(sanitizeContent("location", { mode: "satellite" }).mode).toBe("address");
+    expect(sanitizeContent("payment", { method: "zelle" }).method).toBe("paypal");
+    expect(sanitizeContent("payment", { method: "venmo" }).method).toBe("venmo");
+  });
 });
 
 describe("loadCode", () => {

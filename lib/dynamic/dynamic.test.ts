@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import { scanTarget } from "./target";
+import { isUnlocked, tooManyAttempts, unlockToken } from "./unlock";
 
 import { measure } from "@/lib/qr/capacity";
 
@@ -161,5 +162,36 @@ describe("scan targets", () => {
     expect(
       scanTarget({ ...code, content: { iosUrl: "javascript:alert(1)" } }, "APP", "iOS", site),
     ).toBe(`${site}/p/APP`);
+  });
+});
+
+describe("unlock cookies", () => {
+  const secret = "test-secret-test-secret-test-secret";
+
+  it("unlock one slug, case-insensitively, until they expire", () => {
+    const now = Date.UTC(2026, 9, 13, 12);
+    const token = unlockToken("abc234", secret, now);
+    expect(isUnlocked("ABC234", token, secret, now + 1000)).toBe(true);
+    expect(isUnlocked("ABC235", token, secret, now)).toBe(false);
+    expect(isUnlocked("ABC234", token, "other-secret", now)).toBe(false);
+    expect(isUnlocked("ABC234", token, secret, now + 13 * 3600 * 1000)).toBe(false);
+  });
+
+  it("reject tampered or malformed tokens", () => {
+    const now = Date.now();
+    const token = unlockToken("ABC234", secret, now);
+    const [expires, signature] = token.split(".");
+    expect(isUnlocked("ABC234", `${Number(expires) + 9999}.${signature}`, secret, now)).toBe(false);
+    expect(isUnlocked("ABC234", "garbage", secret, now)).toBe(false);
+    expect(isUnlocked("ABC234", undefined, secret, now)).toBe(false);
+  });
+
+  it("limit password attempts per visitor and code", () => {
+    const key = `visitor:${Math.random()}`;
+    const results = Array.from({ length: 11 }, () => tooManyAttempts(key, 1_000));
+    expect(results.slice(0, 10).every((r) => !r)).toBe(true);
+    expect(results[10]).toBe(true);
+    // The window resets after 15 minutes.
+    expect(tooManyAttempts(key, 1_000 + 16 * 60 * 1000)).toBe(false);
   });
 });

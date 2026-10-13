@@ -4,6 +4,7 @@ import { scanContext } from "@/lib/dynamic/scan-context";
 import { isValidSlug } from "@/lib/dynamic/slug";
 import { SITE_URL } from "@/lib/env";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { getPublicPage } from "@/lib/supabase/public";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,11 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/p/[s
   const admin = getAdminSupabase();
   const secret = process.env.SCAN_HASH_SECRET;
   if (!admin || !secret) return json({ error: "unavailable" }, 503);
+
+  // Protected feedback pages only accept responses from visitors who unlocked them.
+  const page = await getPublicPage(slug);
+  if (!page || page === "unavailable") return json({ error: "not_found" }, 404);
+  if (page.locked) return json({ error: "locked" }, 403);
 
   const visitor = scanContext(request.headers, secret);
   if (visitor.isBot) return json({ ok: true }, 200);

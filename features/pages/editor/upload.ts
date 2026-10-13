@@ -93,11 +93,14 @@ async function prepareImage(
   };
 }
 
-/** Uploads a file to the signed-in user's folder in the page-media bucket. */
+/**
+ * Uploads a file to the page-media bucket, in the folder of the workspace the page belongs to
+ * (the signed-in user's own, or a team owner's when an editor works on their pages).
+ */
 export async function uploadMedia(
   file: File,
   kind: MediaKind,
-  { maxSide = 1600 }: { maxSide?: number } = {},
+  { maxSide = 1600, ownerId }: { maxSide?: number; ownerId?: string | null } = {},
 ): Promise<{ ok: true; media: Media } | { ok: false; error: string }> {
   const problem = checkFile(file, kind);
   if (problem) return { ok: false, error: problem };
@@ -118,7 +121,7 @@ export async function uploadMedia(
     }
   }
 
-  const path = `${data.user.id}/${crypto.randomUUID()}.${EXTENSION[type] ?? "bin"}`;
+  const path = `${ownerId ?? data.user.id}/${crypto.randomUUID()}.${EXTENSION[type] ?? "bin"}`;
   const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, blob, {
     contentType: type,
     cacheControl: "31536000",

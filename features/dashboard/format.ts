@@ -16,4 +16,10 @@ export function relativeTime(iso: string | null, now = Date.now()): string {
   });
 }
 
+/** relativeTime for use mid-sentence: "3 days ago", "never", "in 2 weeks", "on Oct 13, 2026". */
+export function relativePhrase(iso: string | null, now = Date.now()): string {
+  const text = relativeTime(iso, now);
+  return /^[A-Z][a-z]+ \d/.test(text) ? `on ${text}` : text.toLowerCase();
+}
+
 export const formatCount = (n: number) => new Intl.NumberFormat("en").format(n);

@@ -3,13 +3,28 @@ import { notFound } from "next/navigation";
 
 import { CodeEditor } from "@/features/dashboard/CodeEditor";
 import { requireUser } from "@/lib/auth/server";
+import { dashboardHref, workspaceAccess } from "@/lib/teams/server";
 
 export const metadata: Metadata = { title: "Edit code · QuickQReate" };
 
 export default async function CodePage({ params }: PageProps<"/dashboard/codes/[id]">) {
   const { id } = await params;
-  const { supabase } = await requireUser(`/dashboard/codes/${id}`);
+  const { supabase, user } = await requireUser(`/dashboard/codes/${id}`);
   const { data: code } = await supabase.from("qr_codes").select("*").eq("id", id).maybeSingle();
   if (!code) notFound();
-  return <CodeEditor code={code} />;
+  const [access, { data: folders }] = await Promise.all([
+    workspaceAccess(supabase, user.id, code.user_id),
+    supabase.from("folders").select("*").eq("user_id", code.user_id).order("name"),
+  ]);
+  return (
+    <CodeEditor
+      code={code}
+      canEdit={access?.canEdit ?? false}
+      folders={folders ?? []}
+      back={{
+        href: dashboardHref(code.user_id, user.id),
+        label: access?.label ? `${access.label}’s codes` : "My codes",
+      }}
+    />
+  );
 }

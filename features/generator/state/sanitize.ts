@@ -7,6 +7,7 @@ import {
   DOT_STYLE_IDS,
   FRAME_STYLE_IDS,
   GRADIENT_TYPE_IDS,
+  PAYMENT_METHODS,
   type ContentValues,
   type QrTypeId,
 } from "@/lib/qr/types";
@@ -72,11 +73,24 @@ export function cleanFrameText(text: string): string {
 /** Fills in any missing form fields for a type, keeping only fields the type defines. */
 export function sanitizeContent<K extends QrTypeId>(type: K, raw: unknown): ContentValues[K] {
   const defaults = QR_TYPES[type].defaults as unknown as Record<string, string | boolean>;
+  const choices: Record<string, readonly string[]> = CHOICES[type] ?? {};
   const source = isObject(raw) ? raw : {};
   const result: Record<string, string | boolean> = {};
   for (const [key, fallback] of Object.entries(defaults)) {
     const value = source[key];
-    result[key] = typeof value === typeof fallback ? (value as string | boolean) : fallback;
+    const options = choices[key];
+    result[key] = options
+      ? pick(value, options, fallback as string)
+      : typeof value === typeof fallback
+        ? (value as string | boolean)
+        : fallback;
   }
   return result as unknown as ContentValues[K];
 }
+
+/** Fields limited to a fixed set of values; anything else falls back to the default. */
+const CHOICES: Partial<Record<QrTypeId, Record<string, readonly string[]>>> = {
+  wifi: { security: ["WPA", "WEP", "nopass"] },
+  location: { mode: ["address", "coordinates"] },
+  payment: { method: PAYMENT_METHODS },
+};

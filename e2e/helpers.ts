@@ -13,9 +13,17 @@ const MIME: Record<string, string> = {
 
 /** Decodes a downloaded QR image in the browser with jsQR and returns its payload. */
 export async function decodeDownload(page: Page, download: Download): Promise<string | null> {
-  const file = await download.path();
   const extension = download.suggestedFilename().split(".").pop() ?? "png";
-  const base64 = (await readFile(file)).toString("base64");
+  return decodeImage(page, await readFile(await download.path()), extension);
+}
+
+/** Decodes QR image bytes (PNG, JPG, WebP or SVG) in the browser with jsQR. */
+export async function decodeImage(
+  page: Page,
+  bytes: Uint8Array,
+  extension: string,
+): Promise<string | null> {
+  const base64 = Buffer.from(bytes).toString("base64");
   if (!(await page.evaluate(() => "jsQR" in window))) await page.addScriptTag({ path: JSQR });
 
   return page.evaluate(

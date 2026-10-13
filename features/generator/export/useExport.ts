@@ -3,6 +3,7 @@
 import { useCallback, useState, useSyncExternalStore } from "react";
 
 import { useToast } from "@/components/ui/Toast";
+import { saveBlob } from "@/lib/download";
 import { renderBlob, type RenderOptions } from "@/lib/qr/renderer";
 import type { ExportFormat } from "@/lib/qr/types";
 
@@ -28,17 +29,6 @@ function useCapabilities() {
     () => false,
   );
   return { canCopy, canShare };
-}
-
-function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 interface ExportInput {

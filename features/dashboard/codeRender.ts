@@ -7,7 +7,7 @@ import { codeTypeInfo } from "@/lib/qr/code-types";
 import { encodeContent, summarizeContent } from "@/lib/qr/qr-types";
 import type { RenderOptions } from "@/lib/qr/renderer";
 import { isPageType, isStaticType, type CodeTypeId } from "@/lib/qr/types";
-import type { QrCodeRow } from "@/types/supabase";
+import type { CodeState, QrCodeRow } from "@/types/supabase";
 
 export function codeType(code: Pick<QrCodeRow, "qr_type">): CodeTypeId {
   return isStaticType(code.qr_type) || isPageType(code.qr_type) ? code.qr_type : "text";
@@ -35,3 +35,14 @@ export function codeSummary(code: QrCodeRow): string {
 export const codeTypeLabel = (code: QrCodeRow) => codeTypeInfo(codeType(code)).label;
 
 export const isHostedPage = (code: Pick<QrCodeRow, "qr_type">) => isPageType(code.qr_type);
+
+/** Whether a code works right now, taking its active dates into account. */
+export function codeState(
+  code: Pick<QrCodeRow, "status" | "active_from" | "active_until">,
+  now = Date.now(),
+): CodeState {
+  if (code.status === "paused") return "paused";
+  if (code.active_from && now < Date.parse(code.active_from)) return "scheduled";
+  if (code.active_until && now >= Date.parse(code.active_until)) return "expired";
+  return "active";
+}

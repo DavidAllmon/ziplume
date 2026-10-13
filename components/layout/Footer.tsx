@@ -2,7 +2,7 @@ import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 import { BuyMeACoffee } from "@/components/support/BuyMeACoffee";
-import { REPO_URL } from "@/lib/env";
+import { accountsEnabled, REPO_URL } from "@/lib/env";
 
 import { GitHubIcon } from "./GitHubIcon";
 
@@ -32,6 +32,11 @@ export function Footer() {
           <Link className={linkClass} href="/terms">
             Terms
           </Link>
+          {accountsEnabled && (
+            <Link className={linkClass} href="/developers">
+              Developers
+            </Link>
+          )}
           <a className={`${linkClass} inline-flex items-center gap-1.5`} href={REPO_URL}>
             <GitHubIcon className="size-4" /> Source on GitHub
           </a>

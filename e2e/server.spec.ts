@@ -14,7 +14,15 @@ test.describe("without accounts configured", () => {
   });
 
   test("account pages are not reachable", async ({ request }) => {
-    for (const path of ["/login", "/signup", "/forgot-password", "/dashboard", "/account"]) {
+    for (const path of [
+      "/login",
+      "/signup",
+      "/forgot-password",
+      "/dashboard",
+      "/dashboard/team",
+      "/account",
+      `/invite/${"ab".repeat(24)}`,
+    ]) {
       const response = await request.get(path, { maxRedirects: 0 });
       expect(response.status(), path).toBe(404);
     }
@@ -58,5 +66,25 @@ test.describe("without accounts configured", () => {
     await page.goto("/");
     await page.getByRole("radio", { name: "Menu", exact: true }).click();
     await expect(page.getByText("Hosted pages aren’t available on this server yet.")).toBeVisible();
+  });
+
+  test("the API answers with JSON errors and CORS headers", async ({ request }) => {
+    const key = `qq_${"a".repeat(48)}`;
+    for (const path of ["/api/v1/codes", "/api/v1/qr?data=hi"]) {
+      const response = await request.get(path, { headers: { authorization: `Bearer ${key}` } });
+      expect(response.status(), path).toBe(503);
+      expect(response.headers()["access-control-allow-origin"]).toBe("*");
+      expect((await response.json()).error.code).toBe("unavailable");
+    }
+    const preflight = await request.fetch("/api/v1/codes", { method: "OPTIONS" });
+    expect(preflight.status()).toBe(204);
+    expect(preflight.headers()["access-control-allow-methods"]).toContain("PATCH");
+  });
+
+  test("the developer docs explain the API isn't on this copy", async ({ page }) => {
+    await page.goto("/developers");
+    await expect(page.getByRole("heading", { name: "Developers", level: 1 })).toBeVisible();
+    await expect(page.getByText("isn’t available on this copy of the site")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Endpoints" })).toBeVisible();
   });
 });

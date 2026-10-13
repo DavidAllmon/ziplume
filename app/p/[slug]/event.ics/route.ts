@@ -9,7 +9,13 @@ export const dynamic = "force-dynamic";
 export async function GET(_request: Request, { params }: RouteContext<"/p/[slug]/event.ics">) {
   const { slug } = await params;
   const page = isValidSlug(slug) ? await getPublicPage(slug) : null;
-  if (!page || page === "unavailable" || page.type !== "event" || page.status !== "active") {
+  if (
+    !page ||
+    page === "unavailable" ||
+    page.locked ||
+    page.type !== "event" ||
+    page.status !== "active"
+  ) {
     return new Response("Not found", { status: 404 });
   }
   const ics = eventIcs(page.content, page.slug, `${SITE_URL}/p/${page.slug}`);

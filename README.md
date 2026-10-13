@@ -51,6 +51,10 @@
 - **Works offline:** install it as an app; it keeps working without a connection.
 - **Free accounts (optional):** sign up with email and password or Google to save unlimited codes, with optional two-factor authentication. The generator never requires an account.
 - **Dynamic codes:** a Link code can point at a short link (`qr.techitdave.com/r/…`) whose destination you change any time, even after printing. Pause a code, customize its ending, or add UTM tags for Google Analytics.
+- **Folders and bulk tools:** file codes in folders, select several to move them or download them as one ZIP, and create up to 500 codes at once from a spreadsheet (CSV), downloaded as a ZIP and optionally saved as dynamic links.
+- **Passwords and schedules:** protect a dynamic code or hosted page with a password, or make it work only between two dates. Scanners see a friendly "not active yet" or "expired" page outside them.
+- **Teams:** invite coworkers to your workspace as viewers or editors with a one-time invite link. Switch between workspaces from your dashboard.
+- **REST API:** personal API keys to create, update and track codes from your own scripts, plus server-rendered QR images. Documented at `/developers`.
 - **Scan analytics:** scans and unique visitors over time, countries, cities, devices, operating systems, browsers and time of day, for 7 days to all time. Export every scan as CSV. Bots and link previewers aren't counted.
 - **Accessible:** keyboard friendly, screen-reader labelled, WCAG AA contrast in light and dark themes, and it respects reduced motion.
 
@@ -99,6 +103,10 @@ features/
   codes/                Saving, updating and deleting codes
   dashboard/            Saved-code list and code editor
   analytics/            Charts and the analytics page
+  folders/              Folder actions and the move dialog
+  teams/                Team management, invites and workspaces
+  bulk/                 Bulk creation from a spreadsheet
+  developer/            API key management
 features/generator/
   content/              Type picker and one form per QR type
   style/                Colors, shape, logo and error correction
@@ -110,6 +118,8 @@ lib/
   color/                WCAG contrast helpers
   dynamic/              Short-link slugs, scan context (location, device, bot filter), UTM tags
   analytics/            Date ranges, time zones and chart shaping
+  api/                  The REST API's key checks, rate limit and input validation
+  bulk/, csv/           CSV parsing and per-row validation for bulk creation
   supabase/             Browser, server and service-role clients
 supabase/
   migrations/           Schema, row-level security, scan recorder, analytics function

@@ -6,6 +6,7 @@ import { DeleteAccountForm } from "@/features/auth/DeleteAccountForm";
 import { ProfileForm } from "@/features/auth/ProfileForm";
 import { TotpSettings } from "@/features/auth/TotpSettings";
 import { UpdatePasswordForm } from "@/features/auth/UpdatePasswordForm";
+import { ApiKeys } from "@/features/developer/ApiKeys";
 import { requireUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
@@ -13,11 +14,13 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Account · QuickQReate" };
 
 function Panel({
+  id,
   title,
   description,
   children,
   danger,
 }: {
+  id?: string;
   title: string;
   description?: string;
   children: ReactNode;
@@ -25,7 +28,8 @@ function Panel({
 }) {
   return (
     <section
-      className={`grid gap-4 rounded-card border bg-surface p-5 sm:p-6 md:grid-cols-[16rem_1fr] md:gap-8 ${danger ? "border-danger/40" : "border-border"}`}
+      id={id}
+      className={`grid scroll-mt-20 gap-4 rounded-card border bg-surface p-5 sm:p-6 md:grid-cols-[16rem_1fr] md:gap-8 ${danger ? "border-danger/40" : "border-border"}`}
     >
       <div>
         <h2 className={`font-display text-lg font-bold ${danger ? "text-danger" : "text-fg"}`}>
@@ -45,6 +49,10 @@ export default async function AccountPage() {
     .select("display_name")
     .eq("id", user.id)
     .maybeSingle();
+  const { data: apiKeys } = await supabase
+    .from("api_keys")
+    .select("id, name, prefix, created_at, last_used_at")
+    .order("created_at", { ascending: false });
   const usesPassword = user.identities?.some((identity) => identity.provider === "email") ?? false;
 
   return (
@@ -69,6 +77,9 @@ export default async function AccountPage() {
       </Panel>
       <Panel title="Two-step verification" description="Optional, and free like everything else.">
         <TotpSettings />
+      </Panel>
+      <Panel id="api-keys" title="API keys" description="For developers. Up to 10 keys.">
+        <ApiKeys keys={apiKeys ?? []} />
       </Panel>
       <BuyMeACoffee variant="card" />
       <Panel title="Delete account" danger>
