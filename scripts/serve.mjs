@@ -1,10 +1,11 @@
 // Minimal static file server for the exported site in ./out.
 // Usage: node scripts/serve.mjs [--port 3000]
-// Honors NEXT_PUBLIC_BASE_PATH so the export can be served exactly as GitHub Pages does.
+// Honors NEXT_PUBLIC_BASE_PATH and gzips text, so the export is served much as GitHub Pages does.
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
+import { createGzip } from "node:zlib";
 
 const root = resolve("out");
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -55,7 +56,21 @@ createServer(async (req, res) => {
     res.writeHead(404).end("Not found");
     return;
   }
-  res.writeHead(200, { "Content-Type": types[extname(file)] ?? "application/octet-stream" });
+  const type = types[extname(file)] ?? "application/octet-stream";
+  const headers = {
+    "Content-Type": type,
+    // Hashed build assets never change; everything else is revalidated.
+    "Cache-Control": path.startsWith("/_next/static/")
+      ? "public, max-age=31536000, immutable"
+      : "public, max-age=0, must-revalidate",
+  };
+  const compressible = /^(text\/|application\/(json|manifest\+json)|image\/svg)/.test(type);
+  if (compressible && /\bgzip\b/.test(req.headers["accept-encoding"] ?? "")) {
+    res.writeHead(200, { ...headers, "Content-Encoding": "gzip", Vary: "Accept-Encoding" });
+    createReadStream(file).pipe(createGzip()).pipe(res);
+    return;
+  }
+  res.writeHead(200, headers);
   createReadStream(file).pipe(res);
 }).listen(port, () => {
   console.log(`Serving ./out at http://localhost:${port}${basePath}/`);

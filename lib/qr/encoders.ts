@@ -48,7 +48,8 @@ export function encodeContact(values: ContactValues): string {
   if (v.title) lines.push(`TITLE:${escapeVCard(v.title)}`);
   if (v.phone) lines.push(`TEL;TYPE=CELL:${normalizePhone(v.phone)}`);
   if (v.email) lines.push(`EMAIL:${escapeVCard(v.email)}`);
-  if (v.website) lines.push(`URL:${escapeVCard(normalizeUrl(v.website))}`);
+  // URL is a URI value in vCard 3.0, so it is not TEXT-escaped.
+  if (v.website) lines.push(`URL:${normalizeUrl(v.website)}`);
   lines.push("END:VCARD");
   // vCard requires CRLF line endings.
   return lines.join("\r\n");

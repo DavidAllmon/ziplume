@@ -15,10 +15,10 @@ import type { FormProps } from "../types";
 import { useTouched } from "../useTouched";
 
 const SECURITY = [
-  { value: "WPA", label: "WPA/WPA2/WPA3" },
+  { value: "WPA", label: "WPA", ariaLabel: "WPA, WPA2 or WPA3" },
   { value: "WEP", label: "WEP" },
   { value: "nopass", label: "None" },
-] as const satisfies readonly { value: WifiSecurity; label: string }[];
+] as const satisfies readonly { value: WifiSecurity; label: string; ariaLabel?: string }[];
 
 export function WifiForm({ values, onChange }: FormProps<"wifi">) {
   const { touch, errorFor } = useTouched();
@@ -52,6 +52,7 @@ export function WifiForm({ values, onChange }: FormProps<"wifi">) {
           onChange={(security) => onChange("security", security)}
           options={SECURITY}
         />
+        <p className="text-sm text-fg-muted">WPA covers WPA2 and WPA3, used by most networks.</p>
       </div>
 
       {values.security !== "nopass" && (

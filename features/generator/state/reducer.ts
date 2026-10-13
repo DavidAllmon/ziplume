@@ -78,7 +78,10 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
           fgColor: normalizeHex(design.fgColor) ?? DEFAULT_DESIGN.fgColor,
           bgColor: normalizeHex(design.bgColor) ?? DEFAULT_DESIGN.bgColor,
         },
-        exportSettings,
+        exportSettings: {
+          ...exportSettings,
+          size: clamp(Math.round(exportSettings.size), MIN_EXPORT_SIZE, MAX_EXPORT_SIZE),
+        },
       };
     }
   }

@@ -19,16 +19,18 @@ interface StyleCardProps {
 
 function Swatches({ design }: { design: DesignState }) {
   return (
-    <span
-      className="flex items-center"
-      aria-label={`${design.fgColor} on ${design.transparent ? "transparent" : design.bgColor}`}
-    >
+    <span className="flex items-center">
+      <span className="sr-only">
+        {design.fgColor} on {design.transparent ? "transparent" : design.bgColor}
+      </span>
       <span
-        className="size-5 rounded-full border-2 border-surface"
+        aria-hidden
+        className="size-5 rounded-full border border-field-border"
         style={{ background: design.fgColor }}
       />
       <span
-        className={`-ml-1.5 size-5 rounded-full ring-2 ring-surface outline outline-1 outline-border ${design.transparent ? "bg-checker" : ""}`}
+        aria-hidden
+        className={`-ml-1.5 size-5 rounded-full border border-field-border ${design.transparent ? "bg-checker" : ""}`}
         style={design.transparent ? undefined : { background: design.bgColor }}
       />
     </span>

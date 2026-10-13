@@ -26,21 +26,8 @@ export function ColorField({ label, value, onChange, disabled }: ColorFieldProps
       <label htmlFor={id} className="text-sm font-medium text-fg">
         {label}
       </label>
-      <div className="flex items-center gap-2">
-        <span className="relative size-11 shrink-0 overflow-hidden rounded-field border border-field-border focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
-          <span aria-hidden className="absolute inset-0" style={{ backgroundColor: value }} />
-          <input
-            type="color"
-            aria-label={`${label} picker`}
-            value={value.length === 7 ? value.toLowerCase() : (normalizeHex(value) ?? "#000000")}
-            disabled={disabled}
-            onChange={(event) => {
-              setDraft(null);
-              onChange(event.target.value.toUpperCase());
-            }}
-            className="absolute inset-0 size-full cursor-pointer opacity-0"
-          />
-        </span>
+      {/* The swatch sits inside the field so the full hex value fits on narrow phones. */}
+      <div className="relative">
         <input
           id={id}
           value={text}
@@ -63,8 +50,22 @@ export function ColorField({ label, value, onChange, disabled }: ColorFieldProps
             if (normalized) onChange(normalized);
             if (!draft || normalized) setDraft(null);
           }}
-          className={cn(fieldClasses, "h-11 font-mono text-sm uppercase")}
+          className={cn(fieldClasses, "h-11 pr-2 pl-11 font-mono uppercase")}
         />
+        <span className="absolute top-1/2 left-1.5 size-8 -translate-y-1/2 overflow-hidden rounded-md ring-1 ring-black/15 focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-ring dark:ring-white/20">
+          <span aria-hidden className="absolute inset-0" style={{ backgroundColor: value }} />
+          <input
+            type="color"
+            aria-label={`${label} picker`}
+            value={value.length === 7 ? value.toLowerCase() : (normalizeHex(value) ?? "#000000")}
+            disabled={disabled}
+            onChange={(event) => {
+              setDraft(null);
+              onChange(event.target.value.toUpperCase());
+            }}
+            className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+          />
+        </span>
       </div>
       {invalid && (
         <p id={`${id}-error`} className="text-sm text-danger">

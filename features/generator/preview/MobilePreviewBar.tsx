@@ -45,7 +45,6 @@ export function MobilePreviewBar({
             type="button"
             onClick={() => setOpen(true)}
             className="flex min-w-0 flex-1 items-center gap-3 rounded-control text-left focus-ring"
-            aria-label="Open preview and download options"
           >
             <QrTile
               compact
@@ -65,6 +64,7 @@ export function MobilePreviewBar({
                 <ChevronUp aria-hidden className="size-4 text-fg-muted" />
               </span>
               <span className="truncate text-sm text-fg-muted">{blocker ?? summary}</span>
+              <span className="sr-only">Open preview and download options</span>
             </span>
           </button>
           <Button onClick={download} disabled={!!blocker || busy !== null} className="px-4">

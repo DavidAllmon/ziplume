@@ -48,7 +48,7 @@ test("layout never scrolls sideways", async ({ page }) => {
 test("phones get a bottom bar and a preview sheet", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "mobile only");
   await page.getByLabel("Website address").fill("example.com");
-  const bar = page.getByRole("button", { name: "Open preview and download options" });
+  const bar = page.getByRole("button", { name: /Open preview and download options/ });
   await expect(bar).toBeVisible();
   await bar.click();
   const sheet = page.getByRole("dialog", { name: "Your QR code" });

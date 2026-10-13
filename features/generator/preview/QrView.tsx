@@ -15,10 +15,9 @@ interface QrViewProps {
   resolution: number;
   label: string;
   className?: string;
-  onCanvas?: (canvas: HTMLCanvasElement | null) => void;
 }
 
-export function QrView({ options, resolution, label, className, onCanvas }: QrViewProps) {
+export function QrView({ options, resolution, label, className }: QrViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const instance = useRef<QRCodeStyling | null>(null);
   // Typing stays responsive: React renders the latest input first and redraws the code after.
@@ -38,12 +37,11 @@ export function QrView({ options, resolution, label, className, onCanvas }: QrVi
         instance.current = new QRCode(styling);
         instance.current.append(element);
       }
-      onCanvas?.(element.querySelector("canvas"));
     });
     return () => {
       cancelled = true;
     };
-  }, [deferred, resolution, onCanvas]);
+  }, [deferred, resolution]);
 
   return (
     <div

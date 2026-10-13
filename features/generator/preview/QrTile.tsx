@@ -12,7 +12,6 @@ interface QrTileProps {
   resolution?: number;
   compact?: boolean;
   className?: string;
-  onCanvas?: (canvas: HTMLCanvasElement | null) => void;
 }
 
 /**
@@ -26,7 +25,6 @@ export function QrTile({
   resolution = 720,
   compact = false,
   className,
-  onCanvas,
 }: QrTileProps) {
   const empty = !options.data;
   return (
@@ -41,7 +39,6 @@ export function QrTile({
       <QrView
         options={options}
         resolution={resolution}
-        onCanvas={onCanvas}
         label={empty ? "Example QR code. Enter content to create yours." : `QR code for ${summary}`}
         className={cn("transition-opacity duration-300", empty && "opacity-10 blur-[1px]")}
       />

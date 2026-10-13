@@ -47,3 +47,21 @@ describe("generatorReducer", () => {
     expect(state.design).toEqual(DEFAULT_DESIGN);
   });
 });
+
+describe("hydrate", () => {
+  it("normalizes colors and clamps sizes from storage", () => {
+    const state = reduce(initialState(), {
+      type: "hydrate",
+      saved: {
+        version: 1,
+        activeType: "wifi",
+        design: { ...DEFAULT_DESIGN, fgColor: "#abc", bgColor: "nope" },
+        exportSettings: { format: "svg", size: 100_000 },
+      },
+    });
+    expect(state.activeType).toBe("wifi");
+    expect(state.design.fgColor).toBe("#AABBCC");
+    expect(state.design.bgColor).toBe(DEFAULT_DESIGN.bgColor);
+    expect(state.exportSettings).toEqual({ format: "svg", size: 4096 });
+  });
+});

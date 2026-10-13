@@ -26,25 +26,22 @@ export function ErrorCorrectionSection({ design, dispatch }: ErrorCorrectionSect
   const level = EC_LEVELS.find((l) => l.value === design.errorCorrection) ?? EC_LEVELS[1];
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        <span aria-hidden className="text-sm font-medium text-fg">
-          Error correction
-        </span>
-        <InfoTip label="What is error correction?">
-          QR codes store extra recovery data so they still scan when part of the code is damaged or
-          covered. Higher levels recover more (Low 7%, Medium 15%, Quartile 25%, High 30%) but make
-          the pattern denser.
-        </InfoTip>
-      </div>
       <SegmentedControl
         aria-label="Error correction"
         value={design.errorCorrection}
         onChange={(errorCorrection) => dispatch({ type: "setDesign", patch: { errorCorrection } })}
         options={EC_LEVELS}
       />
-      <p className="text-sm text-fg-muted" aria-live="polite">
-        {level.description}
-      </p>
+      <div className="flex items-start gap-1">
+        <p className="flex-1 pt-1 text-sm text-fg-muted" aria-live="polite">
+          {level.description}
+        </p>
+        <InfoTip label="What is error correction?">
+          QR codes store extra recovery data so they still scan when part of the code is damaged or
+          covered. Higher levels recover more (Low 7%, Medium 15%, Quartile 25%, High 30%) but make
+          the pattern denser.
+        </InfoTip>
+      </div>
     </div>
   );
 }

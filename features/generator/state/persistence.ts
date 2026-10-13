@@ -1,4 +1,4 @@
-import { loadJSON, removeKey, saveJSON } from "@/lib/storage";
+import { loadJSON, saveJSON } from "@/lib/storage";
 import { QR_TYPE_IDS } from "@/lib/qr/types";
 
 import { MAX_LOGO_SIZE, MIN_LOGO_SIZE } from "./defaults";
@@ -53,4 +53,3 @@ export function toPersisted(state: GeneratorState): PersistedSettings {
 
 export const loadSettings = () => loadJSON(STORAGE_KEY, isPersistedSettings);
 export const saveSettings = (state: GeneratorState) => saveJSON(STORAGE_KEY, toPersisted(state));
-export const clearSettings = () => removeKey(STORAGE_KEY);

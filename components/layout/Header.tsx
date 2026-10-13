@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Logo } from "@/components/brand/Logo";
 
 import { GitHubIcon } from "./GitHubIcon";
@@ -9,9 +11,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-bg/85 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:h-16">
-        <a href="#main" className="rounded-control focus-ring" aria-label="QuickQReate home">
+        <Link href="/" className="rounded-control focus-ring" aria-label="QuickQReate home">
           <Logo />
-        </a>
+        </Link>
         <div className="flex items-center gap-1.5">
           <ThemeToggle />
           <a
