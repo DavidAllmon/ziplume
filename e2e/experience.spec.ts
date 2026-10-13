@@ -73,3 +73,34 @@ for (const theme of ["light", "dark"] as const) {
     expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(", ")}`)).toEqual([]);
   });
 }
+
+test("the scan check verifies the rendered code with a real decoder", async ({ page }) => {
+  await page.getByLabel("Website address").fill("example.com/verify");
+  await expect(
+    page.getByText("Verified scannable").filter({ visible: true }).first(),
+  ).toBeVisible();
+
+  // Nearly invisible colors fail the real decode, not just the contrast rule.
+  await page.getByLabel("Code color", { exact: true }).fill("#F4F4F4");
+  await page.getByLabel("Code color", { exact: true }).blur();
+  await expect(page.getByText("May not scan").filter({ visible: true }).first()).toBeVisible();
+});
+
+test("works offline after the first visit", async ({ page, context }, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "desktop",
+    "service worker behaviour is viewport-independent",
+  );
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+  });
+  // Reload once so the page is controlled by the worker, then go offline.
+  await page.reload();
+  await context.setOffline(true);
+  await page.reload();
+  await page.getByLabel("Website address").fill("example.com/offline");
+  await expect(
+    page.getByText("Verified scannable").filter({ visible: true }).first(),
+  ).toBeVisible();
+  await context.setOffline(false);
+});

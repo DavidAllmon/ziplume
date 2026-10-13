@@ -57,7 +57,11 @@ export function MobilePreviewBar({
             />
             <span className="flex min-w-0 flex-col">
               <span className="flex items-center gap-1 text-sm font-semibold text-fg">
-                {blocker ? "Preview" : STATUS_TEXT[report.status]}
+                {blocker
+                  ? "Preview"
+                  : report.status === "ok" && report.verified
+                    ? "Verified scannable"
+                    : STATUS_TEXT[report.status]}
                 <ChevronUp aria-hidden className="size-4 text-fg-muted" />
               </span>
               <span className="truncate text-sm text-fg-muted">{blocker ?? summary}</span>

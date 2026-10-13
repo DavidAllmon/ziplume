@@ -53,3 +53,17 @@ describe("checkScannability", () => {
     );
   });
 });
+
+describe("withVerification", () => {
+  it("marks decoded codes as verified and failed decodes as errors", async () => {
+    const { withVerification } = await import("./scannability");
+    const report = checkScannability(base);
+    expect(withVerification(report, "verified")).toMatchObject({ status: "ok", verified: true });
+    expect(withVerification(report, null)).toBe(report);
+    const failed = withVerification(report, "failed");
+    expect(failed.status).toBe("error");
+    expect(failed.issues[0]?.id).toBe("decode");
+    const empty = checkScannability({ ...base, data: "" });
+    expect(withVerification(empty, "failed")).toBe(empty);
+  });
+});

@@ -12,9 +12,10 @@ import {
   validateContent,
 } from "@/lib/qr/qr-types";
 import type { RenderOptions } from "@/lib/qr/renderer";
-import { checkScannability } from "@/lib/qr/scannability";
+import { checkScannability, withVerification } from "@/lib/qr/scannability";
 import type { QrTypeId } from "@/lib/qr/types";
 
+import { useScanVerification } from "./preview/useScanVerification";
 import { initialState } from "./state/defaults";
 import { loadSettings, saveSettings } from "./state/persistence";
 import { generatorReducer } from "./state/reducer";
@@ -49,7 +50,7 @@ export function useGenerator() {
     [data, design.errorCorrection],
   );
 
-  const report = useMemo(
+  const heuristics = useMemo(
     () =>
       checkScannability({
         data,
@@ -67,6 +68,12 @@ export function useGenerator() {
   const renderOptions: RenderOptions = useMemo(
     () => ({ ...design, data, size: exportSettings.size }),
     [design, data, exportSettings.size],
+  );
+
+  const verification = useScanVerification(renderOptions, data !== "" && measurement.fits);
+  const report = useMemo(
+    () => withVerification(heuristics, verification),
+    [heuristics, verification],
   );
 
   const summary = data ? summarizeContent(activeType, values) : "";

@@ -19,7 +19,9 @@ const STATUS = {
 } as const;
 
 export function ScanBadge({ report, className }: { report: ScanReport; className?: string }) {
-  const { icon: Icon, text, className: tone } = STATUS[report.status];
+  const { icon: Icon, className: tone } = STATUS[report.status];
+  const text =
+    report.status === "ok" && report.verified ? "Verified scannable" : STATUS[report.status].text;
   return (
     <span
       className={cn(

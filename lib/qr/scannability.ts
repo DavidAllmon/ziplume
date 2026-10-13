@@ -6,7 +6,8 @@ import type { ErrorCorrection } from "./types";
 export type ScanStatus = "empty" | "ok" | "warn" | "error";
 
 export interface ScanIssue {
-  id: "contrast" | "inverted" | "transparent" | "logo" | "overflow" | "density" | "print";
+  id:
+    "contrast" | "inverted" | "transparent" | "logo" | "overflow" | "density" | "print" | "decode";
   severity: "warn" | "error";
   message: string;
 }
@@ -14,6 +15,30 @@ export interface ScanIssue {
 export interface ScanReport {
   status: ScanStatus;
   issues: ScanIssue[];
+  /** True once the rendered image has been decoded successfully by a real QR reader. */
+  verified?: boolean;
+}
+
+/** Result of decoding the rendered image: null while a check is pending. */
+export type Verification = "verified" | "failed" | null;
+
+/** Folds the real-decoder result into the heuristic report. */
+export function withVerification(report: ScanReport, verification: Verification): ScanReport {
+  if (report.status === "empty" || verification === null) return report;
+  if (verification === "verified") return { ...report, verified: true };
+  return {
+    status: "error",
+    verified: false,
+    issues: [
+      {
+        id: "decode",
+        severity: "error",
+        message:
+          "Our test scanner couldn't read this code. Increase contrast, shrink the logo or raise error correction.",
+      },
+      ...report.issues.filter((issue) => issue.id !== "decode"),
+    ],
+  };
 }
 
 export interface ScanInput {

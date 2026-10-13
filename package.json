@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/generate-sw.mjs",
     "start": "node scripts/serve.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
