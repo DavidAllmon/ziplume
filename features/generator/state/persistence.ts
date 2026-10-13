@@ -1,5 +1,5 @@
 import { loadJSON, saveJSON } from "@/lib/storage";
-import { EXPORT_FORMAT_IDS, QR_TYPE_IDS } from "@/lib/qr/types";
+import { EXPORT_FORMAT_IDS, PAGE_TYPE_IDS, QR_TYPE_IDS } from "@/lib/qr/types";
 
 import type { GeneratorState, PersistedSettings } from "./types";
 
@@ -21,7 +21,7 @@ export function isPersistedSettings(value: unknown): value is PersistedSettings 
   if (!isObject(value) || value.version !== 1) return false;
   const { design, exportSettings, activeType } = value;
   return (
-    oneOf(activeType, QR_TYPE_IDS) &&
+    oneOf(activeType, [...QR_TYPE_IDS, ...PAGE_TYPE_IDS]) &&
     isObject(design) &&
     isObject(exportSettings) &&
     oneOf(exportSettings.format, EXPORT_FORMAT_IDS) &&

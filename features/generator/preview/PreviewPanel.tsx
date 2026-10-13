@@ -1,11 +1,14 @@
 "use client";
 
-import { QR_TYPES } from "@/lib/qr/qr-types";
+import { useState } from "react";
+
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import type { ScanReport } from "@/lib/qr/scannability";
 
 import { SavePanel } from "../SavePanel";
 import type { Generator } from "../useGenerator";
 import { ExportPanel } from "../export/ExportPanel";
+import { PagePreview } from "./PagePreview";
 import { QrTile } from "./QrTile";
 import { ScanBadge, ScanIssues } from "./ScanCheck";
 
@@ -16,17 +19,40 @@ interface PreviewPanelProps {
 
 /** Preview, scan check and export options. Sticky sidebar on desktop, sheet on mobile. */
 export function PreviewPanel({ generator, report }: PreviewPanelProps) {
-  const { state, renderOptions, summary, filename, blocker, dispatch, measurement } = generator;
-  const type = QR_TYPES[state.activeType];
+  const { state, renderOptions, summary, filename, blocker, dispatch, measurement, pageType } =
+    generator;
+  const type = generator.info;
   const usage = measurement.bytes / measurement.maxBytes;
+  const [view, setView] = useState<"code" | "page">("code");
+  const showPage = pageType !== null && view === "page";
   return (
     <div className="flex flex-col gap-5">
-      <QrTile
-        options={renderOptions}
-        summary={summary}
-        emptyHint={type.emptyHint}
-        className="mx-auto w-full max-w-[20rem]"
-      />
+      {pageType && (
+        <SegmentedControl
+          aria-label="Preview"
+          size="sm"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "code", label: "QR code" },
+            { value: "page", label: "Page" },
+          ]}
+        />
+      )}
+      {showPage ? (
+        <PagePreview
+          type={pageType}
+          page={state.pages[pageType]}
+          slug={generator.slug ?? "PREVIEW"}
+        />
+      ) : (
+        <QrTile
+          options={renderOptions}
+          summary={summary}
+          emptyHint={type.emptyHint}
+          className="mx-auto w-full max-w-[20rem]"
+        />
+      )}
       <div className="flex flex-col items-center gap-2 text-center">
         <ScanBadge report={report} />
         {summary && (

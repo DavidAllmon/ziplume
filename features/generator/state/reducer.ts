@@ -1,4 +1,7 @@
 import { DEFAULT_DESIGN, MAX_EXPORT_SIZE, MIN_EXPORT_SIZE } from "./defaults";
+import { sanitizePage } from "@/lib/pages/sanitize";
+import { isPageType } from "@/lib/qr/types";
+
 import { sanitizeContent, sanitizeDesign } from "./sanitize";
 import type { DesignState, GeneratorAction, GeneratorState } from "./types";
 
@@ -98,7 +101,23 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
     case "resetDesign":
       return { ...state, design: { ...DEFAULT_DESIGN }, ecBeforeLogo: null };
 
-    case "loadCode":
+    case "setPage":
+      return {
+        ...state,
+        pages: { ...state.pages, [action.pageType]: sanitizePage(action.pageType, action.content) },
+      };
+
+    case "loadCode": {
+      const design = sanitizeDesign(action.design);
+      if (isPageType(action.qrType)) {
+        return {
+          ...state,
+          activeType: action.qrType,
+          pages: { ...state.pages, [action.qrType]: sanitizePage(action.qrType, action.content) },
+          design,
+          ecBeforeLogo: null,
+        };
+      }
       return {
         ...state,
         activeType: action.qrType,
@@ -106,9 +125,10 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
           ...state.content,
           [action.qrType]: sanitizeContent(action.qrType, action.content),
         },
-        design: sanitizeDesign(action.design),
+        design,
         ecBeforeLogo: null,
       };
+    }
 
     case "hydrate": {
       const { design, exportSettings, activeType } = action.saved;

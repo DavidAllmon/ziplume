@@ -1,0 +1,677 @@
+"use client";
+
+import {
+  ArrowDown,
+  ArrowUp,
+  FileAudio,
+  FileText,
+  FileVideo,
+  Loader2,
+  Plus,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import { useId, useState, type ReactNode } from "react";
+
+import { Button, IconButton } from "@/components/ui/Button";
+import { ColorField } from "@/components/ui/ColorField";
+import { Field } from "@/components/ui/Field";
+import { Select, Textarea, TextInput } from "@/components/ui/inputs";
+import { Toggle } from "@/components/ui/Toggle";
+import { cn } from "@/lib/cn";
+import type { DayHours, LinkItem, Media, SocialItem, SocialNetwork } from "@/lib/pages/types";
+import { SOCIAL_NETWORKS } from "@/lib/pages/types";
+import { mediaUrl } from "@/lib/pages/urls";
+
+import { fileSize, socialLabel } from "../parts";
+import { ACCEPT, uploadMedia, type MediaKind } from "./upload";
+
+/** Shows a field's error once it has been left (or after a save attempt). */
+export interface ErrorsApi {
+  error: (path: string) => string | undefined;
+  touch: (path: string) => void;
+}
+
+interface TextFieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  path?: string;
+  errors?: ErrorsApi;
+  hint?: ReactNode;
+  optional?: boolean;
+  placeholder?: string;
+  maxLength?: number;
+  type?: "text" | "url" | "email" | "tel" | "date" | "datetime-local" | "time";
+  inputMode?: "text" | "url" | "email" | "tel" | "decimal";
+  autoComplete?: string;
+}
+
+export function TextField({
+  label,
+  value,
+  onChange,
+  path,
+  errors,
+  hint,
+  optional,
+  placeholder,
+  maxLength = 120,
+  type = "text",
+  inputMode,
+  autoComplete,
+}: TextFieldProps) {
+  return (
+    <Field
+      label={label}
+      hint={hint}
+      optional={optional}
+      error={path ? errors?.error(path) : undefined}
+    >
+      {(control) => (
+        <TextInput
+          {...control}
+          type={type}
+          inputMode={inputMode}
+          autoComplete={autoComplete ?? "off"}
+          autoCapitalize={type === "url" || type === "email" ? "none" : undefined}
+          spellCheck={type === "url" || type === "email" ? false : undefined}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={() => path && errors?.touch(path)}
+        />
+      )}
+    </Field>
+  );
+}
+
+export function AreaField({
+  label,
+  value,
+  onChange,
+  hint,
+  optional = true,
+  placeholder,
+  maxLength = 300,
+  rows = 3,
+}: Omit<TextFieldProps, "type" | "path" | "errors"> & { rows?: number }) {
+  return (
+    <Field label={label} hint={hint} optional={optional}>
+      {(control) => (
+        <Textarea
+          {...control}
+          rows={rows}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+    </Field>
+  );
+}
+
+export function ToggleField({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description?: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return <Toggle label={label} description={description} checked={checked} onChange={onChange} />;
+}
+
+const ACCENTS = [
+  "#4F46E5",
+  "#0F766E",
+  "#B45309",
+  "#BE123C",
+  "#7C3AED",
+  "#0E7490",
+  "#15803D",
+  "#0F172A",
+];
+
+export function AccentField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-2">
+      <span id={id} className="text-sm font-medium text-fg">
+        Page color
+      </span>
+      <div role="group" aria-labelledby={id} className="flex flex-wrap items-center gap-2">
+        {ACCENTS.map((color) => (
+          <button
+            key={color}
+            type="button"
+            aria-label={`Use ${color}`}
+            aria-pressed={value === color}
+            onClick={() => onChange(color)}
+            className={cn(
+              "size-9 rounded-full border-2 focus-ring",
+              value === color ? "border-fg" : "border-transparent",
+            )}
+            style={{ background: color }}
+          />
+        ))}
+      </div>
+      <div className="max-w-56">
+        <ColorField label="Custom color" value={value} onChange={onChange} />
+      </div>
+    </div>
+  );
+}
+
+const KIND_ICON = { pdf: FileText, audio: FileAudio, video: FileVideo, image: FileText };
+const KIND_LABEL: Record<MediaKind, string> = {
+  image: "image",
+  pdf: "PDF",
+  audio: "audio file",
+  video: "video",
+};
+
+interface MediaFieldProps {
+  label: string;
+  kind: MediaKind;
+  value: Media | null;
+  onChange: (value: Media | null) => void;
+  hint?: string;
+  /** Longest side for images, in pixels. */
+  maxSide?: number;
+  round?: boolean;
+  error?: string;
+}
+
+/** Upload, preview, replace and remove one file. */
+export function MediaField({
+  label,
+  kind,
+  value,
+  onChange,
+  hint,
+  maxSide,
+  round,
+  error,
+}: MediaFieldProps) {
+  const inputId = useId();
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const Icon = KIND_ICON[kind];
+
+  async function pick(file: File | undefined) {
+    if (!file) return;
+    setBusy(true);
+    setProblem(null);
+    const result = await uploadMedia(file, kind, { maxSide });
+    setBusy(false);
+    if (result.ok) onChange(result.media);
+    else setProblem(result.error);
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-fg">{label}</span>
+      <div className="flex items-center gap-3 rounded-control border border-border bg-surface-2 p-3">
+        {value && kind === "image" ? (
+          // eslint-disable-next-line @next/next/no-img-element -- uploaded file preview
+          <img
+            src={mediaUrl(value.path)}
+            alt=""
+            className={cn(
+              "size-14 shrink-0 bg-white object-cover",
+              round ? "rounded-full" : "rounded-lg",
+            )}
+          />
+        ) : (
+          <span className="grid size-14 shrink-0 place-items-center rounded-lg bg-surface text-fg-muted">
+            {busy ? (
+              <Loader2 aria-hidden className="size-6 animate-spin" />
+            ) : value ? (
+              <Icon aria-hidden className="size-6" />
+            ) : (
+              <Upload aria-hidden className="size-6" />
+            )}
+          </span>
+        )}
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          {value ? (
+            <span className="truncate text-sm text-fg">
+              {value.name} <span className="text-fg-muted">· {fileSize(value.size)}</span>
+            </span>
+          ) : (
+            <span className="text-sm text-fg-muted">
+              {busy ? "Uploading…" : `No ${KIND_LABEL[kind]} yet`}
+            </span>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <label
+              htmlFor={inputId}
+              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-control border border-border bg-surface px-3 text-sm font-semibold text-fg hover:bg-surface-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring"
+            >
+              {value ? "Replace" : "Upload"}
+              <input
+                id={inputId}
+                type="file"
+                accept={ACCEPT[kind]}
+                className="sr-only"
+                disabled={busy}
+                onChange={(event) => {
+                  void pick(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+            {value && (
+              <Button variant="ghost" size="sm" onClick={() => onChange(null)}>
+                <Trash2 aria-hidden /> Remove
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+      {(problem || error) && (
+        <p role="alert" className="text-sm text-danger">
+          {problem ?? error}
+        </p>
+      )}
+      {hint && !problem && !error && <p className="text-sm text-fg-muted">{hint}</p>}
+    </div>
+  );
+}
+
+/** Several images, uploaded one or many at a time. */
+export function ImagesField({
+  value,
+  onChange,
+  max,
+  error,
+}: {
+  value: Media[];
+  onChange: (value: Media[]) => void;
+  max: number;
+  error?: string;
+}) {
+  const inputId = useId();
+  const [busy, setBusy] = useState(0);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  async function pick(files: FileList | null) {
+    if (!files?.length) return;
+    const room = max - value.length;
+    const chosen = Array.from(files).slice(0, room);
+    setProblem(files.length > room ? `You can add up to ${max} images.` : null);
+    setBusy(chosen.length);
+    let next = [...value];
+    for (const file of chosen) {
+      const result = await uploadMedia(file, "image");
+      setBusy((n) => n - 1);
+      if (result.ok) {
+        next = [...next, result.media];
+        onChange(next);
+      } else setProblem(result.error);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-medium text-fg">Images</span>
+      {value.length > 0 && (
+        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {value.map((image, i) => (
+            <li key={image.path} className="group relative">
+              {/* eslint-disable-next-line @next/next/no-img-element -- uploaded file preview */}
+              <img
+                src={mediaUrl(image.path)}
+                alt={`Image ${i + 1}`}
+                className="aspect-square w-full rounded-lg object-cover"
+              />
+              <div className="absolute inset-x-1 bottom-1 flex justify-between">
+                <IconButton
+                  label={`Move image ${i + 1} earlier`}
+                  size="icon-sm"
+                  variant="secondary"
+                  disabled={i === 0}
+                  onClick={() => onChange(move(value, i, -1))}
+                >
+                  <ArrowUp aria-hidden className="-rotate-90" />
+                </IconButton>
+                <IconButton
+                  label={`Remove image ${i + 1}`}
+                  size="icon-sm"
+                  variant="secondary"
+                  onClick={() => onChange(value.filter((_, j) => j !== i))}
+                >
+                  <Trash2 aria-hidden />
+                </IconButton>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {value.length < max && (
+        <label
+          htmlFor={inputId}
+          className="flex cursor-pointer flex-col items-center gap-1 rounded-control border-2 border-dashed border-field-border px-4 py-6 text-center hover:bg-surface-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring"
+        >
+          {busy ? (
+            <Loader2 aria-hidden className="size-6 animate-spin text-fg-muted" />
+          ) : (
+            <Plus aria-hidden className="size-6 text-primary dark:text-link" />
+          )}
+          <span className="text-sm font-semibold text-fg">
+            {busy ? `Uploading ${busy}…` : "Add images"}
+          </span>
+          <span className="text-sm text-fg-muted">
+            PNG, JPG, WebP or GIF · {value.length}/{max}
+          </span>
+          <input
+            id={inputId}
+            type="file"
+            multiple
+            accept={ACCEPT.image}
+            className="sr-only"
+            disabled={busy > 0}
+            onChange={(event) => {
+              void pick(event.target.files);
+              event.target.value = "";
+            }}
+          />
+        </label>
+      )}
+      {(problem || error) && (
+        <p role="alert" className="text-sm text-danger">
+          {problem ?? error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function move<T>(list: T[], index: number, by: number): T[] {
+  const target = index + by;
+  if (target < 0 || target >= list.length) return list;
+  const next = [...list];
+  [next[index], next[target]] = [next[target]!, next[index]!];
+  return next;
+}
+
+interface ListFieldProps<T> {
+  label: string;
+  items: T[];
+  onChange: (items: T[]) => void;
+  newItem: () => T;
+  max: number;
+  addLabel: string;
+  itemName: string;
+  render: (item: T, update: (patch: Partial<T>) => void, index: number) => ReactNode;
+}
+
+/** A reorderable list of small forms (links, phone numbers, menu items…). */
+export function ListField<T>({
+  label,
+  items,
+  onChange,
+  newItem,
+  max,
+  addLabel,
+  itemName,
+  render,
+}: ListFieldProps<T>) {
+  return (
+    <fieldset className="flex flex-col gap-3">
+      <legend className="mb-2 text-sm font-medium text-fg">{label}</legend>
+      {items.map((item, i) => (
+        <div key={i} className="flex gap-2 rounded-control border border-border p-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-3">
+            {render(
+              item,
+              (patch) => onChange(items.map((it, j) => (j === i ? { ...it, ...patch } : it))),
+              i,
+            )}
+          </div>
+          <div className="flex shrink-0 flex-col gap-1">
+            <IconButton
+              label={`Move ${itemName} ${i + 1} up`}
+              size="icon-sm"
+              disabled={i === 0}
+              onClick={() => onChange(move(items, i, -1))}
+            >
+              <ArrowUp aria-hidden />
+            </IconButton>
+            <IconButton
+              label={`Move ${itemName} ${i + 1} down`}
+              size="icon-sm"
+              disabled={i === items.length - 1}
+              onClick={() => onChange(move(items, i, 1))}
+            >
+              <ArrowDown aria-hidden />
+            </IconButton>
+            <IconButton
+              label={`Remove ${itemName} ${i + 1}`}
+              size="icon-sm"
+              onClick={() => onChange(items.filter((_, j) => j !== i))}
+            >
+              <Trash2 aria-hidden />
+            </IconButton>
+          </div>
+        </div>
+      ))}
+      {items.length < max && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="self-start"
+          onClick={() => onChange([...items, newItem()])}
+        >
+          <Plus aria-hidden /> {addLabel}
+        </Button>
+      )}
+    </fieldset>
+  );
+}
+
+export function LinksField({
+  label = "Links",
+  items,
+  onChange,
+  max,
+  errors,
+  prefix = "links",
+}: {
+  label?: string;
+  items: LinkItem[];
+  onChange: (items: LinkItem[]) => void;
+  max: number;
+  errors: ErrorsApi;
+  prefix?: string;
+}) {
+  return (
+    <ListField
+      label={label}
+      items={items}
+      onChange={onChange}
+      max={max}
+      addLabel="Add link"
+      itemName="link"
+      newItem={() => ({ label: "", url: "" })}
+      render={(item, update, i) => (
+        <>
+          <TextField
+            label="Button text"
+            value={item.label}
+            onChange={(labelText) => update({ label: labelText })}
+            placeholder="My website"
+            maxLength={80}
+          />
+          <TextField
+            label="Link"
+            type="url"
+            inputMode="url"
+            value={item.url}
+            onChange={(url) => update({ url })}
+            path={`${prefix}.${i}.url`}
+            errors={errors}
+            placeholder="example.com"
+            maxLength={2048}
+          />
+        </>
+      )}
+    />
+  );
+}
+
+export function SocialsField({
+  items,
+  onChange,
+  max,
+  errors,
+}: {
+  items: SocialItem[];
+  onChange: (items: SocialItem[]) => void;
+  max: number;
+  errors: ErrorsApi;
+}) {
+  return (
+    <ListField
+      label="Social profiles"
+      items={items}
+      onChange={onChange}
+      max={max}
+      addLabel="Add profile"
+      itemName="profile"
+      newItem={(): SocialItem => ({ network: "instagram", url: "" })}
+      render={(item, update, i) => (
+        <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
+          <Field label="Network">
+            {(control) => (
+              <Select
+                {...control}
+                value={item.network}
+                onChange={(event) => update({ network: event.target.value as SocialNetwork })}
+              >
+                {SOCIAL_NETWORKS.map((network) => (
+                  <option key={network} value={network}>
+                    {socialLabel(network)}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <TextField
+            label="Profile link or @handle"
+            value={item.url}
+            onChange={(url) => update({ url })}
+            path={`socials.${i}.url`}
+            errors={errors}
+            placeholder="@yourname"
+            maxLength={2048}
+          />
+        </div>
+      )}
+    />
+  );
+}
+
+const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+export function HoursField({
+  hours,
+  onChange,
+  errors,
+}: {
+  hours: DayHours[];
+  onChange: (hours: DayHours[]) => void;
+  errors: ErrorsApi;
+}) {
+  const update = (i: number, patch: Partial<DayHours>) =>
+    onChange(hours.map((h, j) => (j === i ? { ...h, ...patch } : h)));
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-1 text-sm font-medium text-fg">Opening hours</legend>
+      {hours.map((h, i) => (
+        <div key={DAY_NAMES[i]} className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex w-32 items-center gap-2 text-sm text-fg">
+              <input
+                type="checkbox"
+                checked={h.open}
+                onChange={(event) => update(i, { open: event.target.checked })}
+                className="size-4 accent-primary"
+              />
+              {DAY_NAMES[i]}
+            </label>
+            {h.open ? (
+              <>
+                <input
+                  type="time"
+                  aria-label={`${DAY_NAMES[i]} opens`}
+                  value={h.from}
+                  onChange={(event) => update(i, { from: event.target.value })}
+                  className="h-10 rounded-control border border-field-border bg-surface px-2 text-sm text-fg"
+                />
+                <span className="text-fg-muted">–</span>
+                <input
+                  type="time"
+                  aria-label={`${DAY_NAMES[i]} closes`}
+                  value={h.to}
+                  onChange={(event) => update(i, { to: event.target.value })}
+                  className="h-10 rounded-control border border-field-border bg-surface px-2 text-sm text-fg"
+                />
+              </>
+            ) : (
+              <span className="text-sm text-fg-muted">Closed</span>
+            )}
+          </div>
+          {errors.error(`hours.${i}`) && (
+            <p className="text-sm text-danger">{errors.error(`hours.${i}`)}</p>
+          )}
+        </div>
+      ))}
+    </fieldset>
+  );
+}
+
+/** IANA time zones from the browser, with the user's own first. */
+export function TimeZoneField({
+  value,
+  onChange,
+  error,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+}) {
+  const zones = (() => {
+    try {
+      return Intl.supportedValuesOf("timeZone");
+    } catch {
+      return ["UTC"];
+    }
+  })();
+  return (
+    <Field label="Time zone" error={error}>
+      {(control) => (
+        <Select {...control} value={value} onChange={(event) => onChange(event.target.value)}>
+          {!value && <option value="">Choose…</option>}
+          {zones.map((zone) => (
+            <option key={zone} value={zone}>
+              {zone.replace(/_/g, " ")}
+            </option>
+          ))}
+        </Select>
+      )}
+    </Field>
+  );
+}

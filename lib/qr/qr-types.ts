@@ -1,10 +1,14 @@
 import {
+  cleanAccount,
   encodeContact,
   encodeEmail,
+  encodeLocation,
+  encodePayment,
   encodePhone,
   encodeSms,
   encodeText,
   encodeUrl,
+  encodeWhatsApp,
   encodeWifi,
 } from "./encoders";
 import { normalizeUrl } from "./normalize";
@@ -12,10 +16,13 @@ import type { ContentValues, FieldErrors, QrTypeId } from "./types";
 import {
   validateContact,
   validateEmail,
+  validateLocation,
+  validatePayment,
   validatePhone,
   validateSms,
   validateText,
   validateUrl,
+  validateWhatsApp,
   validateWifi,
 } from "./validators";
 
@@ -131,6 +138,58 @@ export const QR_TYPES: QrTypeRegistry = {
     summary: ({ phone, message }) =>
       truncate([phone.trim(), message.trim()].filter(Boolean).join(" · ")),
     filenameLabel: ({ phone }) => phone,
+  },
+  whatsapp: {
+    id: "whatsapp",
+    label: "WhatsApp",
+    emptyHint: "Add a WhatsApp number to start",
+    defaults: { phone: "", message: "" },
+    encode: encodeWhatsApp,
+    validate: validateWhatsApp,
+    summary: ({ phone, message }) =>
+      truncate([phone.trim(), message.trim()].filter(Boolean).join(" · ")),
+    filenameLabel: ({ phone }) => `whatsapp-${phone}`,
+  },
+  location: {
+    id: "location",
+    label: "Location",
+    emptyHint: "Add an address or coordinates to start",
+    defaults: { mode: "address", query: "", latitude: "", longitude: "" },
+    encode: encodeLocation,
+    validate: validateLocation,
+    summary: (v) =>
+      truncate(
+        v.mode === "address" ? v.query.trim() : `${v.latitude.trim()}, ${v.longitude.trim()}`,
+      ),
+    filenameLabel: (v) => (v.mode === "address" ? v.query.slice(0, 24) : "map"),
+  },
+  payment: {
+    id: "payment",
+    label: "Payment",
+    emptyHint: "Add your payment details to start",
+    defaults: { method: "paypal", account: "", amount: "", currency: "", note: "" },
+    encode: encodePayment,
+    validate: validatePayment,
+    summary: (v) => {
+      const names = {
+        paypal: "PayPal",
+        venmo: "Venmo",
+        cashapp: "Cash App",
+        bitcoin: "Bitcoin",
+        ethereum: "Ethereum",
+      };
+      const account = cleanAccount(v.account);
+      return truncate(
+        [
+          names[v.method],
+          account.length > 18 ? `${account.slice(0, 8)}…${account.slice(-6)}` : account,
+          v.amount.trim(),
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      );
+    },
+    filenameLabel: (v) => `${v.method}-${cleanAccount(v.account).slice(0, 16)}`,
   },
 };
 

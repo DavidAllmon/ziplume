@@ -1,23 +1,24 @@
 "use client";
 
-import type { QrTypeId } from "@/lib/qr/types";
+import { isPageType } from "@/lib/qr/types";
 
-import type { GeneratorState } from "../state/types";
+import type { Generator } from "../useGenerator";
 import { ContactForm } from "./forms/ContactForm";
 import { EmailForm } from "./forms/EmailForm";
+import { LocationForm } from "./forms/LocationForm";
+import { PaymentForm } from "./forms/PaymentForm";
 import { PhoneForm } from "./forms/PhoneForm";
 import { SmsForm } from "./forms/SmsForm";
 import { TextForm } from "./forms/TextForm";
 import { UrlForm } from "./forms/UrlForm";
+import { WhatsAppForm } from "./forms/WhatsAppForm";
 import { WifiForm } from "./forms/WifiForm";
+import { HostedPageForm } from "./HostedPageForm";
 
-interface ContentFormProps {
-  state: GeneratorState;
-  setField: (type: QrTypeId, field: string, value: string | boolean) => void;
-}
-
-export function ContentForm({ state, setField }: ContentFormProps) {
+export function ContentForm({ generator }: { generator: Generator }) {
+  const { state, setField } = generator;
   const { activeType, content } = state;
+  if (isPageType(activeType)) return <HostedPageForm generator={generator} type={activeType} />;
   const onChange = (field: string, value: string | boolean) => setField(activeType, field, value);
   // key resets per-form UI state (touched fields, password visibility) when switching types.
   switch (activeType) {
@@ -35,5 +36,11 @@ export function ContentForm({ state, setField }: ContentFormProps) {
       return <PhoneForm key="phone" values={content.phone} onChange={onChange} />;
     case "sms":
       return <SmsForm key="sms" values={content.sms} onChange={onChange} />;
+    case "whatsapp":
+      return <WhatsAppForm key="whatsapp" values={content.whatsapp} onChange={onChange} />;
+    case "location":
+      return <LocationForm key="location" values={content.location} onChange={onChange} />;
+    case "payment":
+      return <PaymentForm key="payment" values={content.payment} onChange={onChange} />;
   }
 }

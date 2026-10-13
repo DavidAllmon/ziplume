@@ -45,4 +45,18 @@ test.describe("without accounts configured", () => {
     const response = await request.get("/r/%3Cscript%3E", { maxRedirects: 0 });
     expect(response.status()).toBe(404);
   });
+
+  test("hosted pages are not served", async ({ request }) => {
+    expect((await request.get("/p/ABC234")).status()).toBe(404);
+    expect((await request.get("/p/ABC234/event.ics")).status()).toBe(404);
+    expect((await request.get("/p/ABC234/contact.vcf")).status()).toBe(404);
+    const feedback = await request.post("/p/ABC234/feedback", { data: { rating: 5 } });
+    expect(feedback.status()).toBe(503);
+  });
+
+  test("hosted page types explain they need accounts", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("radio", { name: "Menu", exact: true }).click();
+    await expect(page.getByText("Hosted pages aren’t available on this server yet.")).toBeVisible();
+  });
 });

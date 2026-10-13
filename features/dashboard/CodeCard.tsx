@@ -8,7 +8,7 @@ import { QrTile } from "@/features/generator/preview/QrTile";
 import { shortLink, shortLinkLabel } from "@/lib/env";
 import type { QrCodeRow } from "@/types/supabase";
 
-import { codeRenderOptions, codeSummary, codeTypeLabel } from "./codeRender";
+import { codeRenderOptions, codeSummary, codeTypeLabel, isHostedPage } from "./codeRender";
 import { CopyButton } from "./CopyButton";
 import { formatCount, relativeTime } from "./format";
 
@@ -110,7 +110,11 @@ export function CodeCard({ code, onDuplicate, onToggleStatus, onDelete }: CodeCa
             <span className="rounded-full bg-surface-2 px-2 py-0.5 text-fg-muted">
               {codeTypeLabel(code)}
             </span>
-            {code.is_dynamic ? (
+            {isHostedPage(code) ? (
+              <span className="rounded-full bg-primary-soft px-2 py-0.5 text-primary-soft-fg">
+                Hosted page
+              </span>
+            ) : code.is_dynamic ? (
               <span className="rounded-full bg-primary-soft px-2 py-0.5 text-primary-soft-fg">
                 Dynamic
               </span>

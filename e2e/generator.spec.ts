@@ -1,7 +1,14 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
-import { encodeContact, encodeEmail, encodeSms, encodeWifi } from "../lib/qr/encoders";
+import {
+  encodeContact,
+  encodeEmail,
+  encodeLocation,
+  encodeSms,
+  encodeWhatsApp,
+  encodeWifi,
+} from "../lib/qr/encoders";
 import { chooseType, decodeDownload, downloadCode } from "./helpers";
 
 // Downloads are decoded with jsQR, so these tests prove the files actually scan.
@@ -74,6 +81,34 @@ test.describe("generated codes scan back to the right content", () => {
     await page.getByLabel("Message").fill("Count me in");
     expect(await decodeDownload(page, await downloadCode(page))).toBe(
       encodeSms({ phone: "555-0100", message: "Count me in" }),
+    );
+  });
+
+  test("WhatsApp, location and payment", async ({ page }) => {
+    await chooseType(page, "WhatsApp");
+    await page.getByLabel("WhatsApp number").fill("+1 555 010 9999");
+    await page.getByLabel("Message").fill("Table for two?");
+    expect(await decodeDownload(page, await downloadCode(page))).toBe(
+      encodeWhatsApp({ phone: "+1 555 010 9999", message: "Table for two?" }),
+    );
+
+    await chooseType(page, "Location");
+    await page.getByLabel("Address or place name").fill("Eiffel Tower, Paris");
+    expect(await decodeDownload(page, await downloadCode(page))).toBe(
+      encodeLocation({
+        mode: "address",
+        query: "Eiffel Tower, Paris",
+        latitude: "",
+        longitude: "",
+      }),
+    );
+
+    await chooseType(page, "Payment");
+    await page.getByLabel("Pay with").selectOption("bitcoin");
+    await page.getByLabel("Bitcoin address").fill("bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq");
+    await page.getByLabel(/Amount in BTC/).fill("0.0005");
+    expect(await decodeDownload(page, await downloadCode(page))).toBe(
+      "bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq?amount=0.0005",
     );
   });
 

@@ -30,6 +30,23 @@ const SUPABASE_STUB = `
   alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
   alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
   alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+
+  -- Storage: buckets plus objects guarded by row-level security, as in Supabase.
+  create schema storage;
+  create table storage.buckets (
+    id text primary key, name text not null, public boolean default false,
+    file_size_limit bigint, allowed_mime_types text[]
+  );
+  create table storage.objects (
+    id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets (id),
+    name text not null, owner uuid default auth.uid(), created_at timestamptz default now()
+  );
+  alter table storage.objects enable row level security;
+  create function storage.foldername(name text) returns text[] language sql immutable
+    as $$ select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1] $$;
+  grant usage on schema storage to anon, authenticated, service_role;
+  grant all on storage.objects, storage.buckets to anon, authenticated, service_role;
+  grant execute on function storage.foldername(text) to anon, authenticated, service_role;
 `;
 
 let db: PGlite;
@@ -223,7 +240,7 @@ describe("two-factor accounts", () => {
 describe("record_scan and analytics", () => {
   const scan = (slug: string, visitor: string, country: string | null = "US", device = "mobile") =>
     asService<{ destination: string; status: string }>(
-      "select * from public.record_scan($1, $2, $3, 'California', 'Los Angeles', $4, 'iOS', 'Safari')",
+      "select destination, status from public.record_scan($1, $2, $3, 'California', 'Los Angeles', $4, 'iOS', 'Safari')",
       [slug, visitor, country, device],
     );
 
@@ -379,5 +396,130 @@ describe("design templates", () => {
       [CAROL],
     );
     expect(Number(rows[0]?.n)).toBe(0);
+  });
+});
+
+describe("hosted pages", () => {
+  const EVE = "55555555-5555-4555-8555-555555555555";
+  const FRANK = "66666666-6666-4666-8666-666666666666";
+  const asEve = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", EVE, sql, params);
+  const asFrank = <T>(sql: string, params?: unknown[]) =>
+    as<T>("authenticated", FRANK, sql, params);
+  let pageId = "";
+
+  beforeAll(async () => {
+    await db.query(
+      "insert into auth.users (id, email) values ($1, 'eve@example.com'), ($2, 'frank@example.com')",
+      [EVE, FRANK],
+    );
+  });
+
+  it("are dynamic codes without a destination", async () => {
+    const [row] = await asEve<{ id: string }>(
+      `insert into public.qr_codes (name, qr_type, is_dynamic, slug, content)
+       values ('Menu page', 'menu', true, 'EVEMENU', '{"name":"Eve''s Diner"}') returning id`,
+    );
+    pageId = row!.id;
+    await expect(
+      asEve(`insert into public.qr_codes (name, qr_type, content) values ('x', 'links', '{}')`),
+    ).rejects.toThrow(/qr_codes_pages_are_dynamic/);
+    await expect(
+      asEve(
+        `insert into public.qr_codes (name, qr_type, is_dynamic, slug) values ('x', 'url', true, 'NODEST')`,
+      ),
+    ).rejects.toThrow(/qr_codes_dynamic_fields/);
+    // New static types still work without an account-hosted page.
+    await asEve(
+      `insert into public.qr_codes (name, qr_type, content) values ('Pay', 'payment', '{"method":"paypal"}')`,
+    );
+  });
+
+  it("can be read by anyone with the link, without revealing the owner", async () => {
+    const [{ page }] = (await asAnon<{ page: Record<string, unknown> }>(
+      "select public.public_page('evemenu') as page",
+    )) as [{ page: Record<string, unknown> }];
+    expect(page).toMatchObject({
+      slug: "EVEMENU",
+      qr_type: "menu",
+      status: "active",
+      content: { name: "Eve's Diner" },
+    });
+    expect(JSON.stringify(page)).not.toContain(EVE);
+    // Ordinary dynamic links and unknown slugs aren't pages.
+    await asEve(
+      `insert into public.qr_codes (name, qr_type, is_dynamic, slug, destination) values ('L', 'url', true, 'EVELINK', 'https://e.com')`,
+    );
+    const [{ none }] = (await asAnon<{ none: unknown }>(
+      "select public.public_page('EVELINK') as none",
+    )) as [{ none: unknown }];
+    expect(none).toBeNull();
+  });
+
+  it("route through record_scan with their type and content", async () => {
+    const rows = await asService<{
+      destination: string | null;
+      qr_type: string;
+      content: { name: string };
+    }>("select destination, qr_type, content from public.record_scan('EVEMENU', 'v1')");
+    expect(rows).toEqual([
+      { destination: null, qr_type: "menu", content: { name: "Eve's Diner" } },
+    ]);
+  });
+
+  it("collect feedback through the server only, rate limited, visible to the owner only", async () => {
+    await asEve(
+      `insert into public.qr_codes (name, qr_type, is_dynamic, slug, content) values ('FB', 'feedback', true, 'EVEFB', '{}')`,
+    );
+    await expect(
+      asAnon("select public.submit_feedback('EVEFB', 5, 'Great', null, 'v')"),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      asAnon(
+        "insert into public.feedback_responses (code_id, rating, visitor_hash) values ($1, 5, 'v')",
+        [pageId],
+      ),
+    ).rejects.toThrow(/permission denied/);
+
+    const submit = (rating: number, visitor = "visitor-1", slug = "EVEFB") =>
+      asService<{ ok: boolean }>(
+        "select public.submit_feedback($1, $2, 'Lovely', 'eve@x.com', $3) as ok",
+        [slug, rating, visitor],
+      );
+    expect((await submit(5))[0]?.ok).toBe(true);
+    expect((await submit(4))[0]?.ok).toBe(true);
+    expect((await submit(3))[0]?.ok).toBe(true);
+    expect((await submit(2))[0]?.ok).toBe(false); // fourth from the same visitor today
+    expect((await submit(5, "visitor-2"))[0]?.ok).toBe(true);
+    expect((await submit(9, "visitor-3"))[0]?.ok).toBe(false); // out of range
+    expect((await submit(5, "visitor-3", "EVEMENU"))[0]?.ok).toBe(false); // not a feedback page
+
+    const mine = await asEve<{ rating: number }>(
+      "select rating from public.feedback_responses order by id",
+    );
+    expect(mine.map((r) => r.rating)).toEqual([5, 4, 3, 5]);
+    expect(await asFrank("select * from public.feedback_responses")).toEqual([]);
+  });
+
+  it("store media only in the owner's folder", async () => {
+    await asEve(`insert into storage.objects (bucket_id, name) values ('page-media', $1)`, [
+      `${EVE}/menu.pdf`,
+    ]);
+    await expect(
+      asFrank(`insert into storage.objects (bucket_id, name) values ('page-media', $1)`, [
+        `${EVE}/evil.pdf`,
+      ]),
+    ).rejects.toThrow(/row-level security/);
+    await expect(
+      asAnon(`insert into storage.objects (bucket_id, name) values ('page-media', 'x/y.pdf')`),
+    ).rejects.toThrow(/row-level security/);
+    expect(await asFrank("select name from storage.objects")).toEqual([]);
+    expect(await asEve("select name from storage.objects")).toEqual([{ name: `${EVE}/menu.pdf` }]);
+    await asFrank("delete from storage.objects");
+    expect(await asEve("select name from storage.objects")).toHaveLength(1);
+    const [bucket] = await asService<{ public: boolean; file_size_limit: string }>(
+      "select public, file_size_limit from storage.buckets where id = 'page-media'",
+    );
+    expect(bucket).toMatchObject({ public: true });
+    expect(Number(bucket?.file_size_limit)).toBe(52428800);
   });
 });

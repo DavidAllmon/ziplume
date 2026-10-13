@@ -1,5 +1,7 @@
 // Pure helpers that turn code_analytics() output into what the analytics page draws.
 
+import { startOfDayInZone } from "@/lib/time/zone";
+
 export type RangeKey = "7d" | "30d" | "90d" | "12m" | "all";
 
 export const RANGES: readonly { value: RangeKey; label: string; days: number | null }[] = [
@@ -56,40 +58,7 @@ export function dayInZone(date: Date, timeZone: string): string {
   }).format(date);
 }
 
-/** How far a time zone is ahead of UTC at an instant, in milliseconds. */
-function zoneOffset(at: number, timeZone: string): number {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      hourCycle: "h23",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    })
-      .formatToParts(new Date(at))
-      .map((p) => [p.type, Number(p.value)]),
-  ) as Record<string, number>;
-  const wall = Date.UTC(
-    parts.year!,
-    parts.month! - 1,
-    parts.day!,
-    parts.hour! % 24,
-    parts.minute!,
-    parts.second!,
-  );
-  return wall - Math.floor(at / 1000) * 1000;
-}
-
-/** The instant a calendar day (YYYY-MM-DD) starts in a time zone. */
-export function startOfDayInZone(day: string, timeZone: string): Date {
-  const utcMidnight = Date.parse(`${day}T00:00:00Z`);
-  const guess = utcMidnight - zoneOffset(utcMidnight, timeZone);
-  // A second pass corrects days where the offset changes (daylight saving).
-  return new Date(utcMidnight - zoneOffset(guess, timeZone));
-}
+export { startOfDayInZone } from "@/lib/time/zone";
 
 /**
  * [from, to) for a range: whole calendar days in the viewer's time zone, ending today, and

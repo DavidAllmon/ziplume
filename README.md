@@ -40,7 +40,8 @@
 
 ## Features
 
-- **Seven QR types:** links, plain text, Wi-Fi (including hidden networks), contact cards (vCard), email, phone and SMS. Every type has labelled fields and friendly validation.
+- **Ten code types, no account needed:** links, plain text, Wi-Fi (including hidden networks), contact cards (vCard), email, phone, SMS, WhatsApp, map locations and payments (PayPal, Venmo, Cash App, Bitcoin, Ethereum). Every type has labelled fields and friendly validation.
+- **Twelve hosted pages (free account):** a link list with social profiles, a contact page with "Save contact", a business page with hours, a restaurant menu, a coupon with a copyable code, an event with "Add to calendar", a feedback form with star ratings, a PDF, an image gallery, a video (YouTube, Vimeo or upload), audio, and an app page that sends phones to the right store. Pages are mobile-first, editable after printing, and previewed live as you type.
 - **Live preview everywhere:** a sticky preview on tablet and desktop, and an always-visible thumbnail bar with a Download button on phones.
 - **Scan check:** contrast, inverted colors, logo coverage and data density are checked as you edit. The rendered code is then decoded with a real QR reader, so "Verified scannable" means exactly that.
 - **Make it yours:** scan-safe color presets, linear and radial gradients, separate corner colors, transparent backgrounds, six pattern styles, five corner styles and five corner centers, frames with a "Scan me" call to action, and your own logo or one of 24 built-in icons. Adding a logo raises error correction to High automatically.

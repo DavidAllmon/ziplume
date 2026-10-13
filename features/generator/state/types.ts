@@ -1,4 +1,6 @@
+import type { PageContentMap } from "@/lib/pages/types";
 import type {
+  CodeTypeId,
   ContentValues,
   CornerDotStyle,
   CornerStyle,
@@ -7,6 +9,7 @@ import type {
   ExportFormat,
   FrameStyle,
   GradientType,
+  PageTypeId,
   QrTypeId,
 } from "@/lib/qr/types";
 
@@ -49,8 +52,10 @@ export interface ExportSettings {
 }
 
 export interface GeneratorState {
-  activeType: QrTypeId;
+  activeType: CodeTypeId;
   content: ContentValues;
+  /** Hosted page drafts, one per page type. */
+  pages: PageContentMap;
   design: DesignState;
   exportSettings: ExportSettings;
   /** Error correction the user had before a logo forced it to High; restored on removal. */
@@ -58,7 +63,8 @@ export interface GeneratorState {
 }
 
 export type GeneratorAction =
-  | { type: "setActiveType"; activeType: QrTypeId }
+  | { type: "setActiveType"; activeType: CodeTypeId }
+  | { type: "setPage"; pageType: PageTypeId; content: PageContentMap[PageTypeId] }
   | {
       type: "setField";
       qrType: QrTypeId;
@@ -75,11 +81,11 @@ export type GeneratorAction =
   | { type: "resetDesign" }
   | { type: "hydrate"; saved: PersistedSettings }
   /** Load a saved code (from the dashboard) into the generator for editing. */
-  | { type: "loadCode"; qrType: QrTypeId; content: unknown; design: unknown };
+  | { type: "loadCode"; qrType: CodeTypeId; content: unknown; design: unknown };
 
 export interface PersistedSettings {
   version: 1;
-  activeType: QrTypeId;
+  activeType: CodeTypeId;
   design: DesignState;
   exportSettings: ExportSettings;
 }

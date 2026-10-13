@@ -3,7 +3,7 @@
 import { generateSlug, isValidSlug } from "@/lib/dynamic/slug";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import type { DesignState } from "@/features/generator/state/types";
-import type { QrTypeId } from "@/lib/qr/types";
+import type { CodeTypeId } from "@/lib/qr/types";
 import type { Database, Json, QrCodeRow, QrStatus } from "@/types/supabase";
 
 /** Stay under the database's 256 KB design limit; very large logos are left out. */
@@ -24,11 +24,14 @@ export function designForStorage(design: DesignState): { design: Json; droppedLo
 
 export interface NewCode {
   name: string;
-  qrType: QrTypeId;
+  qrType: CodeTypeId;
   content: unknown;
   design: DesignState;
-  /** For dynamic codes: the destination URL and an optional chosen ending. */
-  dynamic?: { destination: string; slug?: string };
+  /**
+   * For dynamic codes: the destination URL (null for hosted pages, whose content is the page)
+   * and an optional chosen ending.
+   */
+  dynamic?: { destination: string | null; slug?: string };
 }
 
 export async function createCode(input: NewCode): Promise<Result<QrCodeRow>> {
@@ -48,7 +51,9 @@ export async function createCode(input: NewCode): Promise<Result<QrCodeRow>> {
       .insert({
         name: input.name.slice(0, 120),
         qr_type: input.qrType,
-        content: (input.dynamic ? { url: input.dynamic.destination } : input.content) as Json,
+        content: (input.dynamic?.destination
+          ? { url: input.dynamic.destination }
+          : input.content) as Json,
         design,
         is_dynamic: Boolean(input.dynamic),
         slug,
@@ -116,9 +121,9 @@ export async function deleteCode(id: string): Promise<Result<null>> {
 export async function duplicateCode(code: QrCodeRow): Promise<Result<QrCodeRow>> {
   return createCode({
     name: `Copy of ${code.name}`.slice(0, 120),
-    qrType: code.qr_type as QrTypeId,
+    qrType: code.qr_type as CodeTypeId,
     content: code.content,
     design: code.design as unknown as DesignState,
-    dynamic: code.is_dynamic && code.destination ? { destination: code.destination } : undefined,
+    dynamic: code.is_dynamic ? { destination: code.destination } : undefined,
   });
 }

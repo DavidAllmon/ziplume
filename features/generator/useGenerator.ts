@@ -12,14 +12,22 @@ import { buildFilename } from "@/lib/qr/filename";
 import {
   encodeContent,
   filenameLabelFor,
-  QR_TYPES,
   summarizeContent,
   validateContent,
 } from "@/lib/qr/qr-types";
 import type { RenderOptions } from "@/lib/qr/renderer";
 import { gradientSamples } from "@/lib/color/contrast";
 import { checkScannability, withVerification } from "@/lib/qr/scannability";
-import { QR_TYPE_IDS, type QrTypeId } from "@/lib/qr/types";
+import { codeTypeInfo } from "@/lib/qr/code-types";
+import type { PageContentMap } from "@/lib/pages/types";
+import { pageSummary, validatePage } from "@/lib/pages/validate";
+import {
+  isPageType,
+  isStaticType,
+  type CodeTypeId,
+  type PageTypeId,
+  type QrTypeId,
+} from "@/lib/qr/types";
 
 import { useScanVerification } from "./preview/useScanVerification";
 import { initialState } from "./state/defaults";
@@ -47,8 +55,7 @@ function moduleColors(design: DesignState): string[] {
   return colors;
 }
 
-const isQrType = (value: string): value is QrTypeId =>
-  (QR_TYPE_IDS as readonly string[]).includes(value);
+const isCodeType = (value: string): value is CodeTypeId => isStaticType(value) || isPageType(value);
 
 export function useGenerator() {
   const [state, dispatch] = useReducer(generatorReducer, undefined, initialState);
@@ -82,11 +89,12 @@ export function useGenerator() {
       .eq("id", id)
       .maybeSingle()
       .then(({ data: code }) => {
-        if (!code || !isQrType(code.qr_type)) return;
+        if (!code || !isCodeType(code.qr_type)) return;
+        const linkCode = code.is_dynamic && code.qr_type === "url";
         dispatch({
           type: "loadCode",
           qrType: code.qr_type,
-          content: code.is_dynamic ? { url: code.destination ?? "" } : code.content,
+          content: linkCode ? { url: code.destination ?? "" } : code.content,
           design: code.design,
         });
         setSaved({ id: code.id, name: code.name, isDynamic: code.is_dynamic, slug: code.slug });
@@ -94,19 +102,30 @@ export function useGenerator() {
   }, []);
 
   const { activeType, design, exportSettings } = state;
-  const values = state.content[activeType];
+  const pageType = isPageType(activeType) ? activeType : null;
+  const staticType = isPageType(activeType) ? null : activeType;
+  const values = staticType ? state.content[staticType] : null;
+  const page = pageType ? state.pages[pageType] : null;
 
-  const isDynamic = saved ? saved.isDynamic : wantsDynamic && activeType === "url";
-  const destination = isDynamic ? normalizeUrl(state.content.url.url) : "";
+  // Hosted pages are always dynamic; Link codes are when the user switches it on.
+  const isDynamic = saved
+    ? saved.isDynamic
+    : pageType !== null || (wantsDynamic && activeType === "url");
+  const destination = isDynamic && activeType === "url" ? normalizeUrl(state.content.url.url) : "";
   // A new dynamic code previews a placeholder ending; downloads wait until it's saved.
   const slug = saved?.slug ?? "PREVIEW";
 
-  const errors = useMemo(() => validateContent(activeType, values), [activeType, values]);
+  const errors: Record<string, string> = useMemo(() => {
+    if (pageType && page) return validatePage(pageType, page);
+    if (staticType && values) return validateContent(staticType, values) as Record<string, string>;
+    return {};
+  }, [pageType, page, staticType, values]);
   const isValid = Object.keys(errors).length === 0;
   const data = useMemo(() => {
+    if (pageType) return isValid ? dynamicPayload(slug) : "";
     if (isDynamic) return destination && isValid ? dynamicPayload(slug) : "";
-    return encodeContent(activeType, values);
-  }, [isDynamic, destination, isValid, slug, activeType, values]);
+    return staticType && values ? encodeContent(staticType, values) : "";
+  }, [pageType, isDynamic, destination, isValid, slug, staticType, values]);
 
   const measurement = useMemo(
     () => measure(data, design.errorCorrection),
@@ -140,21 +159,36 @@ export function useGenerator() {
     [heuristics, verification],
   );
 
-  const summary = data ? summarizeContent(activeType, values) : "";
-  const defaultName = summary || QR_TYPES[activeType].label;
+  const info = codeTypeInfo(activeType);
+  const summary =
+    pageType && page
+      ? pageSummary(pageType, page)
+      : data && staticType && values
+        ? summarizeContent(staticType, values)
+        : "";
+  const defaultName = summary || info.label;
   const extension = exportSettings.format === "jpeg" ? "jpg" : exportSettings.format;
-  const filename = buildFilename(activeType, filenameLabelFor(activeType, values), extension);
+  const filename = buildFilename(
+    activeType,
+    staticType && values ? filenameLabelFor(staticType, values) : summary,
+    extension,
+  );
 
   /** Why the code can't be exported yet, or null when it's ready. */
-  const blocker = !data
-    ? QR_TYPES[activeType].emptyHint
-    : !isValid
-      ? (Object.values(errors)[0] as string)
-      : !measurement.fits
-        ? "Too much content for a QR code"
-        : isDynamic && !saved
-          ? "Save this dynamic code first so its short link works."
-          : null;
+  const blocker =
+    pageType && !isValid
+      ? (Object.values(errors)[0] ?? info.emptyHint)
+      : !data
+        ? info.emptyHint
+        : !isValid
+          ? (Object.values(errors)[0] as string)
+          : !measurement.fits
+            ? "Too much content for a QR code"
+            : isDynamic && !saved
+              ? pageType
+                ? "Save this page first so its QR code works."
+                : "Save this dynamic code first so its short link works."
+              : null;
 
   /** Saves a new code to the account, or updates the one being edited. */
   const save = useCallback(
@@ -166,9 +200,11 @@ export function useGenerator() {
         const result = await updateCode(saved.id, {
           name: label,
           design,
-          ...(saved.isDynamic
-            ? { destination, content: { url: destination } }
-            : { content: values }),
+          ...(pageType
+            ? { content: page }
+            : saved.isDynamic
+              ? { destination, content: { url: destination } }
+              : { content: values }),
         });
         if (!result.ok) return { ok: false, message: result.error };
         setSaved({ ...saved, name: result.value.name });
@@ -177,9 +213,9 @@ export function useGenerator() {
       const result = await createCode({
         name: label,
         qrType: activeType,
-        content: values,
+        content: pageType ? page : values,
         design,
-        dynamic: isDynamic ? { destination } : undefined,
+        dynamic: pageType ? { destination: null } : isDynamic ? { destination } : undefined,
       });
       if (!result.ok) return { ok: false, message: result.error };
       const code = result.value;
@@ -187,7 +223,7 @@ export function useGenerator() {
       window.history.replaceState(null, "", `/?edit=${code.id}`);
       return { ok: true, message: `Saved “${code.name}” to your codes.${note}` };
     },
-    [saved, design, destination, values, activeType, isDynamic, defaultName],
+    [saved, design, destination, values, page, pageType, activeType, isDynamic, defaultName],
   );
 
   /** Leaves edit mode and starts a fresh, unsaved code with the current design. */
@@ -203,10 +239,20 @@ export function useGenerator() {
     [],
   );
 
+  const setPage = useCallback(
+    (type: PageTypeId, content: PageContentMap[PageTypeId]) =>
+      dispatch({ type: "setPage", pageType: type, content }),
+    [],
+  );
+
   return {
     state,
     dispatch,
     setField,
+    setPage,
+    pageType,
+    pageErrors: pageType ? errors : {},
+    info,
     data,
     measurement,
     report,

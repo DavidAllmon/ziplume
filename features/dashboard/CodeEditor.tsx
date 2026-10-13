@@ -23,13 +23,16 @@ import { readUtm, withUtm, type UtmParams } from "@/lib/dynamic/utm";
 import { shortLink, shortLinkLabel } from "@/lib/env";
 import { normalizeUrl } from "@/lib/qr/normalize";
 import { isValidUrl } from "@/lib/qr/validators";
+import { isPageType } from "@/lib/qr/types";
 import type { QrCodeRow } from "@/types/supabase";
 
 import { codeRenderOptions, codeSummary, codeType, codeTypeLabel } from "./codeRender";
 import { CopyButton } from "./CopyButton";
+import { FeedbackResponses } from "./FeedbackResponses";
 import { formatCount, relativeTime } from "./format";
 
 export function CodeEditor({ code: initial }: { code: QrCodeRow }) {
+  const isPage = isPageType(initial.qr_type);
   const router = useRouter();
   const toast = useToast();
   const [code, setCode] = useState(initial);
@@ -103,6 +106,37 @@ export function CodeEditor({ code: initial }: { code: QrCodeRow }) {
     router.refresh();
   }
 
+  const slugSection = code.slug ? (
+    <Section title="Link ending" summary={code.slug}>
+      <form onSubmit={saveSlug} className="flex flex-col gap-3">
+        <Field
+          label="Custom ending"
+          hint="3–40 letters, numbers or dashes. Changing it breaks codes you've already printed."
+          error={slug && !isValidSlug(slug) ? "Use 3–40 letters, numbers or dashes." : undefined}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              autoCapitalize="characters"
+              spellCheck={false}
+              value={slug}
+              onChange={(e) => setSlug(e.target.value.trim())}
+            />
+          )}
+        </Field>
+        <div>
+          <Button
+            type="submit"
+            variant="outline"
+            disabled={saving !== null || !isValidSlug(slug) || slug === code.slug}
+          >
+            {saving === "slug" ? "Saving…" : "Change ending"}
+          </Button>
+        </div>
+      </form>
+    </Section>
+  ) : null;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
@@ -118,7 +152,8 @@ export function CodeEditor({ code: initial }: { code: QrCodeRow }) {
               {code.name}
             </h1>
             <p className="mt-1 text-sm text-fg-muted">
-              {codeTypeLabel(code)} · {code.is_dynamic ? "Dynamic" : "Static"} · Updated{" "}
+              {codeTypeLabel(code)} ·{" "}
+              {isPage ? "Hosted page" : code.is_dynamic ? "Dynamic" : "Static"} · Updated{" "}
               {relativeTime(code.updated_at)}
             </p>
           </div>
@@ -126,13 +161,16 @@ export function CodeEditor({ code: initial }: { code: QrCodeRow }) {
             {code.is_dynamic && (
               <Link
                 href={`/dashboard/codes/${code.id}/analytics`}
-                className={buttonClasses("primary", "md")}
+                className={buttonClasses(isPage ? "outline" : "primary", "md")}
               >
                 <BarChart3 aria-hidden /> Analytics
               </Link>
             )}
-            <Link href={`/?edit=${code.id}`} className={buttonClasses("outline", "md")}>
-              <Palette aria-hidden /> Edit design
+            <Link
+              href={`/?edit=${code.id}`}
+              className={buttonClasses(isPage ? "primary" : "outline", "md")}
+            >
+              <Palette aria-hidden /> {isPage ? "Edit page & design" : "Edit design"}
             </Link>
           </div>
         </div>
@@ -140,7 +178,50 @@ export function CodeEditor({ code: initial }: { code: QrCodeRow }) {
 
       <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_20rem] lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-6">
-          {code.is_dynamic && code.slug && (
+          {isPage && code.slug && (
+            <Card>
+              <CardHeader
+                title="Hosted page"
+                description="Edit the page any time. Printed codes always open the latest version."
+              />
+              <div className="flex flex-col gap-5 px-5 pt-4 pb-6 sm:px-6">
+                <div className="flex flex-wrap items-center gap-2 rounded-control bg-surface-2 px-3.5 py-2.5 text-sm">
+                  <span className="text-fg-muted">Short link</span>
+                  <span className="font-mono text-fg">{shortLinkLabel(code.slug)}</span>
+                  <CopyButton text={shortLink(code.slug)} />
+                  <a
+                    href={`/p/${code.slug}`}
+                    target="_blank"
+                    rel="noopener"
+                    className="ml-auto inline-flex items-center gap-1 font-medium text-link"
+                  >
+                    View page <ExternalLink aria-hidden className="size-3.5" />
+                  </a>
+                </div>
+                <Toggle
+                  label="Active"
+                  description={
+                    code.status === "active"
+                      ? "Scans open the page."
+                      : "Paused: scanners see a “paused” notice and scans aren't counted."
+                  }
+                  checked={code.status === "active"}
+                  onChange={(active) =>
+                    void save(
+                      "status",
+                      { status: active ? "active" : "paused" },
+                      active ? "The page is live again" : "Paused",
+                    )
+                  }
+                />
+              </div>
+              {slugSection}
+            </Card>
+          )}
+
+          {code.qr_type === "feedback" && <FeedbackResponses codeId={code.id} />}
+
+          {code.is_dynamic && !isPage && code.slug && (
             <Card>
               <CardHeader
                 title="Where it points"
@@ -238,38 +319,7 @@ export function CodeEditor({ code: initial }: { code: QrCodeRow }) {
                   </Button>
                 </div>
               </Section>
-              <Section title="Link ending" summary={code.slug}>
-                <form onSubmit={saveSlug} className="flex flex-col gap-3">
-                  <Field
-                    label="Custom ending"
-                    hint="3–40 letters, numbers or dashes. Changing it breaks codes you've already printed."
-                    error={
-                      slug && !isValidSlug(slug)
-                        ? "Use 3–40 letters, numbers or dashes."
-                        : undefined
-                    }
-                  >
-                    {(control) => (
-                      <TextInput
-                        {...control}
-                        autoCapitalize="characters"
-                        spellCheck={false}
-                        value={slug}
-                        onChange={(e) => setSlug(e.target.value.trim())}
-                      />
-                    )}
-                  </Field>
-                  <div>
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      disabled={saving !== null || !isValidSlug(slug) || slug === code.slug}
-                    >
-                      {saving === "slug" ? "Saving…" : "Change ending"}
-                    </Button>
-                  </div>
-                </form>
-              </Section>
+              {slugSection}
             </Card>
           )}
 

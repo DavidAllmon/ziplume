@@ -1,5 +1,6 @@
+import { PAGE_DEFAULTS, type PageContentMap } from "@/lib/pages/types";
 import { QR_TYPES } from "@/lib/qr/qr-types";
-import type { ContentValues } from "@/lib/qr/types";
+import { PAGE_TYPE_IDS, QR_TYPE_IDS, type ContentValues } from "@/lib/qr/types";
 
 import type { DesignState, ExportSettings, GeneratorState } from "./types";
 
@@ -68,21 +69,29 @@ export const COLOR_PRESETS = [
 ] as const;
 
 export function defaultContent(): ContentValues {
-  return {
-    url: { ...QR_TYPES.url.defaults },
-    text: { ...QR_TYPES.text.defaults },
-    wifi: { ...QR_TYPES.wifi.defaults },
-    contact: { ...QR_TYPES.contact.defaults },
-    email: { ...QR_TYPES.email.defaults },
-    phone: { ...QR_TYPES.phone.defaults },
-    sms: { ...QR_TYPES.sms.defaults },
-  };
+  return Object.fromEntries(
+    QR_TYPE_IDS.map((id) => [id, { ...QR_TYPES[id].defaults }]),
+  ) as unknown as ContentValues;
+}
+
+export function defaultPages(): PageContentMap {
+  const pages = Object.fromEntries(
+    PAGE_TYPE_IDS.map((id) => [id, PAGE_DEFAULTS[id]()]),
+  ) as unknown as PageContentMap;
+  // Events default to the creator's own time zone (the browser's; UTC while prerendering).
+  try {
+    pages.event.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    pages.event.timeZone = "UTC";
+  }
+  return pages;
 }
 
 export function initialState(): GeneratorState {
   return {
     activeType: "url",
     content: defaultContent(),
+    pages: defaultPages(),
     design: { ...DEFAULT_DESIGN },
     exportSettings: { ...DEFAULT_EXPORT },
     ecBeforeLogo: null,

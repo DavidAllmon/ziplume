@@ -66,6 +66,20 @@ export interface Database {
         Update: { name?: string; design?: Json };
         Relationships: [];
       };
+      feedback_responses: {
+        Row: {
+          id: number;
+          code_id: string;
+          created_at: string;
+          rating: number;
+          comment: string | null;
+          contact: string | null;
+          visitor_hash: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       scan_events: {
         Row: {
           id: number;
@@ -98,7 +112,21 @@ export interface Database {
           p_browser?: string | null;
           p_record?: boolean;
         };
-        Returns: { destination: string; status: QrStatus }[];
+        Returns: { destination: string | null; status: QrStatus; qr_type: string; content: Json }[];
+      };
+      public_page: {
+        Args: { p_slug: string };
+        Returns: Json;
+      };
+      submit_feedback: {
+        Args: {
+          p_slug: string;
+          p_rating: number;
+          p_comment: string | null;
+          p_contact: string | null;
+          p_visitor_hash: string;
+        };
+        Returns: boolean;
       };
       code_analytics: {
         Args: { p_code: string; p_from: string; p_to: string; p_tz?: string };
@@ -112,3 +140,4 @@ export interface Database {
 
 export type QrCodeRow = Database["public"]["Tables"]["qr_codes"]["Row"];
 export type DesignTemplateRow = Database["public"]["Tables"]["design_templates"]["Row"];
+export type FeedbackRow = Database["public"]["Tables"]["feedback_responses"]["Row"];

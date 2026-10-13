@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { scanContext } from "@/lib/dynamic/scan-context";
+import { scanTarget } from "@/lib/dynamic/target";
+import { SITE_URL } from "@/lib/env";
 import { isValidSlug } from "@/lib/dynamic/slug";
 import { statusPage } from "@/lib/dynamic/status-page";
 import { getAdminSupabase } from "@/lib/supabase/admin";
@@ -61,7 +63,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     );
   }
 
-  const response = NextResponse.redirect(code.destination, 302);
+  const target = scanTarget(code, slug, scan.os, SITE_URL);
+  if (!target) return NOT_FOUND();
+  const response = NextResponse.redirect(target, 302);
   response.headers.set("cache-control", "no-store");
   return response;
 }
