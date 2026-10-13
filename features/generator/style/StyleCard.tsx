@@ -1,6 +1,14 @@
 "use client";
 
-import { Image as ImageIcon, Palette, RotateCcw, ScanLine, Shapes } from "lucide-react";
+import {
+  Frame,
+  Image as ImageIcon,
+  LayoutTemplate,
+  Palette,
+  RotateCcw,
+  ScanLine,
+  Shapes,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -9,8 +17,11 @@ import { Section } from "@/components/ui/Section";
 import type { DesignState, GeneratorAction } from "../state/types";
 import { ColorsSection } from "./ColorsSection";
 import { EC_LEVELS, ErrorCorrectionSection } from "./ErrorCorrectionSection";
+import { FRAME_STYLES, FrameSection } from "./FrameSection";
 import { LogoSection } from "./LogoSection";
 import { DOT_STYLES, ShapeSection } from "./ShapeSection";
+import { TemplatesSection } from "./TemplatesSection";
+import { LOGO_ICONS } from "@/lib/qr/logo-icons";
 
 interface StyleCardProps {
   design: DesignState;
@@ -26,7 +37,12 @@ function Swatches({ design }: { design: DesignState }) {
       <span
         aria-hidden
         className="size-5 rounded-full border border-field-border"
-        style={{ background: design.fgColor }}
+        style={{
+          background:
+            design.gradientType === "none"
+              ? design.fgColor
+              : `linear-gradient(135deg, ${design.fgColor}, ${design.gradientColor})`,
+        }}
       />
       <span
         aria-hidden
@@ -44,7 +60,7 @@ export function StyleCard({ design, dispatch }: StyleCardProps) {
         id="style-heading"
         step={2}
         title="Make it yours"
-        description="Colors, shapes and a logo. Everything updates live."
+        description="Colors, shapes, a frame and a logo. Everything updates live."
         action={
           <Button variant="ghost" size="sm" onClick={() => dispatch({ type: "resetDesign" })}>
             <RotateCcw aria-hidden />
@@ -53,6 +69,9 @@ export function StyleCard({ design, dispatch }: StyleCardProps) {
         }
       />
       <div className="mt-4">
+        <Section title="Styles" icon={<LayoutTemplate />} summary="Quick styles & templates">
+          <TemplatesSection design={design} dispatch={dispatch} />
+        </Section>
         <Section
           title="Colors"
           icon={<Palette />}
@@ -68,7 +87,24 @@ export function StyleCard({ design, dispatch }: StyleCardProps) {
         >
           <ShapeSection design={design} dispatch={dispatch} />
         </Section>
-        <Section title="Logo" icon={<ImageIcon />} summary={design.logo ? "Added" : "None"}>
+        <Section
+          title="Frame"
+          icon={<Frame />}
+          summary={FRAME_STYLES.find((f) => f.value === design.frame)?.label}
+        >
+          <FrameSection design={design} dispatch={dispatch} />
+        </Section>
+        <Section
+          title="Logo"
+          icon={<ImageIcon />}
+          summary={
+            design.logo
+              ? "Your image"
+              : design.logoIcon
+                ? `${LOGO_ICONS.find((i) => i.id === design.logoIcon)?.label} icon`
+                : "None"
+          }
+        >
           <LogoSection design={design} dispatch={dispatch} />
         </Section>
         <Section

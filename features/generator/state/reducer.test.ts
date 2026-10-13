@@ -65,3 +65,57 @@ describe("hydrate", () => {
     expect(state.exportSettings).toEqual({ format: "svg", size: 4096 });
   });
 });
+
+describe("logo icons and templates", () => {
+  it("preset icons raise error correction like uploads, and replace an upload", () => {
+    let state = reduce(initialState(), {
+      type: "setLogo",
+      logo: "data:image/png;base64,AAA",
+    });
+    state = reduce(state, { type: "setLogoIcon", icon: "wifi" });
+    expect(state.design.logo).toBeNull();
+    expect(state.design.logoIcon).toBe("wifi");
+    expect(state.design.errorCorrection).toBe("H");
+    state = reduce(state, { type: "setLogoIcon", icon: null });
+    expect(state.design.errorCorrection).toBe("M");
+  });
+
+  it("applying a template keeps the user's logo and its error correction", () => {
+    let state = reduce(initialState(), {
+      type: "setLogo",
+      logo: "data:image/png;base64,AAA",
+    });
+    state = reduce(state, {
+      type: "applyDesign",
+      design: { fgColor: "#831843", frame: "badge", errorCorrection: "M", logo: null },
+    });
+    expect(state.design).toMatchObject({
+      fgColor: "#831843",
+      frame: "badge",
+      logo: "data:image/png;base64,AAA",
+      errorCorrection: "H",
+    });
+    state = reduce(state, { type: "setLogo", logo: null });
+    expect(state.design.errorCorrection).toBe("M");
+  });
+
+  it("templates are sanitized", () => {
+    const state = reduce(initialState(), {
+      type: "applyDesign",
+      design: {
+        dotStyle: "hearts",
+        frame: "neon",
+        gradientType: "conic",
+        frameText: "a\nb",
+        logoIcon: "nope",
+      },
+    });
+    expect(state.design).toMatchObject({
+      dotStyle: "rounded",
+      frame: "none",
+      gradientType: "none",
+      frameText: "a b",
+      logoIcon: null,
+    });
+  });
+});

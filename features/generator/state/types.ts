@@ -1,26 +1,46 @@
 import type {
   ContentValues,
+  CornerDotStyle,
   CornerStyle,
   DotStyle,
   ErrorCorrection,
   ExportFormat,
+  FrameStyle,
+  GradientType,
   QrTypeId,
 } from "@/lib/qr/types";
 
-export type { CornerStyle, DotStyle, ExportFormat };
+export type { CornerDotStyle, CornerStyle, DotStyle, ExportFormat, FrameStyle, GradientType };
 
 export interface DesignState {
   fgColor: string;
   bgColor: string;
   transparent: boolean;
+  /** Blend the code color into gradientColor; "none" keeps a solid color. */
+  gradientType: GradientType;
+  gradientColor: string;
+  /** Direction of a linear gradient in degrees (0 = left to right). */
+  gradientAngle: number;
+  /** Color of the three corner frames; null uses the code color. */
+  cornerColor: string | null;
+  /** Color of the corner centers; null uses the corner color. */
+  cornerDotColor: string | null;
   dotStyle: DotStyle;
   cornerStyle: CornerStyle;
+  cornerDotStyle: CornerDotStyle;
   errorCorrection: ErrorCorrection;
+  /** An uploaded logo as a data URL. */
   logo: string | null;
+  /** A built-in icon used as the logo instead of an upload (drawn in the code color). */
+  logoIcon: string | null;
   /** Logo width as a fraction of the code width. */
   logoSize: number;
   /** Clear the modules behind the logo so it sits on a clean background. */
   logoClearSpace: boolean;
+  /** A frame around the code with a call to action such as "Scan me". */
+  frame: FrameStyle;
+  frameText: string;
+  frameColor: string;
 }
 
 export interface ExportSettings {
@@ -45,8 +65,11 @@ export type GeneratorAction =
       field: string;
       value: string | boolean;
     }
-  | { type: "setDesign"; patch: Partial<Omit<DesignState, "logo">> }
+  | { type: "setDesign"; patch: Partial<Omit<DesignState, "logo" | "logoIcon">> }
   | { type: "setLogo"; logo: string | null }
+  | { type: "setLogoIcon"; icon: string | null }
+  /** Replace the whole design (a template), keeping error correction high enough for its logo. */
+  | { type: "applyDesign"; design: unknown }
   | { type: "swapColors" }
   | { type: "setExport"; patch: Partial<ExportSettings> }
   | { type: "resetDesign" }

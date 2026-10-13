@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { cn } from "@/lib/cn";
 import type { RenderOptions } from "@/lib/qr/renderer";
-import type { ExportFormat } from "@/lib/qr/types";
+import { frameLayout } from "@/lib/qr/frame";
+import { VECTOR_FORMATS, type ExportFormat } from "@/lib/qr/types";
 
 import { EXPORT_SIZES } from "../state/defaults";
 import type { ExportSettings, GeneratorAction } from "../state/types";
@@ -15,6 +16,8 @@ import { useExport } from "./useExport";
 const FORMATS = [
   { value: "png", label: "PNG" },
   { value: "svg", label: "SVG" },
+  { value: "pdf", label: "PDF" },
+  { value: "eps", label: "EPS" },
   { value: "jpeg", label: "JPG" },
   { value: "webp", label: "WebP" },
 ] as const satisfies readonly { value: ExportFormat; label: string }[];
@@ -27,7 +30,9 @@ const SIZE_OPTIONS = EXPORT_SIZES.map((size) => ({
 
 const FORMAT_HINT: Record<ExportFormat, string> = {
   png: "Works everywhere. Supports transparency.",
-  svg: "Vector file that stays sharp at any size. Best for print.",
+  svg: "Vector file that stays sharp at any size. Great for the web and design tools.",
+  pdf: "Vector PDF for print shops and documents.",
+  eps: "Vector EPS for Illustrator, InDesign and professional printers.",
   jpeg: "Small file, no transparency.",
   webp: "Smallest file for websites.",
 };
@@ -48,6 +53,8 @@ export function ExportPanel({ options, settings, filename, blocker, dispatch }: 
   });
   const disabled = blocker !== null || busy !== null;
   const sizeLabel = EXPORT_SIZES.find((s) => s.value === settings.size);
+  const vector = VECTOR_FORMATS.includes(settings.format);
+  const height = Math.round(frameLayout(options.frame, settings.size).height);
 
   return (
     <div className="flex flex-col gap-4">
@@ -64,14 +71,15 @@ export function ExportPanel({ options, settings, filename, blocker, dispatch }: 
         <p className="text-sm text-fg-muted">{FORMAT_HINT[settings.format]}</p>
       </div>
 
-      <div className={cn("flex flex-col gap-1.5", settings.format === "svg" && "opacity-60")}>
+      <div className={cn("flex flex-col gap-1.5", vector && "opacity-60")}>
         <div className="flex items-baseline justify-between">
           <span aria-hidden className="text-sm font-medium text-fg">
             Size
           </span>
           <span className="text-sm text-fg-muted tabular-nums">
-            {settings.size} × {settings.size} px
-            {sizeLabel && ` · ${sizeLabel.hint}`}
+            {vector
+              ? "Vector: sharp at any size"
+              : `${settings.size} × ${height} px${sizeLabel ? ` · ${sizeLabel.hint}` : ""}`}
           </span>
         </div>
         <SegmentedControl

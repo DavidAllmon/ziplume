@@ -3,11 +3,15 @@
 import { Radio, RadioGroup } from "@headlessui/react";
 import type { ReactNode } from "react";
 
+import { cn } from "@/lib/cn";
+
 interface OptionTilesProps<T extends string> {
   label: string;
   value: T;
   onChange: (value: T) => void;
   options: readonly { value: T; label: string; icon: ReactNode }[];
+  /** Grid columns; defaults to four. */
+  className?: string;
 }
 
 /** A row of large, visual radio buttons. */
@@ -16,6 +20,7 @@ export function OptionTiles<T extends string>({
   value,
   onChange,
   options,
+  className,
 }: OptionTilesProps<T>) {
   return (
     <div className="flex flex-col gap-2">
@@ -24,7 +29,7 @@ export function OptionTiles<T extends string>({
         value={value}
         onChange={onChange}
         aria-label={label}
-        className="grid grid-cols-4 gap-2"
+        className={cn("grid grid-cols-4 gap-2", className)}
       >
         {options.map((option) => (
           <Radio

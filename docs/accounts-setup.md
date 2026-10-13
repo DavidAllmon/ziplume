@@ -33,11 +33,17 @@ environment's secrets.
 
 ## 2. Create the database schema
 
-Open the project's child Studio → **SQL Editor**, paste the contents of
-`supabase/migrations/20261013120000_quickqreate_core.sql` and run it once.
-It creates `profiles`, `qr_codes`, `scan_events`, row-level security (including a rule that
-locks accounts with two-factor authentication to two-factor sessions), the scan recorder and
-the analytics function. It is safe to read before running: it only touches the `public`
+Open the project's child Studio → **SQL Editor** and run each file in `supabase/migrations/`
+once, in filename order (oldest first). When new files appear in later updates, run only
+those. Today that is:
+
+1. `20261013120000_quickqreate_core.sql`
+2. `20261014120000_design_templates.sql` (saved design templates)
+
+The first file
+creates `profiles`, `qr_codes`, `scan_events`, row-level security (including a rule
+that locks accounts with two-factor authentication to two-factor sessions), the scan recorder
+and the analytics function. It is safe to read before running: it only touches the `public`
 schema and adds one trigger on `auth.users` to create profiles.
 
 ## 3. Brevo (owner, in the browser)

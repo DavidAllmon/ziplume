@@ -7,13 +7,33 @@ export const DEFAULT_DESIGN: DesignState = {
   fgColor: "#0F172A",
   bgColor: "#FFFFFF",
   transparent: false,
+  gradientType: "none",
+  gradientColor: "#4F46E5",
+  gradientAngle: 45,
+  cornerColor: null,
+  cornerDotColor: null,
   dotStyle: "rounded",
   cornerStyle: "rounded",
+  cornerDotStyle: "auto",
   errorCorrection: "M",
   logo: null,
+  logoIcon: null,
   logoSize: 0.22,
   logoClearSpace: true,
+  frame: "none",
+  frameText: "SCAN ME",
+  frameColor: "#0F172A",
 };
+
+export const MAX_FRAME_TEXT = 28;
+export const FRAME_TEXT_SUGGESTIONS = [
+  "SCAN ME",
+  "Scan for the menu",
+  "Join our Wi-Fi",
+  "Scan to pay",
+  "Save my contact",
+  "Leave a review",
+] as const;
 
 export const DEFAULT_EXPORT: ExportSettings = { format: "png", size: 1024 };
 
@@ -28,6 +48,15 @@ export const MIN_EXPORT_SIZE = 256;
 export const MAX_EXPORT_SIZE = 4096;
 export const MIN_LOGO_SIZE = 0.1;
 export const MAX_LOGO_SIZE = 0.3;
+
+/** Two-color fills that keep enough contrast on white at both ends. */
+export const GRADIENT_PRESETS = [
+  { name: "Indigo to berry", from: "#3730A3", to: "#9D174D" },
+  { name: "Ocean", from: "#0C4A6E", to: "#0F766E" },
+  { name: "Sunset", from: "#9A3412", to: "#86198F" },
+  { name: "Forest", from: "#14532D", to: "#3F6212" },
+  { name: "Midnight", from: "#0F172A", to: "#4338CA" },
+] as const;
 
 export const COLOR_PRESETS = [
   { name: "Ink", fg: "#0F172A", bg: "#FFFFFF" },

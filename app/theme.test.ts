@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { contrastRatio } from "@/lib/color/contrast";
+import { GRADIENT_PRESETS } from "@/features/generator/state/defaults";
+import { contrastRatio, gradientSamples } from "@/lib/color/contrast";
 
 const css = readFileSync(resolve(process.cwd(), "app/globals.css"), "utf8");
 
@@ -53,5 +54,17 @@ describe.each(Object.entries(themes))("%s theme tokens", (_name, palette) => {
 
   it.each(TEXT_PAIRS)("%s on %s meets %s:1", (fg, bg, min) => {
     expect(contrastRatio(palette[fg]!, palette[bg]!)).toBeGreaterThanOrEqual(min);
+  });
+});
+
+describe("gradient presets", () => {
+  it("keep both ends readable on white", () => {
+    for (const preset of GRADIENT_PRESETS) {
+      for (const color of [preset.from, preset.to, ...gradientSamples(preset.from, preset.to)]) {
+        expect(contrastRatio(color, "#FFFFFF"), `${preset.name} ${color}`).toBeGreaterThanOrEqual(
+          4.5,
+        );
+      }
+    }
   });
 });

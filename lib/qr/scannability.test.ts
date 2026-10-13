@@ -66,4 +66,20 @@ describe("withVerification", () => {
     const empty = checkScannability({ ...base, data: "" });
     expect(withVerification(empty, "failed")).toBe(empty);
   });
+
+  it("judges contrast by the weakest module color", () => {
+    const base = {
+      data: "x",
+      measurement: measure("x", "M"),
+      fgColor: "#000000",
+      bgColor: "#FFFFFF",
+      transparent: false,
+      errorCorrection: "M" as const,
+      logoSize: 0,
+      exportSize: 1024,
+    };
+    expect(checkScannability(base).issues.find((i) => i.id === "contrast")).toBeUndefined();
+    const faintCorner = checkScannability({ ...base, extraColors: ["#DDDDDD"] });
+    expect(faintCorner.issues.find((i) => i.id === "contrast")?.severity).toBe("error");
+  });
 });

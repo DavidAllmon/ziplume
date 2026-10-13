@@ -17,6 +17,7 @@ import {
   validateContent,
 } from "@/lib/qr/qr-types";
 import type { RenderOptions } from "@/lib/qr/renderer";
+import { gradientSamples } from "@/lib/color/contrast";
 import { checkScannability, withVerification } from "@/lib/qr/scannability";
 import { QR_TYPE_IDS, type QrTypeId } from "@/lib/qr/types";
 
@@ -24,6 +25,7 @@ import { useScanVerification } from "./preview/useScanVerification";
 import { initialState } from "./state/defaults";
 import { loadSettings, saveSettings } from "./state/persistence";
 import { generatorReducer } from "./state/reducer";
+import type { DesignState } from "./state/types";
 
 /** The account copy of the code being edited, once it has been saved or loaded. */
 export interface SavedCode {
@@ -31,6 +33,18 @@ export interface SavedCode {
   name: string;
   isDynamic: boolean;
   slug: string | null;
+}
+
+/** Colors other than the main code color that modules are drawn in. */
+function moduleColors(design: DesignState): string[] {
+  const colors: string[] = [];
+  if (design.gradientType !== "none") {
+    // Sample the blend too: its midpoint can be lighter than either end.
+    colors.push(design.gradientColor, ...gradientSamples(design.fgColor, design.gradientColor));
+  }
+  if (design.cornerColor) colors.push(design.cornerColor);
+  if (design.cornerDotColor) colors.push(design.cornerDotColor);
+  return colors;
 }
 
 const isQrType = (value: string): value is QrTypeId =>
@@ -105,6 +119,7 @@ export function useGenerator() {
         data,
         measurement,
         fgColor: design.fgColor,
+        extraColors: moduleColors(design),
         bgColor: design.bgColor,
         transparent: design.transparent,
         errorCorrection: design.errorCorrection,

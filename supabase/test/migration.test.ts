@@ -325,3 +325,59 @@ describe("record_scan and analytics", () => {
     );
   });
 });
+
+describe("design templates", () => {
+  const CAROL = "33333333-3333-4333-8333-333333333333";
+  const DAN = "44444444-4444-4444-8444-444444444444";
+  const asCarol = <T>(sql: string, params?: unknown[]) =>
+    as<T>("authenticated", CAROL, sql, params);
+  const asDan = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", DAN, sql, params);
+
+  beforeAll(async () => {
+    await db.query(
+      "insert into auth.users (id, email) values ($1, 'carol@example.com'), ($2, 'dan@example.com')",
+      [CAROL, DAN],
+    );
+  });
+
+  it("belong to their owner only", async () => {
+    const [row] = await asCarol<{ id: string; user_id: string }>(
+      `insert into public.design_templates (name, design) values ('Brand', '{"fgColor":"#112233"}') returning id, user_id`,
+    );
+    expect(row?.user_id).toBe(CAROL);
+    expect(await asDan("select id from public.design_templates")).toEqual([]);
+    await asDan("update public.design_templates set name = 'Stolen' where id = $1", [row!.id]);
+    await asDan("delete from public.design_templates where id = $1", [row!.id]);
+    const [kept] = await asCarol<{ name: string }>(
+      "select name from public.design_templates where id = $1",
+      [row!.id],
+    );
+    expect(kept?.name).toBe("Brand");
+    await expect(asAnon("select * from public.design_templates")).rejects.toThrow(
+      /permission denied/,
+    );
+  });
+
+  it("can't be created for someone else and validate their fields", async () => {
+    await expect(
+      asDan(`insert into public.design_templates (user_id, name, design) values ($1, 'x', '{}')`, [
+        CAROL,
+      ]),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      asDan(`insert into public.design_templates (name, design) values ('', '{}')`),
+    ).rejects.toThrow(/check constraint/);
+    await expect(
+      asDan(`insert into public.design_templates (name, design) values ('x', '[]')`),
+    ).rejects.toThrow(/check constraint/);
+  });
+
+  it("are removed with their owner", async () => {
+    await db.query("delete from auth.users where id = $1", [CAROL]);
+    const rows = await asService<{ n: string }>(
+      "select count(*) as n from public.design_templates where user_id = $1",
+      [CAROL],
+    );
+    expect(Number(rows[0]?.n)).toBe(0);
+  });
+});

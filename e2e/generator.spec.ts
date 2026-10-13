@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 import { encodeContact, encodeEmail, encodeSms, encodeWifi } from "../lib/qr/encoders";
 import { chooseType, decodeDownload, downloadCode } from "./helpers";
@@ -76,22 +77,79 @@ test.describe("generated codes scan back to the right content", () => {
     );
   });
 
-  test("every pattern and corner style", async ({ page }) => {
+  test("every pattern, corner and center style", async ({ page }) => {
     await page.getByLabel("Website address").fill("https://example.com/styles");
     await page.getByRole("button", { name: "Shape" }).click();
-    for (const pattern of ["Square", "Rounded", "Dots", "Classy"]) {
-      for (const corner of ["Square", "Rounded", "Circle"]) {
-        await page
-          .getByRole("radiogroup", { name: "Pattern" })
-          .getByRole("radio", { name: pattern })
-          .click();
-        await page
-          .getByRole("radiogroup", { name: "Corners" })
-          .getByRole("radio", { name: corner })
-          .click();
-        const payload = await decodeDownload(page, await downloadCode(page));
-        expect(payload, `${pattern} + ${corner}`).toBe("https://example.com/styles");
-      }
+    const patterns = ["Square", "Rounded", "Fluid", "Dots", "Classy", "Leaf"];
+    const corners = ["Square", "Rounded", "Circle", "Classy", "Leaf"];
+    const centers = ["Match", "Square", "Rounded", "Circle", "Classy"];
+    // Each pattern once, cycling through corner and center styles so every option is covered.
+    for (const [i, pattern] of patterns.entries()) {
+      const corner = corners[i % corners.length]!;
+      const center = centers[(i + 2) % centers.length]!;
+      await page
+        .getByRole("radiogroup", { name: "Pattern" })
+        .getByRole("radio", { name: pattern })
+        .click();
+      await page
+        .getByRole("radiogroup", { name: "Corners", exact: true })
+        .getByRole("radio", { name: corner })
+        .click();
+      await page
+        .getByRole("radiogroup", { name: "Corner centers" })
+        .getByRole("radio", { name: center })
+        .click();
+      const payload = await decodeDownload(page, await downloadCode(page));
+      expect(payload, `${pattern} + ${corner} + ${center}`).toBe("https://example.com/styles");
+    }
+  });
+
+  test("frames, gradients, corner colors and icons still scan", async ({ page }) => {
+    await page.getByLabel("Website address").fill("https://example.com/framed");
+    // Colors is open by default.
+    await page
+      .getByRole("radiogroup", { name: "Fill" })
+      .getByRole("radio", { name: "Linear" })
+      .click();
+    await page.getByText("Custom corner colors").click();
+    await page.getByRole("button", { name: /^Frame/ }).click();
+    await page.getByRole("button", { name: /^Logo/ }).click();
+    await page.getByRole("radio", { name: "Icon" }).click();
+    await page.getByRole("button", { name: "Wi-Fi icon" }).click();
+    for (const frame of ["Label below", "Label above", "Badge", "Bubble"]) {
+      await page
+        .getByRole("radiogroup", { name: "Frame" })
+        .getByRole("radio", { name: frame })
+        .click();
+      const download = await downloadCode(page);
+      expect(await decodeDownload(page, download), frame).toBe("https://example.com/framed");
+    }
+    await expect(page.getByText("Verified scannable").first()).toBeVisible();
+  });
+
+  test("quick styles apply a whole look", async ({ page }) => {
+    await page.getByLabel("Website address").fill("https://example.com/quick");
+    await page.getByRole("button", { name: "Styles" }).click();
+    await page.getByRole("button", { name: "Sunset", exact: true }).click();
+    await expect(page.getByRole("button", { name: /^Frame/ })).toContainText("Bubble");
+    expect(await decodeDownload(page, await downloadCode(page))).toBe("https://example.com/quick");
+  });
+
+  test("vector PDF and EPS downloads", async ({ page }) => {
+    await page.getByLabel("Website address").fill("example.com/print");
+    for (const [label, ext, signature] of [
+      ["PDF", "pdf", "%PDF-"],
+      ["EPS", "eps", "%!PS-Adobe-3.0 EPSF-3.0"],
+    ] as const) {
+      await page
+        .getByRole("radiogroup", { name: "Format" })
+        .getByRole("radio", { name: label })
+        .click();
+      const download = await downloadCode(page);
+      expect(download.suggestedFilename()).toBe(`quickqreate-url-example-com.${ext}`);
+      const content = await readFile(await download.path());
+      expect(content.subarray(0, signature.length).toString("latin1"), label).toBe(signature);
+      expect(content.length, label).toBeGreaterThan(2000);
     }
   });
 

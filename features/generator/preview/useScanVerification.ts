@@ -8,14 +8,23 @@ import type { Verification } from "@/lib/qr/scannability";
 
 const DEBOUNCE_MS = 500;
 
-/** Pixel size for the test render: about 5px per module, within sensible bounds. */
-function testSize(options: RenderOptions): number {
+/**
+ * Pixel sizes for the test renders, at a few module scales. Phone cameras see a code at
+ * many sizes; jsQR occasionally misses a style at one scale and reads it at another.
+ */
+function testSizes(options: RenderOptions): number[] {
   const modules = measure(options.data, options.errorCorrection).modules ?? 33;
-  return Math.min(1200, Math.max(400, (modules + 8) * 5));
+  return [5, 7, 3.5].map((px) => Math.round(Math.min(1400, Math.max(320, (modules + 8) * px))));
 }
 
 async function decodes(options: RenderOptions): Promise<boolean> {
-  const size = testSize(options);
+  for (const size of testSizes(options)) {
+    if (await decodesAt(options, size)) return true;
+  }
+  return false;
+}
+
+async function decodesAt(options: RenderOptions, size: number): Promise<boolean> {
   const [{ default: jsQR }, blob] = await Promise.all([
     import("jsqr"),
     renderBlob({ ...options, size }, "png"),

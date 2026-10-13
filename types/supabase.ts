@@ -53,6 +53,19 @@ export interface Database {
         };
         Relationships: [];
       };
+      design_templates: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          design: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { name: string; design: Json };
+        Update: { name?: string; design?: Json };
+        Relationships: [];
+      };
       scan_events: {
         Row: {
           id: number;
@@ -98,3 +111,4 @@ export interface Database {
 }
 
 export type QrCodeRow = Database["public"]["Tables"]["qr_codes"]["Row"];
+export type DesignTemplateRow = Database["public"]["Tables"]["design_templates"]["Row"];

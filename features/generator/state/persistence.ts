@@ -1,7 +1,6 @@
 import { loadJSON, saveJSON } from "@/lib/storage";
-import { QR_TYPE_IDS } from "@/lib/qr/types";
+import { EXPORT_FORMAT_IDS, QR_TYPE_IDS } from "@/lib/qr/types";
 
-import { MAX_LOGO_SIZE, MIN_LOGO_SIZE } from "./defaults";
 import type { GeneratorState, PersistedSettings } from "./types";
 
 export const STORAGE_KEY = "quickqreate:v1";
@@ -14,25 +13,18 @@ const oneOf = <T extends string>(value: unknown, options: readonly T[]): value i
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+/**
+ * Accepts saved settings from this or an older version. The design is only checked to be an
+ * object here; hydrating runs it through sanitizeDesign, so fields added later get defaults.
+ */
 export function isPersistedSettings(value: unknown): value is PersistedSettings {
   if (!isObject(value) || value.version !== 1) return false;
   const { design, exportSettings, activeType } = value;
-  if (!oneOf(activeType, QR_TYPE_IDS) || !isObject(design) || !isObject(exportSettings)) {
-    return false;
-  }
   return (
-    typeof design.fgColor === "string" &&
-    typeof design.bgColor === "string" &&
-    typeof design.transparent === "boolean" &&
-    oneOf(design.dotStyle, ["square", "rounded", "dots", "classy"] as const) &&
-    oneOf(design.cornerStyle, ["square", "rounded", "dot"] as const) &&
-    oneOf(design.errorCorrection, ["L", "M", "Q", "H"] as const) &&
-    (design.logo === null || typeof design.logo === "string") &&
-    typeof design.logoSize === "number" &&
-    design.logoSize >= MIN_LOGO_SIZE &&
-    design.logoSize <= MAX_LOGO_SIZE &&
-    typeof design.logoClearSpace === "boolean" &&
-    oneOf(exportSettings.format, ["png", "svg", "jpeg", "webp"] as const) &&
+    oneOf(activeType, QR_TYPE_IDS) &&
+    isObject(design) &&
+    isObject(exportSettings) &&
+    oneOf(exportSettings.format, EXPORT_FORMAT_IDS) &&
     typeof exportSettings.size === "number"
   );
 }
