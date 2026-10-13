@@ -1,56 +1,61 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
+
+import { Providers } from "@/components/layout/Providers";
+
+import { inter, spaceGrotesk } from "./fonts";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://davidallmon.github.io";
+const title = "QuickQReate: free QR code generator";
+const description =
+  "Create beautiful, scannable QR codes for links, Wi-Fi, contacts, email, phone and SMS. Free, private and runs entirely in your browser.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://davidallmon.github.io/QuickQReate/'),
-  title: "QuickQReate",
-  description: "Create customizable QR codes for URLs, contact information, Wi-Fi networks, and more with ease.",
+  metadataBase: new URL(siteUrl),
+  title,
+  description,
+  applicationName: "QuickQReate",
+  authors: [{ name: "David Allmon", url: "https://github.com/DavidAllmon" }],
+  keywords: [
+    "QR code generator",
+    "Wi-Fi QR code",
+    "vCard QR code",
+    "free QR code",
+    "custom QR code",
+  ],
   openGraph: {
-    title: "QuickQReate - QR Code Generator",
-    description: "Create customizable QR codes for URLs, contact information, Wi-Fi networks, and more with ease.",
-    images: [
-      {
-        url: "https://davidallmon.github.io/QuickQReate/quickqrSM.png",
-        width: 1200,
-        height: 630,
-        alt: "QuickQReate - QR Code Generator",
-      },
-    ],
-    url: "https://davidallmon.github.io/QuickQReate/",
+    title,
+    description,
     siteName: "QuickQReate",
     locale: "en_US",
     type: "website",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "QuickQReate - QR Code Generator",
-    description: "Create customizable QR codes for URLs, contact information, Wi-Fi networks, and more with ease.",
-    images: ["https://davidallmon.github.io/QuickQReate/quickqrSM.png"],
-    creator: "@YourTwitterHandle",
-  },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/qricon.png", type: "image/png" },
-    ],
-    apple: "/qricon.png",
-  },
+  twitter: { card: "summary_large_image", title, description },
+  appleWebApp: { title: "QuickQReate", capable: true, statusBarStyle: "default" },
+  formatDetection: { telephone: false },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F8FAFC" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B1020" },
+  ],
+};
+
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${inter.className} bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900`}
-      >
-        {children}
+    // next-themes sets data-theme before hydration, so the attribute differs from the server HTML.
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${inter.variable} ${spaceGrotesk.variable}`}
+    >
+      <body>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

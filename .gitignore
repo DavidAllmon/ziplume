@@ -37,3 +37,7 @@ next-env.d.ts
 
 # whisper
 .whisper
+# playwright
+/playwright-report/
+/test-results/
+/blob-report/
