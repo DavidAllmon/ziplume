@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 interface VCardInputProps {
   onVCardGenerated: (vcard: string) => void;
 }
 
 const VCardInput: React.FC<VCardInputProps> = ({ onVCardGenerated }) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [company, setCompany] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [company, setCompany] = useState("");
 
   useEffect(() => {
     if (name || email || phone || company) {
@@ -21,7 +21,7 @@ ORG:${company}
 END:VCARD`;
       onVCardGenerated(vcard);
     } else {
-      onVCardGenerated('');
+      onVCardGenerated("");
     }
   }, [name, email, phone, company, onVCardGenerated]);
 

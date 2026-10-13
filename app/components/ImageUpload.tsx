@@ -46,27 +46,19 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onImageUpload }) => {
         </label>
         {preview && (
           <div className="relative">
-            <Image
-              src={preview}
-              alt="Logo preview"
-              width={50}
-              height={50}
-              className="rounded-md"
-            />
+            <Image src={preview} alt="Logo preview" width={50} height={50} className="rounded-md" />
             <button
               onClick={handleRemove}
-              className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full bg-red-500 text-xs text-white transition-colors duration-300 hover:bg-red-600"
+              className="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-red-500 text-xs text-white transition-colors duration-300 hover:bg-red-600"
             >
               ×
             </button>
           </div>
         )}
       </div>
-      {!preview && (
-        <p className="mt-2 text-sm text-gray-400">No image selected</p>
-      )}
+      {!preview && <p className="mt-2 text-sm text-gray-400">No image selected</p>}
     </div>
   );
-}
+};
 
 export default ImageUpload;

@@ -8,7 +8,6 @@ import VCardInput from "./components/VCardInput";
 import WiFiInput from "./components/WiFiInput";
 import NextImage from "next/image";
 import quickLogo from "./assets/quick.png";
-import { motion } from "framer-motion";
 import URLInput from "./components/URLInput";
 import ErrorCorrectionLevelModal from "./modals/ErrorCorrectionLevelModal";
 import LogoInfoModal from "./modals/LogoInfoModal";
@@ -86,26 +85,16 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    document.body.className =
-      "bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900";
+    document.body.className = "bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900";
   }, []);
 
   const previewSize = 256; // Fixed size for preview
-
-  useEffect(() => {
-    setInput('');
-  }, [qrType]);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 px-4 py-8 font-sans text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         {/* Compact Header with only the image logo */}
-        <motion.div
-          className="mb-8 flex items-center justify-center"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
+        <div className="mb-8 flex items-center justify-center">
           <NextImage
             src={quickLogo}
             alt="QuickQReate Logo"
@@ -115,24 +104,22 @@ export default function Home() {
             priority
             className="drop-shadow-2xl"
           />
-        </motion.div>
+        </div>
 
         {/* Main Content */}
         <div className="grid gap-8 md:grid-cols-3">
           {/* Left Column: QR Type and Input */}
-          <motion.div
-            className="rounded-2xl bg-gray-800/50 p-6 shadow-2xl backdrop-blur-lg"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
+          <div className="rounded-2xl bg-gray-800/50 p-6 shadow-2xl backdrop-blur-lg">
             <h2 className="mb-4 text-xl font-semibold text-purple-300">QR Code Content</h2>
             <div className="space-y-4">
               <select
                 id="qrType"
                 value={qrType}
-                onChange={(e) => setQrType(e.target.value as "url" | "vcard" | "wifi")}
-                className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                onChange={(e) => {
+                  setQrType(e.target.value as "url" | "vcard" | "wifi");
+                  setInput("");
+                }}
+                className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white transition-all duration-300 focus:ring-2 focus:ring-purple-500 focus:outline-none"
               >
                 <option value="url">URL or Text</option>
                 <option value="vcard">vCard (Contact Information)</option>
@@ -143,27 +130,19 @@ export default function Home() {
               {qrType === "vcard" && <VCardInput onVCardGenerated={setInput} />}
               {qrType === "wifi" && <WiFiInput onWiFiGenerated={setInput} />}
             </div>
-          </motion.div>
+          </div>
 
           {/* Middle Column: QR Code Preview and Download */}
-          <motion.div
-            className="order-last md:order-none flex flex-col items-center justify-between rounded-2xl bg-gray-800/50 p-6 shadow-2xl backdrop-blur-lg"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
+          <div className="order-last flex flex-col items-center justify-between rounded-2xl bg-gray-800/50 p-6 shadow-2xl backdrop-blur-lg md:order-none">
             <h2 className="mb-4 text-xl font-semibold text-purple-300">QR Code Preview</h2>
-            <div
-              className="relative mb-6"
-              style={{ width: previewSize, height: previewSize }}
-            >
-              <div 
-                className="absolute inset-0 blur-md rounded-lg bg-purple-500 opacity-30"
-                style={{ 
-                  width: previewSize + 10, 
-                  height: previewSize + 10, 
-                  left: -5, 
-                  top: -5 
+            <div className="relative mb-6" style={{ width: previewSize, height: previewSize }}>
+              <div
+                className="absolute inset-0 rounded-lg bg-purple-500 opacity-30 blur-md"
+                style={{
+                  width: previewSize + 10,
+                  height: previewSize + 10,
+                  left: -5,
+                  top: -5,
                 }}
               ></div>
               <div className="relative">
@@ -174,7 +153,7 @@ export default function Home() {
                   bgColor={bgColor}
                   fgColor={fgColor}
                   level={level}
-                  includeMargin={true}
+                  marginSize={4}
                   imageSettings={
                     logo
                       ? {
@@ -192,19 +171,14 @@ export default function Home() {
             </div>
             <button
               onClick={downloadQRCode}
-              className="w-full rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-lg font-semibold text-white transition-all duration-300 hover:scale-105 hover:from-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+              className="w-full rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-lg font-semibold text-white transition-all duration-300 hover:scale-105 hover:from-purple-600 hover:to-pink-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800 focus:outline-none"
             >
               Download QR Code
             </button>
-          </motion.div>
+          </div>
 
           {/* Right Column: Customization Options */}
-          <motion.div
-            className="rounded-2xl bg-gray-800/50 p-6 shadow-2xl backdrop-blur-lg"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-          >
+          <div className="rounded-2xl bg-gray-800/50 p-6 shadow-2xl backdrop-blur-lg">
             <h2 className="mb-4 text-xl font-semibold text-purple-300">Customize</h2>
             <div className="space-y-6">
               <ColorPicker label="Foreground Color" color={fgColor} onChange={setFgColor} />
@@ -223,13 +197,13 @@ export default function Home() {
                     onChange={(e) => setSize(Number(e.target.value))}
                     className="mr-4 w-full accent-purple-500"
                   />
-                  <span className="whitespace-nowrap text-sm text-purple-300">
+                  <span className="text-sm whitespace-nowrap text-purple-300">
                     {size}x{size}
                   </span>
                 </div>
               </div>
               <div>
-                <div className="flex items-center mb-2">
+                <div className="mb-2 flex items-center">
                   <label htmlFor="level" className="block text-sm font-medium text-purple-300">
                     Error Correction Level
                   </label>
@@ -237,8 +211,17 @@ export default function Home() {
                     onClick={() => setIsErrorCorrectionModalOpen(true)}
                     className="ml-2 text-purple-300 hover:text-purple-100 focus:outline-none"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="size-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="size-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -246,7 +229,7 @@ export default function Home() {
                   id="level"
                   value={level}
                   onChange={(e) => setLevel(e.target.value as "L" | "M" | "Q" | "H")}
-                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white transition-all duration-300 focus:ring-2 focus:ring-purple-500 focus:outline-none"
                 >
                   <option value="L">Low</option>
                   <option value="M">Medium</option>
@@ -255,23 +238,35 @@ export default function Home() {
                 </select>
               </div>
               <div>
-                <div className="flex items-center mb-2">
-                  <label htmlFor="logo-upload" className="block text-sm font-medium text-purple-300">
+                <div className="mb-2 flex items-center">
+                  <label
+                    htmlFor="logo-upload"
+                    className="block text-sm font-medium text-purple-300"
+                  >
                     Upload Logo (optional)
                   </label>
                   <button
                     onClick={() => setIsLogoInfoModalOpen(true)}
                     className="ml-2 text-purple-300 hover:text-purple-100 focus:outline-none"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="size-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="size-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </button>
                 </div>
                 <ImageUpload onImageUpload={handleLogoUpload} />
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
 
         {/* Error Correction Level Modal */}
@@ -281,10 +276,7 @@ export default function Home() {
         />
 
         {/* Logo Info Modal */}
-        <LogoInfoModal
-          isOpen={isLogoInfoModalOpen}
-          onClose={() => setIsLogoInfoModalOpen(false)}
-        />
+        <LogoInfoModal isOpen={isLogoInfoModalOpen} onClose={() => setIsLogoInfoModalOpen(false)} />
       </div>
     </main>
   );

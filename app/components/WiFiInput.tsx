@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 interface WiFiInputProps {
   onWiFiGenerated: (wifiString: string) => void;
 }
 
 const WiFiInput: React.FC<WiFiInputProps> = ({ onWiFiGenerated }) => {
-  const [ssid, setSSID] = useState('');
-  const [password, setPassword] = useState('');
-  const [encryption, setEncryption] = useState('WPA');
+  const [ssid, setSSID] = useState("");
+  const [password, setPassword] = useState("");
+  const [encryption, setEncryption] = useState("WPA");
 
   useEffect(() => {
     const wifiString = `WIFI:T:${encryption};S:${ssid};P:${password};;`;

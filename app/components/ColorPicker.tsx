@@ -6,11 +6,7 @@ interface ColorPickerProps {
   onChange: (color: string) => void;
 }
 
-const ColorPicker: React.FC<ColorPickerProps> = ({
-  label,
-  color,
-  onChange,
-}) => {
+const ColorPicker: React.FC<ColorPickerProps> = ({ label, color, onChange }) => {
   return (
     <div>
       <label className="mb-2 block text-sm font-medium">{label}</label>
@@ -25,7 +21,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
           type="text"
           value={color}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
         />
       </div>
     </div>
