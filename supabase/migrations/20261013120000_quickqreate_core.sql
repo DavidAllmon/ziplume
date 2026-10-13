@@ -155,6 +155,45 @@ create policy "Users can read scans of their own codes"
   using (code_id in (select id from public.qr_codes where user_id = (select auth.uid())));
 
 -- ---------------------------------------------------------------------------
+-- Two-factor authentication: once an account has a verified factor, its rows are reachable
+-- only from sessions that completed the second step (aal2), so a password alone can't read
+-- or change them through the API.
+-- ---------------------------------------------------------------------------
+
+create function public.mfa_satisfied()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(auth.jwt() ->> 'aal', 'aal1') = 'aal2'
+      or not exists (
+        select 1
+          from auth.mfa_factors f
+         where f.user_id = auth.uid()
+           and f.status = 'verified'
+      );
+$$;
+
+revoke all on function public.mfa_satisfied() from public, anon;
+grant execute on function public.mfa_satisfied() to authenticated;
+
+create policy "Two-factor accounts need a two-factor session"
+  on public.profiles as restrictive for all to authenticated
+  using ((select public.mfa_satisfied()))
+  with check ((select public.mfa_satisfied()));
+
+create policy "Two-factor accounts need a two-factor session"
+  on public.qr_codes as restrictive for all to authenticated
+  using ((select public.mfa_satisfied()))
+  with check ((select public.mfa_satisfied()));
+
+create policy "Two-factor accounts need a two-factor session"
+  on public.scan_events as restrictive for all to authenticated
+  using ((select public.mfa_satisfied()));
+
+-- ---------------------------------------------------------------------------
 -- Grants: start from nothing, then allow exactly what the app uses.
 -- ---------------------------------------------------------------------------
 
@@ -176,7 +215,8 @@ grant select, insert, update, delete on public.profiles, public.qr_codes, public
 
 -- ---------------------------------------------------------------------------
 -- record_scan: called by the app's /r/<slug> route with the service role.
--- Returns the destination and status; records a scan only for active codes.
+-- Returns the destination and status; records a scan only for active codes, and only when
+-- p_record is true (the app passes false for link previewers and bots).
 -- ---------------------------------------------------------------------------
 
 create function public.record_scan(
@@ -187,7 +227,8 @@ create function public.record_scan(
   p_city text default null,
   p_device_type text default null,
   p_os text default null,
-  p_browser text default null
+  p_browser text default null,
+  p_record boolean default true
 )
 returns table (destination text, status text)
 language plpgsql
@@ -209,7 +250,7 @@ begin
     return;
   end if;
 
-  if v_status = 'active' then
+  if v_status = 'active' and p_record then
     insert into public.scan_events (code_id, visitor_hash, country, region, city, device_type, os, browser)
     values (
       v_id,
@@ -234,9 +275,9 @@ begin
 end;
 $$;
 
-revoke all on function public.record_scan(text, text, text, text, text, text, text, text)
+revoke all on function public.record_scan(text, text, text, text, text, text, text, text, boolean)
   from public, anon, authenticated;
-grant execute on function public.record_scan(text, text, text, text, text, text, text, text)
+grant execute on function public.record_scan(text, text, text, text, text, text, text, text, boolean)
   to service_role;
 
 -- ---------------------------------------------------------------------------

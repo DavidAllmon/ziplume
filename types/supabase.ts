@@ -83,6 +83,7 @@ export interface Database {
           p_device_type?: string | null;
           p_os?: string | null;
           p_browser?: string | null;
+          p_record?: boolean;
         };
         Returns: { destination: string; status: QrStatus }[];
       };

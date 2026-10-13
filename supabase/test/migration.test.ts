@@ -19,10 +19,13 @@ const SUPABASE_STUB = `
   create role service_role nologin bypassrls;
   create schema auth;
   create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}'::jsonb);
+  create table auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid, status text);
   create function auth.uid() returns uuid language sql stable
     as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+  create function auth.jwt() returns jsonb language sql stable
+    as $$ select nullif(current_setting('request.jwt.claims', true), '')::jsonb $$;
   grant usage on schema auth, public to anon, authenticated, service_role;
-  grant execute on function auth.uid() to anon, authenticated, service_role;
+  grant execute on function auth.uid(), auth.jwt() to anon, authenticated, service_role;
   -- Supabase grants new public tables and functions to the API roles by default.
   alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
   alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
@@ -36,9 +39,13 @@ async function as<T>(
   userId: string | null,
   sql: string,
   params: unknown[] = [],
+  aal: "aal1" | "aal2" = "aal1",
 ): Promise<T[]> {
   await db.exec("reset role");
   await db.query("select set_config('request.jwt.claim.sub', $1, false)", [userId ?? ""]);
+  await db.query("select set_config('request.jwt.claims', $1, false)", [
+    userId ? JSON.stringify({ sub: userId, role, aal }) : "",
+  ]);
   await db.exec(`set role ${role}`);
   try {
     const result = await db.query<T>(sql, params);
@@ -185,6 +192,34 @@ describe("qr_codes", () => {
   });
 });
 
+describe("two-factor accounts", () => {
+  const bobAal2 = <T>(sql: string, params?: unknown[]) =>
+    as<T>("authenticated", BOB, sql, params, "aal2");
+
+  it("hide everything from password-only sessions once a factor is verified", async () => {
+    await db.query("insert into auth.mfa_factors (user_id, status) values ($1, 'unverified')", [
+      BOB,
+    ]);
+    // An unfinished enrollment doesn't lock the account.
+    expect(await asBob("select id from public.qr_codes")).toHaveLength(1);
+
+    await db.query("update auth.mfa_factors set status = 'verified' where user_id = $1", [BOB]);
+    expect(await asBob("select id from public.qr_codes")).toEqual([]);
+    expect(await asBob("select id from public.profiles")).toEqual([]);
+    await expect(
+      asBob("insert into public.qr_codes (name, qr_type) values ('x', 'text')"),
+    ).rejects.toThrow(/row-level security/);
+
+    expect(await bobAal2("select id from public.qr_codes")).toHaveLength(1);
+    expect(await bobAal2("select id from public.profiles")).toEqual([{ id: BOB }]);
+    // Alice has no factor, so her aal1 session is unaffected.
+    expect((await asAlice("select id from public.qr_codes")).length).toBeGreaterThan(0);
+
+    await db.query("delete from auth.mfa_factors where user_id = $1", [BOB]);
+    expect(await asBob("select id from public.qr_codes")).toHaveLength(1);
+  });
+});
+
 describe("record_scan and analytics", () => {
   const scan = (slug: string, visitor: string, country: string | null = "US", device = "mobile") =>
     asService<{ destination: string; status: string }>(
@@ -222,6 +257,17 @@ describe("record_scan and analytics", () => {
     );
     expect(Number(code?.scan_count)).toBe(3);
     expect(code?.last_scanned_at).not.toBeNull();
+  });
+
+  it("returns the destination without counting when recording is off (bots, previews)", async () => {
+    const rows = await asService<{ destination: string }>(
+      "select destination from public.record_scan('MENU42', 'bot', p_record => false)",
+    );
+    expect(rows).toEqual([{ destination: "https://example.com/menu" }]);
+    const [code] = await asAlice<{ scan_count: string }>(
+      "select scan_count from public.qr_codes where slug = 'MENU42'",
+    );
+    expect(Number(code?.scan_count)).toBe(3);
   });
 
   it("returns nothing for unknown slugs and does not count paused codes", async () => {
