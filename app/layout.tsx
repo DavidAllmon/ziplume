@@ -2,17 +2,17 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
 import { Providers } from "@/components/layout/Providers";
+import { SITE_URL } from "@/lib/env";
 
 import { inter, spaceGrotesk } from "./fonts";
 import "./globals.css";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://davidallmon.github.io";
 const title = "QuickQReate: free QR code generator";
 const description =
   "Create beautiful, scannable QR codes for links, Wi-Fi, contacts, email, phone and SMS. Free, private and runs entirely in your browser.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
   title,
   description,
   applicationName: "QuickQReate",

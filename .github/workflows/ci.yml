@@ -5,6 +5,11 @@ on:
     branches: ["main"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      redirect_to:
+        description: "Make GitHub Pages redirect to this URL (e.g. https://qr.techitdave.com). Leave empty to just run checks."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -41,6 +46,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          NEXT_PUBLIC_SITE_URL: http://localhost:4173
 
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
@@ -56,42 +63,37 @@ jobs:
           path: playwright-report
           retention-days: 7
 
-  build-pages:
-    name: Build for GitHub Pages
+  redirect-pages:
+    name: Point GitHub Pages at the new site
+    # One-time cutover, run by hand once the Coolify app is live:
+    # Actions → CI → Run workflow → redirect_to = https://qr.techitdave.com
+    if: github.event_name == 'workflow_dispatch' && inputs.redirect_to != ''
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    env:
-      NEXT_PUBLIC_BASE_PATH: /QuickQReate
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - run: npm ci
-
-      - uses: actions/cache@v4
-        with:
-          path: .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('app/**', 'components/**', 'features/**', 'lib/**') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-
-
-      - name: Build
-        run: npm run build
+      - name: Build redirect pages
+        env:
+          TARGET: ${{ inputs.redirect_to }}
+        run: |
+          TARGET="${TARGET%/}"
+          LABEL="${TARGET#https://}"
+          mkdir -p site
+          for f in index.html 404.html; do
+            sed -e "s#__TARGET_LABEL__#${LABEL}#g" -e "s#__TARGET__#${TARGET}#g" "pages-redirect/$f" > "site/$f"
+          done
+          cp pages-redirect/sw.js site/sw.js
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./out
+          path: ./site
 
-  deploy:
+  deploy-pages:
     name: Deploy to GitHub Pages
-    needs: build-pages
+    needs: redirect-pages
     runs-on: ubuntu-latest
     permissions:
       pages: write
