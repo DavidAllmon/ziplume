@@ -57,3 +57,7 @@ export interface ContentValues {
 
 /** Field-level validation messages, keyed by field name. Empty object = valid. */
 export type FieldErrors<V> = Partial<Record<keyof V, string>>;
+
+export type DotStyle = "square" | "rounded" | "dots" | "classy";
+export type CornerStyle = "square" | "rounded" | "dot";
+export type ExportFormat = "png" | "svg" | "jpeg" | "webp";

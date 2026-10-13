@@ -1,8 +1,13 @@
-import type { ContentValues, ErrorCorrection, QrTypeId } from "@/lib/qr/types";
+import type {
+  ContentValues,
+  CornerStyle,
+  DotStyle,
+  ErrorCorrection,
+  ExportFormat,
+  QrTypeId,
+} from "@/lib/qr/types";
 
-export type DotStyle = "square" | "rounded" | "dots" | "classy";
-export type CornerStyle = "square" | "rounded" | "dot";
-export type ExportFormat = "png" | "svg" | "jpeg" | "webp";
+export type { CornerStyle, DotStyle, ExportFormat };
 
 export interface DesignState {
   fgColor: string;

@@ -16,8 +16,8 @@ interface SegmentedControlProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   options: readonly SegmentOption<T>[];
-  "aria-label"?: string;
-  "aria-labelledby"?: string;
+  /** Accessible name. Headless UI ignores aria-labelledby on RadioGroup, so this is required. */
+  "aria-label": string;
   size?: "sm" | "md";
   className?: string;
 }
@@ -28,13 +28,13 @@ export function SegmentedControl<T extends string>({
   options,
   size = "md",
   className,
-  ...aria
+  "aria-label": ariaLabel,
 }: SegmentedControlProps<T>) {
   return (
     <RadioGroup
       value={value}
       onChange={onChange}
-      {...aria}
+      aria-label={ariaLabel}
       className={cn(
         "grid auto-cols-fr grid-flow-col gap-1 rounded-control bg-surface-2 p-1",
         className,
