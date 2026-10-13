@@ -1,4 +1,4 @@
-import type { QrTypeId } from "./types";
+import type { CodeTypeId } from "./types";
 
 export function slugify(value: string, maxLength = 40): string {
   return value
@@ -11,7 +11,7 @@ export function slugify(value: string, maxLength = 40): string {
     .replace(/-+$/g, "");
 }
 
-export function buildFilename(type: QrTypeId, label: string, extension: string): string {
+export function buildFilename(type: CodeTypeId, label: string, extension: string): string {
   const slug = slugify(label);
   return `quickqreate-${type}${slug ? `-${slug}` : ""}.${extension}`;
 }

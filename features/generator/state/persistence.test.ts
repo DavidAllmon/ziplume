@@ -50,7 +50,42 @@ describe("persistence", () => {
     expect(isPersistedSettings(valid)).toBe(true);
     expect(isPersistedSettings({ ...valid, version: 0 })).toBe(false);
     expect(isPersistedSettings({ ...valid, activeType: "fax" })).toBe(false);
-    expect(isPersistedSettings({ ...valid, design: { ...valid.design, logoSize: 2 } })).toBe(false);
+    expect(isPersistedSettings({ ...valid, design: "nope" })).toBe(false);
+    expect(isPersistedSettings({ ...valid, exportSettings: { format: "gif", size: 1 } })).toBe(
+      false,
+    );
     expect(isPersistedSettings(null)).toBe(false);
+  });
+
+  it("upgrades settings saved by an older version and repairs bad values", () => {
+    const older = {
+      version: 1,
+      activeType: "wifi",
+      design: {
+        fgColor: "#123456",
+        bgColor: "#ffffff",
+        transparent: false,
+        dotStyle: "dots",
+        cornerStyle: "dot",
+        errorCorrection: "Q",
+        logo: null,
+        logoSize: 2,
+        logoClearSpace: true,
+      },
+      exportSettings: { format: "png", size: 1024 },
+    };
+    expect(isPersistedSettings(older)).toBe(true);
+    const state = generatorReducer(initialState(), { type: "hydrate", saved: older as never });
+    expect(state.activeType).toBe("wifi");
+    expect(state.design).toMatchObject({
+      fgColor: "#123456",
+      dotStyle: "dots",
+      cornerStyle: "dot",
+      errorCorrection: "Q",
+      logoSize: 0.3,
+      gradientType: "none",
+      frame: "none",
+      cornerColor: null,
+    });
   });
 });

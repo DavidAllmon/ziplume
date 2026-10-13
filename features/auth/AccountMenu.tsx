@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { LayoutGrid, LogOut, UserRound } from "lucide-react";
+import { LayoutGrid, LogOut, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 
 import { buttonClasses } from "@/components/ui/Button";
@@ -50,6 +50,14 @@ export function AccountMenu() {
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-fg data-focus:bg-surface-2"
             >
               <LayoutGrid aria-hidden className="size-4" /> My codes
+            </Link>
+          </MenuItem>
+          <MenuItem>
+            <Link
+              href="/dashboard/team"
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-fg data-focus:bg-surface-2"
+            >
+              <Users aria-hidden className="size-4" /> Team
             </Link>
           </MenuItem>
           <MenuItem>

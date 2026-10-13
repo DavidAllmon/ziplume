@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { createCode, designForStorage, updateCode } from "@/features/codes/api";
+import { editableWorkspace, type Workspace } from "@/features/teams/workspace";
 import { dynamicPayload } from "@/lib/dynamic/slug";
 import { normalizeUrl } from "@/lib/qr/normalize";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -12,18 +13,28 @@ import { buildFilename } from "@/lib/qr/filename";
 import {
   encodeContent,
   filenameLabelFor,
-  QR_TYPES,
   summarizeContent,
   validateContent,
 } from "@/lib/qr/qr-types";
 import type { RenderOptions } from "@/lib/qr/renderer";
+import { gradientSamples } from "@/lib/color/contrast";
 import { checkScannability, withVerification } from "@/lib/qr/scannability";
-import { QR_TYPE_IDS, type QrTypeId } from "@/lib/qr/types";
+import { codeTypeInfo } from "@/lib/qr/code-types";
+import type { PageContentMap } from "@/lib/pages/types";
+import { pageSummary, validatePage } from "@/lib/pages/validate";
+import {
+  isPageType,
+  isStaticType,
+  type CodeTypeId,
+  type PageTypeId,
+  type QrTypeId,
+} from "@/lib/qr/types";
 
 import { useScanVerification } from "./preview/useScanVerification";
 import { initialState } from "./state/defaults";
 import { loadSettings, saveSettings } from "./state/persistence";
 import { generatorReducer } from "./state/reducer";
+import type { DesignState } from "./state/types";
 
 /** The account copy of the code being edited, once it has been saved or loaded. */
 export interface SavedCode {
@@ -33,8 +44,19 @@ export interface SavedCode {
   slug: string | null;
 }
 
-const isQrType = (value: string): value is QrTypeId =>
-  (QR_TYPE_IDS as readonly string[]).includes(value);
+/** Colors other than the main code color that modules are drawn in. */
+function moduleColors(design: DesignState): string[] {
+  const colors: string[] = [];
+  if (design.gradientType !== "none") {
+    // Sample the blend too: its midpoint can be lighter than either end.
+    colors.push(design.gradientColor, ...gradientSamples(design.fgColor, design.gradientColor));
+  }
+  if (design.cornerColor) colors.push(design.cornerColor);
+  if (design.cornerDotColor) colors.push(design.cornerDotColor);
+  return colors;
+}
+
+const isCodeType = (value: string): value is CodeTypeId => isStaticType(value) || isPageType(value);
 
 export function useGenerator() {
   const [state, dispatch] = useReducer(generatorReducer, undefined, initialState);
@@ -42,6 +64,8 @@ export function useGenerator() {
   const [saved, setSaved] = useState<SavedCode | null>(null);
   /** True when the user switched a new Link code to dynamic (before it is saved). */
   const [wantsDynamic, setWantsDynamic] = useState(false);
+  /** A team workspace new codes are saved into (/?workspace=<owner id>); null = your own. */
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
 
   // Declared before the loading effect so the defaults from the first render are never saved
   // over the user's stored settings.
@@ -57,22 +81,34 @@ export function useGenerator() {
     hydrated.current = true;
   }, []);
 
-  // Opening /?edit=<id> from the dashboard loads that saved code for editing.
+  // Opening /?edit=<id> from the dashboard loads that saved code for editing, and
+  // /?workspace=<owner id> saves new codes into a team workspace.
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("edit");
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("edit");
+    const owner = params.get("workspace");
     const supabase = getBrowserSupabase();
-    if (!id || !supabase) return;
+    if (!supabase) return;
+    if (!id) {
+      if (owner) void editableWorkspace(owner).then(setWorkspace);
+      return;
+    }
     supabase
       .from("qr_codes")
-      .select("id, name, qr_type, content, design, is_dynamic, slug, destination")
+      .select("id, user_id, name, qr_type, content, design, is_dynamic, slug, destination")
       .eq("id", id)
       .maybeSingle()
-      .then(({ data: code }) => {
-        if (!code || !isQrType(code.qr_type)) return;
+      .then(async ({ data: code }) => {
+        if (!code || !isCodeType(code.qr_type)) return;
+        const { data: session } = await supabase.auth.getSession();
+        if (code.user_id !== session.session?.user.id) {
+          setWorkspace(await editableWorkspace(code.user_id));
+        }
+        const linkCode = code.is_dynamic && code.qr_type === "url";
         dispatch({
           type: "loadCode",
           qrType: code.qr_type,
-          content: code.is_dynamic ? { url: code.destination ?? "" } : code.content,
+          content: linkCode ? { url: code.destination ?? "" } : code.content,
           design: code.design,
         });
         setSaved({ id: code.id, name: code.name, isDynamic: code.is_dynamic, slug: code.slug });
@@ -80,19 +116,30 @@ export function useGenerator() {
   }, []);
 
   const { activeType, design, exportSettings } = state;
-  const values = state.content[activeType];
+  const pageType = isPageType(activeType) ? activeType : null;
+  const staticType = isPageType(activeType) ? null : activeType;
+  const values = staticType ? state.content[staticType] : null;
+  const page = pageType ? state.pages[pageType] : null;
 
-  const isDynamic = saved ? saved.isDynamic : wantsDynamic && activeType === "url";
-  const destination = isDynamic ? normalizeUrl(state.content.url.url) : "";
+  // Hosted pages are always dynamic; Link codes are when the user switches it on.
+  const isDynamic = saved
+    ? saved.isDynamic
+    : pageType !== null || (wantsDynamic && activeType === "url");
+  const destination = isDynamic && activeType === "url" ? normalizeUrl(state.content.url.url) : "";
   // A new dynamic code previews a placeholder ending; downloads wait until it's saved.
   const slug = saved?.slug ?? "PREVIEW";
 
-  const errors = useMemo(() => validateContent(activeType, values), [activeType, values]);
+  const errors: Record<string, string> = useMemo(() => {
+    if (pageType && page) return validatePage(pageType, page);
+    if (staticType && values) return validateContent(staticType, values) as Record<string, string>;
+    return {};
+  }, [pageType, page, staticType, values]);
   const isValid = Object.keys(errors).length === 0;
   const data = useMemo(() => {
+    if (pageType) return isValid ? dynamicPayload(slug) : "";
     if (isDynamic) return destination && isValid ? dynamicPayload(slug) : "";
-    return encodeContent(activeType, values);
-  }, [isDynamic, destination, isValid, slug, activeType, values]);
+    return staticType && values ? encodeContent(staticType, values) : "";
+  }, [pageType, isDynamic, destination, isValid, slug, staticType, values]);
 
   const measurement = useMemo(
     () => measure(data, design.errorCorrection),
@@ -105,6 +152,7 @@ export function useGenerator() {
         data,
         measurement,
         fgColor: design.fgColor,
+        extraColors: moduleColors(design),
         bgColor: design.bgColor,
         transparent: design.transparent,
         errorCorrection: design.errorCorrection,
@@ -125,21 +173,36 @@ export function useGenerator() {
     [heuristics, verification],
   );
 
-  const summary = data ? summarizeContent(activeType, values) : "";
-  const defaultName = summary || QR_TYPES[activeType].label;
+  const info = codeTypeInfo(activeType);
+  const summary =
+    pageType && page
+      ? pageSummary(pageType, page)
+      : data && staticType && values
+        ? summarizeContent(staticType, values)
+        : "";
+  const defaultName = summary || info.label;
   const extension = exportSettings.format === "jpeg" ? "jpg" : exportSettings.format;
-  const filename = buildFilename(activeType, filenameLabelFor(activeType, values), extension);
+  const filename = buildFilename(
+    activeType,
+    staticType && values ? filenameLabelFor(staticType, values) : summary,
+    extension,
+  );
 
   /** Why the code can't be exported yet, or null when it's ready. */
-  const blocker = !data
-    ? QR_TYPES[activeType].emptyHint
-    : !isValid
-      ? (Object.values(errors)[0] as string)
-      : !measurement.fits
-        ? "Too much content for a QR code"
-        : isDynamic && !saved
-          ? "Save this dynamic code first so its short link works."
-          : null;
+  const blocker =
+    pageType && !isValid
+      ? (Object.values(errors)[0] ?? info.emptyHint)
+      : !data
+        ? info.emptyHint
+        : !isValid
+          ? (Object.values(errors)[0] as string)
+          : !measurement.fits
+            ? "Too much content for a QR code"
+            : isDynamic && !saved
+              ? pageType
+                ? "Save this page first so its QR code works."
+                : "Save this dynamic code first so its short link works."
+              : null;
 
   /** Saves a new code to the account, or updates the one being edited. */
   const save = useCallback(
@@ -151,20 +214,23 @@ export function useGenerator() {
         const result = await updateCode(saved.id, {
           name: label,
           design,
-          ...(saved.isDynamic
-            ? { destination, content: { url: destination } }
-            : { content: values }),
+          ...(pageType
+            ? { content: page }
+            : saved.isDynamic
+              ? { destination, content: { url: destination } }
+              : { content: values }),
         });
         if (!result.ok) return { ok: false, message: result.error };
         setSaved({ ...saved, name: result.value.name });
         return { ok: true, message: `Saved changes to “${result.value.name}”.${note}` };
       }
       const result = await createCode({
+        ownerId: workspace?.ownerId,
         name: label,
         qrType: activeType,
-        content: values,
+        content: pageType ? page : values,
         design,
-        dynamic: isDynamic ? { destination } : undefined,
+        dynamic: pageType ? { destination: null } : isDynamic ? { destination } : undefined,
       });
       if (!result.ok) return { ok: false, message: result.error };
       const code = result.value;
@@ -172,15 +238,32 @@ export function useGenerator() {
       window.history.replaceState(null, "", `/?edit=${code.id}`);
       return { ok: true, message: `Saved “${code.name}” to your codes.${note}` };
     },
-    [saved, design, destination, values, activeType, isDynamic, defaultName],
+    [
+      saved,
+      design,
+      destination,
+      values,
+      page,
+      pageType,
+      activeType,
+      isDynamic,
+      defaultName,
+      workspace,
+    ],
   );
 
   /** Leaves edit mode and starts a fresh, unsaved code with the current design. */
   const startNew = useCallback(() => {
     setSaved(null);
     setWantsDynamic(false);
-    window.history.replaceState(null, "", "/");
-  }, []);
+    window.history.replaceState(null, "", workspace ? `/?workspace=${workspace.ownerId}` : "/");
+  }, [workspace]);
+
+  /** Saves new codes to your own account instead of a team workspace. */
+  const leaveWorkspace = useCallback(() => {
+    setWorkspace(null);
+    if (!saved) window.history.replaceState(null, "", "/");
+  }, [saved]);
 
   const setField = useCallback(
     (qrType: QrTypeId, field: string, value: string | boolean) =>
@@ -188,10 +271,20 @@ export function useGenerator() {
     [],
   );
 
+  const setPage = useCallback(
+    (type: PageTypeId, content: PageContentMap[PageTypeId]) =>
+      dispatch({ type: "setPage", pageType: type, content }),
+    [],
+  );
+
   return {
     state,
     dispatch,
     setField,
+    setPage,
+    pageType,
+    pageErrors: pageType ? errors : {},
+    info,
     data,
     measurement,
     report,
@@ -204,6 +297,8 @@ export function useGenerator() {
     destination,
     saved,
     defaultName,
+    workspace,
+    leaveWorkspace,
     setDynamic: setWantsDynamic,
     save,
     startNew,

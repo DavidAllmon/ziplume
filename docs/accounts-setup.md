@@ -33,11 +33,26 @@ environment's secrets.
 
 ## 2. Create the database schema
 
-Open the project's child Studio → **SQL Editor**, paste the contents of
-`supabase/migrations/20261013120000_quickqreate_core.sql` and run it once.
-It creates `profiles`, `qr_codes`, `scan_events`, row-level security (including a rule that
-locks accounts with two-factor authentication to two-factor sessions), the scan recorder and
-the analytics function. It is safe to read before running: it only touches the `public`
+Open the project's child Studio → **SQL Editor** and run each file in `supabase/migrations/`
+once, in filename order (oldest first). When new files appear in later updates, run only
+those. Today that is:
+
+1. `20261013120000_quickqreate_core.sql`
+2. `20261013130000_design_templates.sql` (saved design templates)
+3. `20261013140000_hosted_pages.sql` (new code types, hosted pages, feedback responses)
+4. `20261013140100_page_media_storage.sql` (the `page-media` Storage bucket for uploads)
+5. `20261013150000_power_tools.sql` (folders, teams, active dates, password-protected codes
+   and API keys; uses the `pgcrypto` extension, which Supabase installs in the `extensions`
+   schema by default)
+
+The fourth one needs the project's **Storage** service. If it fails because the `storage`
+schema doesn't exist, enable Storage for the project and run it again; everything else works
+without it, except uploading files to hosted pages (PDF, images, video, audio, logos).
+
+The first file
+creates `profiles`, `qr_codes`, `scan_events`, row-level security (including a rule
+that locks accounts with two-factor authentication to two-factor sessions), the scan recorder
+and the analytics function. It is safe to read before running: it only touches the `public`
 schema and adds one trigger on `auth.users` to create profiles.
 
 ## 3. Brevo (owner, in the browser)
@@ -160,4 +175,6 @@ To let the Claude Code cloud environment test the live project, edit the environ
 - [ ] Create a dynamic code, scan it with a phone: it redirects and the scan appears in analytics
 - [ ] A second account cannot see the first account's codes or scans
 - [ ] After turning on two-factor in **Account**, signing in asks for the authenticator code
+- [ ] Create a Link list page with a profile picture: the upload works and `/p/<slug>` shows it
+- [ ] A Feedback page accepts a rating and it appears under Responses in My codes
 - [ ] The project appears in the nightly backup receipts

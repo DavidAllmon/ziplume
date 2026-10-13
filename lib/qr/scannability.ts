@@ -45,6 +45,8 @@ export interface ScanInput {
   data: string;
   measurement: Measurement;
   fgColor: string;
+  /** Other colors the modules use: gradient end and corner colors. */
+  extraColors?: readonly string[];
   bgColor: string;
   transparent: boolean;
   errorCorrection: ErrorCorrection;
@@ -74,13 +76,15 @@ export function checkScannability(input: ScanInput): ScanReport {
     });
   }
 
-  if (isValidHex(input.fgColor) && isValidHex(input.bgColor) && !input.transparent) {
-    const ratio = contrastRatio(input.fgColor, input.bgColor);
+  const colors = [input.fgColor, ...(input.extraColors ?? [])].filter(isValidHex);
+  if (colors.length && isValidHex(input.bgColor) && !input.transparent) {
+    // Judge by the weakest color: one faint corner or gradient end is enough to fail a scan.
+    const ratio = Math.min(...colors.map((color) => contrastRatio(color, input.bgColor)));
     if (ratio < 3) {
       issues.push({
         id: "contrast",
         severity: "error",
-        message: `Contrast is too low (${ratio.toFixed(1)}:1). Use a darker foreground or lighter background.`,
+        message: `Contrast is too low (${ratio.toFixed(1)}:1). Use darker code colors or a lighter background.`,
       });
     } else if (ratio < 4.5) {
       issues.push({
@@ -89,7 +93,7 @@ export function checkScannability(input: ScanInput): ScanReport {
         message: `Contrast is borderline (${ratio.toFixed(1)}:1). Some cameras may struggle.`,
       });
     }
-    if (relativeLuminance(input.fgColor) > relativeLuminance(input.bgColor)) {
+    if (colors.some((color) => relativeLuminance(color) > relativeLuminance(input.bgColor))) {
       issues.push({
         id: "inverted",
         severity: "warn",

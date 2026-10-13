@@ -12,7 +12,7 @@ import { useGenerator } from "./useGenerator";
 
 export function Generator() {
   const generator = useGenerator();
-  const { state, dispatch, setField, report, saved, isDynamic } = generator;
+  const { state, dispatch, report, saved, isDynamic } = generator;
 
   return (
     <>
@@ -35,7 +35,7 @@ export function Generator() {
                 disabled={saved !== null}
                 onChange={(activeType) => dispatch({ type: "setActiveType", activeType })}
               />
-              <ContentForm state={state} setField={setField} />
+              <ContentForm generator={generator} />
               {state.activeType === "url" && (
                 <DynamicToggle
                   enabled={isDynamic}

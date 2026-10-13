@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { PageShell } from "@/components/layout/PageShell";
 import { Generator } from "@/features/generator/Generator";
 
@@ -11,6 +13,13 @@ export default function Home() {
         <p className="mt-2 text-fg-muted sm:text-lg">
           Free forever, with no sign-up needed. Create a free account for editable codes and scan
           analytics.
+        </p>
+        <p className="mt-2 text-sm text-fg-muted">
+          Need lots of codes?{" "}
+          <Link href="/bulk" className="font-medium text-link underline-offset-4 hover:underline">
+            Create them in bulk from a spreadsheet
+          </Link>
+          .
         </p>
       </div>
       <Generator />

@@ -13,9 +13,17 @@ const MIME: Record<string, string> = {
 
 /** Decodes a downloaded QR image in the browser with jsQR and returns its payload. */
 export async function decodeDownload(page: Page, download: Download): Promise<string | null> {
-  const file = await download.path();
   const extension = download.suggestedFilename().split(".").pop() ?? "png";
-  const base64 = (await readFile(file)).toString("base64");
+  return decodeImage(page, await readFile(await download.path()), extension);
+}
+
+/** Decodes QR image bytes (PNG, JPG, WebP or SVG) in the browser with jsQR. */
+export async function decodeImage(
+  page: Page,
+  bytes: Uint8Array,
+  extension: string,
+): Promise<string | null> {
+  const base64 = Buffer.from(bytes).toString("base64");
   if (!(await page.evaluate(() => "jsQR" in window))) await page.addScriptTag({ path: JSQR });
 
   return page.evaluate(
@@ -23,20 +31,26 @@ export async function decodeDownload(page: Page, download: Download): Promise<st
       const image = new Image();
       image.src = `data:${mime};base64,${base64}`;
       await image.decode();
-      const width = image.naturalWidth || 1024;
-      const height = image.naturalHeight || 1024;
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const context = canvas.getContext("2d")!;
-      // Transparent codes are scanned on white, as they would be printed.
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, width, height);
-      context.drawImage(image, 0, 0, width, height);
-      const pixels = context.getImageData(0, 0, width, height);
       type JsQR = (data: Uint8ClampedArray, w: number, h: number) => { data: string } | null;
       const jsQR = (window as unknown as { jsQR: JsQR }).jsQR;
-      return jsQR(pixels.data, width, height)?.data ?? null;
+      // Like a phone camera, try the code at a few sizes: jsQR misses some styles at one
+      // scale and reads them at another.
+      for (const scale of [1, 0.6, 0.4]) {
+        const width = Math.round((image.naturalWidth || 1024) * scale);
+        const height = Math.round((image.naturalHeight || 1024) * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d")!;
+        // Transparent codes are scanned on white, as they would be printed.
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+        const pixels = context.getImageData(0, 0, width, height);
+        const result = jsQR(pixels.data, width, height)?.data;
+        if (result) return result;
+      }
+      return null;
     },
     { base64, mime: MIME[extension] ?? "image/png" },
   );

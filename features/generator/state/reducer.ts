@@ -1,10 +1,37 @@
-import { normalizeHex } from "@/lib/color/contrast";
-
 import { DEFAULT_DESIGN, MAX_EXPORT_SIZE, MIN_EXPORT_SIZE } from "./defaults";
+import { sanitizePage } from "@/lib/pages/sanitize";
+import { isPageType } from "@/lib/qr/types";
+
 import { sanitizeContent, sanitizeDesign } from "./sanitize";
-import type { GeneratorAction, GeneratorState } from "./types";
+import type { DesignState, GeneratorAction, GeneratorState } from "./types";
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const hasLogo = (design: DesignState) => Boolean(design.logo || design.logoIcon);
+
+/**
+ * Logos hide part of the code, so adding one raises error correction to High; removing it
+ * restores what the user had before.
+ */
+function withLogoChange(state: GeneratorState, design: DesignState): GeneratorState {
+  const before = hasLogo(state.design);
+  const after = hasLogo(design);
+  if (after && !before) {
+    return {
+      ...state,
+      design: { ...design, errorCorrection: "H" },
+      ecBeforeLogo: state.design.errorCorrection === "H" ? null : state.design.errorCorrection,
+    };
+  }
+  if (!after && before) {
+    return {
+      ...state,
+      design: { ...design, errorCorrection: state.ecBeforeLogo ?? design.errorCorrection },
+      ecBeforeLogo: null,
+    };
+  }
+  return { ...state, design };
+}
 
 export function generatorReducer(state: GeneratorState, action: GeneratorAction): GeneratorState {
   switch (action.type) {
@@ -30,28 +57,33 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
       return { ...state, design: { ...state.design, ...patch }, ecBeforeLogo };
     }
 
-    case "setLogo": {
-      const { design } = state;
-      if (action.logo && !design.logo) {
-        // Logos hide part of the code, so raise error correction to High automatically.
-        return {
-          ...state,
-          design: { ...design, logo: action.logo, errorCorrection: "H" },
-          ecBeforeLogo: design.errorCorrection === "H" ? null : design.errorCorrection,
-        };
-      }
-      if (!action.logo) {
-        return {
-          ...state,
-          design: {
-            ...design,
-            logo: null,
-            errorCorrection: state.ecBeforeLogo ?? design.errorCorrection,
-          },
-          ecBeforeLogo: null,
-        };
-      }
-      return { ...state, design: { ...design, logo: action.logo } };
+    case "setLogo":
+      return withLogoChange(state, {
+        ...state.design,
+        logo: action.logo,
+        logoIcon: action.logo ? null : state.design.logoIcon,
+      });
+
+    case "setLogoIcon":
+      return withLogoChange(state, {
+        ...state.design,
+        logoIcon: action.icon,
+        logo: action.icon ? null : state.design.logo,
+      });
+
+    case "applyDesign": {
+      const next = sanitizeDesign(action.design);
+      // A template without a logo keeps the one the user already added.
+      const design =
+        next.logo || next.logoIcon
+          ? next
+          : { ...next, logo: state.design.logo, logoIcon: state.design.logoIcon };
+      if (!hasLogo(design)) return { ...state, design, ecBeforeLogo: null };
+      return {
+        ...state,
+        design: { ...design, errorCorrection: "H" },
+        ecBeforeLogo: next.errorCorrection === "H" ? null : next.errorCorrection,
+      };
     }
 
     case "swapColors":
@@ -69,7 +101,23 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
     case "resetDesign":
       return { ...state, design: { ...DEFAULT_DESIGN }, ecBeforeLogo: null };
 
-    case "loadCode":
+    case "setPage":
+      return {
+        ...state,
+        pages: { ...state.pages, [action.pageType]: sanitizePage(action.pageType, action.content) },
+      };
+
+    case "loadCode": {
+      const design = sanitizeDesign(action.design);
+      if (isPageType(action.qrType)) {
+        return {
+          ...state,
+          activeType: action.qrType,
+          pages: { ...state.pages, [action.qrType]: sanitizePage(action.qrType, action.content) },
+          design,
+          ecBeforeLogo: null,
+        };
+      }
       return {
         ...state,
         activeType: action.qrType,
@@ -77,20 +125,17 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
           ...state.content,
           [action.qrType]: sanitizeContent(action.qrType, action.content),
         },
-        design: sanitizeDesign(action.design),
+        design,
         ecBeforeLogo: null,
       };
+    }
 
     case "hydrate": {
       const { design, exportSettings, activeType } = action.saved;
       return {
         ...state,
         activeType,
-        design: {
-          ...design,
-          fgColor: normalizeHex(design.fgColor) ?? DEFAULT_DESIGN.fgColor,
-          bgColor: normalizeHex(design.bgColor) ?? DEFAULT_DESIGN.bgColor,
-        },
+        design: sanitizeDesign(design),
         exportSettings: {
           ...exportSettings,
           size: clamp(Math.round(exportSettings.size), MIN_EXPORT_SIZE, MAX_EXPORT_SIZE),

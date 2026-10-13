@@ -5,7 +5,6 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
-import { QR_TYPES } from "@/lib/qr/qr-types";
 import type { ScanReport } from "@/lib/qr/scannability";
 
 import { useExport } from "../export/useExport";
@@ -30,7 +29,7 @@ export function MobilePreviewBar({
 }) {
   const [open, setOpen] = useState(false);
   const { state, renderOptions, summary, blocker, filename } = generator;
-  const type = QR_TYPES[state.activeType];
+  const type = generator.info;
   const { download, busy } = useExport({
     options: renderOptions,
     format: state.exportSettings.format,

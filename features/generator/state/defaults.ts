@@ -1,5 +1,6 @@
+import { PAGE_DEFAULTS, type PageContentMap } from "@/lib/pages/types";
 import { QR_TYPES } from "@/lib/qr/qr-types";
-import type { ContentValues } from "@/lib/qr/types";
+import { PAGE_TYPE_IDS, QR_TYPE_IDS, type ContentValues } from "@/lib/qr/types";
 
 import type { DesignState, ExportSettings, GeneratorState } from "./types";
 
@@ -7,13 +8,33 @@ export const DEFAULT_DESIGN: DesignState = {
   fgColor: "#0F172A",
   bgColor: "#FFFFFF",
   transparent: false,
+  gradientType: "none",
+  gradientColor: "#4F46E5",
+  gradientAngle: 45,
+  cornerColor: null,
+  cornerDotColor: null,
   dotStyle: "rounded",
   cornerStyle: "rounded",
+  cornerDotStyle: "auto",
   errorCorrection: "M",
   logo: null,
+  logoIcon: null,
   logoSize: 0.22,
   logoClearSpace: true,
+  frame: "none",
+  frameText: "SCAN ME",
+  frameColor: "#0F172A",
 };
+
+export const MAX_FRAME_TEXT = 28;
+export const FRAME_TEXT_SUGGESTIONS = [
+  "SCAN ME",
+  "Scan for the menu",
+  "Join our Wi-Fi",
+  "Scan to pay",
+  "Save my contact",
+  "Leave a review",
+] as const;
 
 export const DEFAULT_EXPORT: ExportSettings = { format: "png", size: 1024 };
 
@@ -29,6 +50,15 @@ export const MAX_EXPORT_SIZE = 4096;
 export const MIN_LOGO_SIZE = 0.1;
 export const MAX_LOGO_SIZE = 0.3;
 
+/** Two-color fills that keep enough contrast on white at both ends. */
+export const GRADIENT_PRESETS = [
+  { name: "Indigo to berry", from: "#3730A3", to: "#9D174D" },
+  { name: "Ocean", from: "#0C4A6E", to: "#0F766E" },
+  { name: "Sunset", from: "#9A3412", to: "#86198F" },
+  { name: "Forest", from: "#14532D", to: "#3F6212" },
+  { name: "Midnight", from: "#0F172A", to: "#4338CA" },
+] as const;
+
 export const COLOR_PRESETS = [
   { name: "Ink", fg: "#0F172A", bg: "#FFFFFF" },
   { name: "Indigo", fg: "#3730A3", bg: "#FFFFFF" },
@@ -39,21 +69,29 @@ export const COLOR_PRESETS = [
 ] as const;
 
 export function defaultContent(): ContentValues {
-  return {
-    url: { ...QR_TYPES.url.defaults },
-    text: { ...QR_TYPES.text.defaults },
-    wifi: { ...QR_TYPES.wifi.defaults },
-    contact: { ...QR_TYPES.contact.defaults },
-    email: { ...QR_TYPES.email.defaults },
-    phone: { ...QR_TYPES.phone.defaults },
-    sms: { ...QR_TYPES.sms.defaults },
-  };
+  return Object.fromEntries(
+    QR_TYPE_IDS.map((id) => [id, { ...QR_TYPES[id].defaults }]),
+  ) as unknown as ContentValues;
+}
+
+export function defaultPages(): PageContentMap {
+  const pages = Object.fromEntries(
+    PAGE_TYPE_IDS.map((id) => [id, PAGE_DEFAULTS[id]()]),
+  ) as unknown as PageContentMap;
+  // Events default to the creator's own time zone (the browser's; UTC while prerendering).
+  try {
+    pages.event.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    pages.event.timeZone = "UTC";
+  }
+  return pages;
 }
 
 export function initialState(): GeneratorState {
   return {
     activeType: "url",
     content: defaultContent(),
+    pages: defaultPages(),
     design: { ...DEFAULT_DESIGN },
     exportSettings: { ...DEFAULT_EXPORT },
     ecBeforeLogo: null,

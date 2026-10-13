@@ -3,10 +3,13 @@ import { normalizePhone, normalizeUrl } from "./normalize";
 import type {
   ContactValues,
   EmailValues,
+  LocationValues,
+  PaymentValues,
   PhoneValues,
   SmsValues,
   TextValues,
   UrlValues,
+  WhatsAppValues,
   WifiValues,
 } from "./types";
 
@@ -74,4 +77,64 @@ export function encodeSms({ phone, message }: SmsValues): string {
   const number = normalizePhone(phone);
   if (!number) return "";
   return `SMSTO:${number}:${message}`;
+}
+
+/** wa.me wants the full international number as digits only, without "+" or spaces. */
+export function encodeWhatsApp({ phone, message }: WhatsAppValues): string {
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) return "";
+  const text = message.trim() ? `?text=${encodeURIComponent(message.trim())}` : "";
+  return `https://wa.me/${digits}${text}`;
+}
+
+/** A Google Maps link: it opens the Maps app on iPhone and Android, and the web elsewhere. */
+export function encodeLocation({ mode, query, latitude, longitude }: LocationValues): string {
+  const target =
+    mode === "coordinates"
+      ? latitude.trim() && longitude.trim()
+        ? `${Number(latitude)},${Number(longitude)}`
+        : ""
+      : query.trim();
+  if (!target) return "";
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(target)}`;
+}
+
+/** Converts a decimal amount (e.g. "0.05") to an integer string in the smallest unit. */
+export function toBaseUnits(amount: string, decimals: number): string {
+  const [whole = "0", fraction = ""] = amount.trim().split(".");
+  const digits = `${whole}${fraction.padEnd(decimals, "0").slice(0, decimals)}`.replace(
+    /^0+(?=\d)/,
+    "",
+  );
+  return digits || "0";
+}
+
+export const cleanAccount = (account: string) => account.trim().replace(/^[@$]/, "");
+
+export function encodePayment({ method, account, amount, currency, note }: PaymentValues): string {
+  const id = cleanAccount(account);
+  if (!id) return "";
+  const value = amount.trim();
+  switch (method) {
+    case "paypal":
+      return `https://paypal.me/${id}${value ? `/${value}${currency}` : ""}`;
+    case "venmo": {
+      const params = new URLSearchParams({ txn: "pay" });
+      if (value) params.set("amount", value);
+      if (note.trim()) params.set("note", note.trim());
+      return `https://venmo.com/${id}?${params.toString()}`;
+    }
+    case "cashapp":
+      return `https://cash.app/$${id}${value ? `/${value}` : ""}`;
+    case "bitcoin": {
+      // BIP 21: amounts are in BTC; message is shown to the payer.
+      const params: string[] = [];
+      if (value) params.push(`amount=${value}`);
+      if (note.trim()) params.push(`message=${encodeURIComponent(note.trim())}`);
+      return `bitcoin:${id}${params.length ? `?${params.join("&")}` : ""}`;
+    }
+    case "ethereum":
+      // EIP-681: value is in wei.
+      return `ethereum:${id}${value ? `?value=${toBaseUnits(value, 18)}` : ""}`;
+  }
 }

@@ -1,18 +1,33 @@
 import {
+  CalendarDays,
+  Clapperboard,
   Contact,
+  CreditCard,
+  FileText,
+  IdCard,
+  Images,
   Link2,
+  List,
   Mail,
+  MapPin,
+  MessageCircle,
   MessageSquareText,
+  Music,
   Phone,
+  Smartphone,
+  Star,
+  Store,
+  TicketPercent,
   Type,
+  UtensilsCrossed,
   Wifi,
   type LucideIcon,
 } from "lucide-react";
 
-import type { QrTypeId } from "@/lib/qr/types";
+import type { CodeTypeId } from "@/lib/qr/types";
 
-/** UI-only metadata for each QR type; encoding and validation live in lib/qr/qr-types.ts. */
-export const TYPE_ICONS: Record<QrTypeId, LucideIcon> = {
+/** UI-only metadata for each code type; encoding and validation live in lib/qr and lib/pages. */
+export const TYPE_ICONS: Record<CodeTypeId, LucideIcon> = {
   url: Link2,
   text: Type,
   wifi: Wifi,
@@ -20,4 +35,19 @@ export const TYPE_ICONS: Record<QrTypeId, LucideIcon> = {
   email: Mail,
   phone: Phone,
   sms: MessageSquareText,
+  whatsapp: MessageCircle,
+  location: MapPin,
+  payment: CreditCard,
+  links: List,
+  vcard: IdCard,
+  business: Store,
+  menu: UtensilsCrossed,
+  coupon: TicketPercent,
+  event: CalendarDays,
+  feedback: Star,
+  pdf: FileText,
+  images: Images,
+  video: Clapperboard,
+  audio: Music,
+  app: Smartphone,
 };

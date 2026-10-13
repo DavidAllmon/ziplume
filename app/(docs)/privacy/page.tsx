@@ -33,9 +33,38 @@ export default function PrivacyPage() {
           you entered.
         </li>
         <li>
-          <strong>Sign-in cookies:</strong> strictly necessary cookies that keep you signed in.
+          <strong>Hosted pages and files:</strong> the text, links, images, PDFs, audio and video
+          you add to a hosted page. These are public: anyone with the code or link can see them.
+        </li>
+        <li>
+          <strong>Design templates:</strong> designs you save to reuse later.
+        </li>
+        <li>
+          <strong>Teams:</strong> people you invite can see your codes, analytics and feedback
+          (viewers) or also change them (editors). An invite keeps the email address you entered
+          until it’s used, revoked or expires after 14 days. Teams you join can see your name and
+          email address.
+        </li>
+        <li>
+          <strong>API keys:</strong> only a one-way hash of each key is stored, with the name you
+          gave it and when it was last used.
+        </li>
+        <li>
+          <strong>Code passwords:</strong> stored only as a secure one-way hash.
+        </li>
+        <li>
+          <strong>Cookies:</strong> strictly necessary cookies that keep you signed in. When a
+          visitor enters a code’s password, a cookie remembers that for 12 hours so they aren’t
+          asked again.
         </li>
       </ul>
+
+      <h2>Feedback pages</h2>
+      <p>
+        When someone answers a feedback page, QuickQReate stores their rating, any comment and any
+        contact details they choose to give, plus the same daily-salted visitor hash used for scans
+        (to stop repeat submissions). Only the page’s owner can see responses.
+      </p>
 
       <h2>Scans of dynamic codes</h2>
       <p>
@@ -61,8 +90,8 @@ export default function PrivacyPage() {
       <h2>Keeping and deleting data</h2>
       <p>
         Your account and codes are kept until you delete them. Deleting your account (Account →
-        Delete account) permanently removes it, every saved code and all scan history right away.
-        Backups are rotated and expire within about three months.
+        Delete account) permanently removes it, every saved code, uploaded file, feedback response
+        and all scan history right away. Backups are rotated and expire within about three months.
       </p>
 
       <h2>Contact</h2>

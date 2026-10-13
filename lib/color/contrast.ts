@@ -42,3 +42,19 @@ export function contrastRatio(a: string, b: string): number {
   const [light, dark] = la > lb ? [la, lb] : [lb, la];
   return (light + 0.05) / (dark + 0.05);
 }
+
+/** Colors along a straight sRGB blend from `a` to `b` (excluding the ends), as hex. */
+export function gradientSamples(a: string, b: string, steps = 8): string[] {
+  if (!isValidHex(a) || !isValidHex(b)) return [];
+  const [ar, ag, ab] = channels(a);
+  const [br, bg, bb] = channels(b);
+  const hex = (n: number) => Math.round(n).toString(16).padStart(2, "0");
+  const samples: string[] = [];
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps;
+    samples.push(
+      `#${hex(ar + (br - ar) * t)}${hex(ag + (bg - ag) * t)}${hex(ab + (bb - ab) * t)}`.toUpperCase(),
+    );
+  }
+  return samples;
+}

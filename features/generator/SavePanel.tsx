@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, LayoutGrid, Plus } from "lucide-react";
+import { Check, LayoutGrid, Plus, Users } from "lucide-react";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
@@ -17,7 +17,7 @@ import type { Generator } from "./useGenerator";
 export function SavePanel({ generator }: { generator: Generator }) {
   const { user, loading } = useSession();
   const toast = useToast();
-  const { saved, defaultName, save, data, isDynamic } = generator;
+  const { saved, defaultName, save, data, isDynamic, workspace } = generator;
   const [name, setName] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -63,6 +63,24 @@ export function SavePanel({ generator }: { generator: Generator }) {
           />
         )}
       </Field>
+      {workspace && (
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-fg-muted">
+          <Users aria-hidden className="size-4 text-primary dark:text-link" />
+          <span>
+            {saved ? "In" : "Saving to"}{" "}
+            <strong className="font-semibold text-fg">{workspace.label}</strong>’s workspace
+          </span>
+          {!saved && (
+            <button
+              type="button"
+              className="font-medium text-link underline-offset-4 hover:underline"
+              onClick={generator.leaveWorkspace}
+            >
+              Use my account instead
+            </button>
+          )}
+        </p>
+      )}
       {saved?.slug && (
         <p className="flex items-center gap-1.5 text-sm text-fg-muted">
           <Check aria-hidden className="size-4 text-success" />

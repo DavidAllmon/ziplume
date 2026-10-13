@@ -1,6 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
+import { scanTarget } from "./target";
+import { isUnlocked, tooManyAttempts, unlockToken } from "./unlock";
+
 import { measure } from "@/lib/qr/capacity";
 
 import { decodeHeaderText, scanContext, visitorHash } from "./scan-context";
@@ -110,5 +113,85 @@ describe("UTM builder", () => {
     expect(withUtm(url, { source: "", medium: "", campaign: "" })).toBe(
       "https://example.com/menu?table=4",
     );
+  });
+});
+
+describe("scan targets", () => {
+  const site = "https://qr.techitdave.com";
+  const UID = "11111111-1111-4111-8111-111111111111";
+
+  it("send links to their destination and pages to their page", () => {
+    expect(
+      scanTarget({ destination: "https://e.com", qr_type: "url", content: {} }, "ABC", null, site),
+    ).toBe("https://e.com");
+    expect(
+      scanTarget({ destination: null, qr_type: "menu", content: {} }, "ABC234", "iOS", site),
+    ).toBe(`${site}/p/ABC234`);
+  });
+
+  it("open direct PDFs straight away", () => {
+    const content = {
+      direct: true,
+      file: { path: `${UID}/menu.pdf`, name: "menu.pdf", type: "application/pdf", size: 1 },
+    };
+    expect(scanTarget({ destination: null, qr_type: "pdf", content }, "PDF1", null, site)).toMatch(
+      /\/storage\/v1\/object\/public\/page-media\/11111111-1111-4111-8111-111111111111\/menu\.pdf$/,
+    );
+    expect(
+      scanTarget(
+        { destination: null, qr_type: "pdf", content: { ...content, direct: false } },
+        "PDF1",
+        null,
+        site,
+      ),
+    ).toBe(`${site}/p/PDF1`);
+  });
+
+  it("send phones to their app store and everyone else to the page", () => {
+    const content = {
+      iosUrl: "https://apps.apple.com/app/id1",
+      androidUrl: "https://play.google.com/store/apps/details?id=x",
+    };
+    const code = { destination: null, qr_type: "app", content };
+    expect(scanTarget(code, "APP", "iOS", site)).toBe("https://apps.apple.com/app/id1");
+    expect(scanTarget(code, "APP", "Android", site)).toBe(
+      "https://play.google.com/store/apps/details?id=x",
+    );
+    expect(scanTarget(code, "APP", "Windows", site)).toBe(`${site}/p/APP`);
+    // An unsafe store link is ignored.
+    expect(
+      scanTarget({ ...code, content: { iosUrl: "javascript:alert(1)" } }, "APP", "iOS", site),
+    ).toBe(`${site}/p/APP`);
+  });
+});
+
+describe("unlock cookies", () => {
+  const secret = "test-secret-test-secret-test-secret";
+
+  it("unlock one slug, case-insensitively, until they expire", () => {
+    const now = Date.UTC(2026, 9, 13, 12);
+    const token = unlockToken("abc234", secret, now);
+    expect(isUnlocked("ABC234", token, secret, now + 1000)).toBe(true);
+    expect(isUnlocked("ABC235", token, secret, now)).toBe(false);
+    expect(isUnlocked("ABC234", token, "other-secret", now)).toBe(false);
+    expect(isUnlocked("ABC234", token, secret, now + 13 * 3600 * 1000)).toBe(false);
+  });
+
+  it("reject tampered or malformed tokens", () => {
+    const now = Date.now();
+    const token = unlockToken("ABC234", secret, now);
+    const [expires, signature] = token.split(".");
+    expect(isUnlocked("ABC234", `${Number(expires) + 9999}.${signature}`, secret, now)).toBe(false);
+    expect(isUnlocked("ABC234", "garbage", secret, now)).toBe(false);
+    expect(isUnlocked("ABC234", undefined, secret, now)).toBe(false);
+  });
+
+  it("limit password attempts per visitor and code", () => {
+    const key = `visitor:${Math.random()}`;
+    const results = Array.from({ length: 11 }, () => tooManyAttempts(key, 1_000));
+    expect(results.slice(0, 10).every((r) => !r)).toBe(true);
+    expect(results[10]).toBe(true);
+    // The window resets after 15 minutes.
+    expect(tooManyAttempts(key, 1_000 + 16 * 60 * 1000)).toBe(false);
   });
 });
