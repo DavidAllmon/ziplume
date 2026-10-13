@@ -3,6 +3,7 @@
 import { Card, CardHeader } from "@/components/ui/Card";
 
 import { ContentForm } from "./content/ContentForm";
+import { DynamicToggle } from "./content/DynamicToggle";
 import { TypePicker } from "./content/TypePicker";
 import { MobilePreviewBar } from "./preview/MobilePreviewBar";
 import { PreviewPanel } from "./preview/PreviewPanel";
@@ -11,7 +12,7 @@ import { useGenerator } from "./useGenerator";
 
 export function Generator() {
   const generator = useGenerator();
-  const { state, dispatch, setField, report } = generator;
+  const { state, dispatch, setField, report, saved, isDynamic } = generator;
 
   return (
     <>
@@ -21,15 +22,28 @@ export function Generator() {
             <CardHeader
               id="content-heading"
               step={1}
-              title="What should it open?"
-              description="Pick a type, then fill in the details."
+              title={saved ? `Editing “${saved.name}”` : "What should it open?"}
+              description={
+                saved
+                  ? "Changes apply when you save. Printed dynamic codes update instantly."
+                  : "Pick a type, then fill in the details."
+              }
             />
             <div className="flex flex-col gap-6 px-5 pt-4 pb-6 sm:px-6">
               <TypePicker
                 value={state.activeType}
+                disabled={saved !== null}
                 onChange={(activeType) => dispatch({ type: "setActiveType", activeType })}
               />
               <ContentForm state={state} setField={setField} />
+              {state.activeType === "url" && (
+                <DynamicToggle
+                  enabled={isDynamic}
+                  onChange={generator.setDynamic}
+                  slug={generator.slug}
+                  locked={saved !== null}
+                />
+              )}
             </div>
           </Card>
           <StyleCard design={state.design} dispatch={dispatch} />

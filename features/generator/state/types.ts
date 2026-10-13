@@ -50,7 +50,9 @@ export type GeneratorAction =
   | { type: "swapColors" }
   | { type: "setExport"; patch: Partial<ExportSettings> }
   | { type: "resetDesign" }
-  | { type: "hydrate"; saved: PersistedSettings };
+  | { type: "hydrate"; saved: PersistedSettings }
+  /** Load a saved code (from the dashboard) into the generator for editing. */
+  | { type: "loadCode"; qrType: QrTypeId; content: unknown; design: unknown };
 
 export interface PersistedSettings {
   version: 1;

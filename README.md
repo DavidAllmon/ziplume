@@ -7,11 +7,14 @@
 
 <p align="center">
   <strong>Create beautiful, scannable QR codes in seconds.</strong><br />
-  Links, Wi-Fi, contacts, email, phone and SMS. Free, private and it runs entirely in your browser.
+  Links, Wi-Fi, contacts, email, phone and SMS, plus editable dynamic codes with scan analytics.<br />
+  Completely free, with no limits.
 </p>
 
 <p align="center">
-  <a href="https://davidallmon.github.io/QuickQReate/"><strong>Open QuickQReate →</strong></a>
+  <a href="https://qr.techitdave.com"><strong>Open QuickQReate →</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://buymeacoffee.com/davidallmon">Buy me a coffee</a>
 </p>
 
 <p align="center">
@@ -44,11 +47,14 @@
 - **Export:** PNG, SVG, JPG or WebP at 512 to 4096 px. Copy to clipboard or use the native share sheet where supported. Files get readable names like `quickqreate-wifi-cafe-guest.png`.
 - **Remembers your style:** design and export settings are saved on your device. What you type, such as Wi-Fi passwords, never is.
 - **Works offline:** install it as an app; it keeps working without a connection.
+- **Free accounts (optional):** sign up with email and password or Google to save unlimited codes, with optional two-factor authentication. The generator never requires an account.
+- **Dynamic codes:** a Link code can point at a short link (`qr.techitdave.com/r/…`) whose destination you change any time, even after printing. Pause a code, customize its ending, or add UTM tags for Google Analytics.
+- **Scan analytics:** scans and unique visitors over time, countries, cities, devices, operating systems, browsers and time of day, for 7 days to all time. Export every scan as CSV. Bots and link previewers aren't counted.
 - **Accessible:** keyboard friendly, screen-reader labelled, WCAG AA contrast in light and dark themes, and it respects reduced motion.
 
 ## Privacy
 
-QuickQReate has no backend, analytics or cookies. QR codes are generated in your browser and your content never leaves your device.
+Codes are generated in your browser, and nothing you type is sent anywhere unless you save a code to your account. There are no ads, tracking scripts or advertising cookies. Scans of dynamic codes record an approximate location, device type and a daily-salted visitor hash; IP addresses are never stored. See the [privacy policy](https://qr.techitdave.com/privacy).
 
 ## Getting started
 
@@ -61,30 +67,36 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). Without any environment variables, the app runs as the free generator with sign-in hidden. To work on accounts, dynamic codes and analytics, copy `.env.example` to `.env.local` and fill in a Supabase project (see [docs/accounts-setup.md](docs/accounts-setup.md)).
 
 ### Scripts
 
 | Command                | What it does                                                         |
 | ---------------------- | -------------------------------------------------------------------- |
 | `npm run dev`          | Start the development server                                         |
-| `npm run build`        | Build the static site into `out/` and generate the service worker    |
-| `npm start`            | Serve `out/` locally (honors `NEXT_PUBLIC_BASE_PATH`)                |
+| `npm run build`        | Build the standalone server and generate the service worker          |
+| `npm start`            | Run the production build (`PORT`, default 3000)                      |
 | `npm run lint`         | ESLint                                                               |
 | `npm run typecheck`    | TypeScript                                                           |
-| `npm test`             | Unit tests (Vitest)                                                  |
-| `npm run test:e2e`     | End-to-end tests (Playwright) against the built site; run `build` first |
+| `npm test`             | Unit tests (Vitest), including the database migration on PGlite      |
+| `npm run test:e2e`     | End-to-end tests (Playwright) against the built app; run `build` first |
 | `npm run format`       | Prettier                                                             |
 | `npm run brand`        | Regenerate favicons, app icons, logos and the social image           |
 
 ## How it's built
 
 ```
-app/                    Layout, metadata, theme tokens (globals.css), manifest, icons
+app/                    Routes: generator, sign-in, dashboard, analytics, /r/<slug> redirects
 components/
   brand/                Logo and the shared mark geometry used to generate assets
   layout/               Header, footer, theme toggle, providers
   ui/                   Buttons, fields, segmented controls, sheet, toast…
+  support/              Buy Me a Coffee links
+features/
+  auth/                 Sign-in, sign-up, password reset, two-factor and account forms
+  codes/                Saving, updating and deleting codes
+  dashboard/            Saved-code list and code editor
+  analytics/            Charts and the analytics page
 features/generator/
   content/              Type picker and one form per QR type
   style/                Colors, shape, logo and error correction
@@ -94,12 +106,19 @@ features/generator/
 lib/
   qr/                   Encoders, validation, capacity, scan check, renderer adapter
   color/                WCAG contrast helpers
-scripts/                Brand asset renderer, service worker generator, static server
+  dynamic/              Short-link slugs, scan context (location, device, bot filter), UTM tags
+  analytics/            Date ranges, time zones and chart shaping
+  supabase/             Browser, server and service-role clients
+supabase/
+  migrations/           Schema, row-level security, scan recorder, analytics function
+  test/                 The migration applied to PGlite and tested as each role
+scripts/                Brand asset renderer, service worker generator, server launcher
 e2e/                    Playwright tests that download codes and decode them with jsQR
 ```
 
 - **QR logic is plain TypeScript** in `lib/qr`, fully unit tested, including spec-correct escaping for Wi-Fi and vCard payloads and UTF-8 support for any language or emoji.
 - **Rendering** uses [qr-code-styling](https://github.com/kozakdenys/qr-code-styling) behind `lib/qr/renderer.ts`, the only file that knows about it.
+- **Accounts and data** use a self-hosted Supabase project. Every table has row-level security and least-privilege grants; scans enter only through a server-side function, and accounts with two-factor authentication are locked to two-factor sessions in the database itself.
 - **Theme tokens** live in `app/globals.css`. `app/theme.test.ts` fails if any text color pair drops below WCAG AA contrast.
 
 ### Adding a QR type
@@ -111,9 +130,9 @@ e2e/                    Playwright tests that download codes and decode them wit
 
 ## Deployment
 
-Pushes to `main` run lint, type checks, unit and end-to-end tests, then deploy the static export to GitHub Pages. The Pages build sets `NEXT_PUBLIC_BASE_PATH=/QuickQReate`, and every asset, icon, manifest and service worker URL respects it. The output in `out/` is plain static files and can be hosted anywhere.
+QuickQReate runs as a Next.js server from the `Dockerfile` (standalone output, health check at `/api/health`). Production is a Coolify application at `https://qr.techitdave.com` that redeploys on every push to `main`. GitHub Actions runs lint, formatting, type checks, unit and end-to-end tests on every push and pull request.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FDavidAllmon%2FQuickQReate)
+The one-time setup (Supabase project, Brevo email, Google sign-in, DNS and Coolify) is in [docs/accounts-setup.md](docs/accounts-setup.md). The old GitHub Pages address becomes a redirect by running the CI workflow manually with `redirect_to` set to the new URL.
 
 ## Contributing
 

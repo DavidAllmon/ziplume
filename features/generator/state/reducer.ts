@@ -1,6 +1,7 @@
 import { normalizeHex } from "@/lib/color/contrast";
 
 import { DEFAULT_DESIGN, MAX_EXPORT_SIZE, MIN_EXPORT_SIZE } from "./defaults";
+import { sanitizeContent, sanitizeDesign } from "./sanitize";
 import type { GeneratorAction, GeneratorState } from "./types";
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -67,6 +68,18 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
 
     case "resetDesign":
       return { ...state, design: { ...DEFAULT_DESIGN }, ecBeforeLogo: null };
+
+    case "loadCode":
+      return {
+        ...state,
+        activeType: action.qrType,
+        content: {
+          ...state.content,
+          [action.qrType]: sanitizeContent(action.qrType, action.content),
+        },
+        design: sanitizeDesign(action.design),
+        ecBeforeLogo: null,
+      };
 
     case "hydrate": {
       const { design, exportSettings, activeType } = action.saved;

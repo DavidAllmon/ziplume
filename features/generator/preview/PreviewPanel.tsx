@@ -3,6 +3,7 @@
 import { QR_TYPES } from "@/lib/qr/qr-types";
 import type { ScanReport } from "@/lib/qr/scannability";
 
+import { SavePanel } from "../SavePanel";
 import type { Generator } from "../useGenerator";
 import { ExportPanel } from "../export/ExportPanel";
 import { QrTile } from "./QrTile";
@@ -64,6 +65,7 @@ export function PreviewPanel({ generator, report }: PreviewPanelProps) {
         </div>
       )}
       <ScanIssues report={report} />
+      <SavePanel generator={generator} />
       <hr className="border-border" />
       <ExportPanel
         options={renderOptions}

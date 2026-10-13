@@ -35,7 +35,8 @@ environment's secrets.
 
 Open the project's child Studio → **SQL Editor**, paste the contents of
 `supabase/migrations/20261013120000_quickqreate_core.sql` and run it once.
-It creates `profiles`, `qr_codes`, `scan_events`, row-level security, the scan recorder and
+It creates `profiles`, `qr_codes`, `scan_events`, row-level security (including a rule that
+locks accounts with two-factor authentication to two-factor sessions), the scan recorder and
 the analytics function. It is safe to read before running: it only touches the `public`
 schema and adds one trigger on `auth.users` to create profiles.
 
@@ -132,7 +133,17 @@ Environment variables:
 
 Enable automatic deployment on push to `main`.
 
-## 8. Let Claude verify it (optional)
+## 8. Retire the GitHub Pages site (after the Coolify app is live)
+
+Until this step, `davidallmon.github.io/QuickQReate` keeps serving the last static build, so
+nothing breaks while the new site is being set up. Once `https://qr.techitdave.com` works:
+
+GitHub → **Actions → CI → Run workflow** on `main`, with **redirect_to** set to
+`https://qr.techitdave.com`. It replaces the Pages site with a page that forwards visitors (and
+any old deep links) to the new address, and a service worker that removes the old offline copy
+from returning visitors' browsers.
+
+## 9. Let Claude verify it (optional)
 
 To let the Claude Code cloud environment test the live project, edit the environment:
 
@@ -148,4 +159,5 @@ To let the Claude Code cloud environment test the live project, edit the environ
 - [ ] Google sign-in creates an account and lands on the dashboard
 - [ ] Create a dynamic code, scan it with a phone: it redirects and the scan appears in analytics
 - [ ] A second account cannot see the first account's codes or scans
+- [ ] After turning on two-factor in **Account**, signing in asks for the authenticator code
 - [ ] The project appears in the nightly backup receipts
