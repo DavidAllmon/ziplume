@@ -33,6 +33,8 @@
   --danger: #b91c1c;
   --danger-soft: #fee2e2;
   --logo-ring: #4f46e5;
+  /* Chart series, validated for color-blind separation against the surface. */
+  --chart-1: #4f46e5;
   --shadow-color: 222 47% 11%;
 }
 
@@ -62,6 +64,7 @@
   --danger: #f87171;
   --danger-soft: #3a1717;
   --logo-ring: #818cf8;
+  --chart-1: #7c83f5;
   --shadow-color: 228 60% 3%;
 }
 
@@ -89,6 +92,7 @@
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-chart-1: var(--chart-1);
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, sans-serif;

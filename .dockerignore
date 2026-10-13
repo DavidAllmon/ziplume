@@ -1,0 +1,14 @@
+.git
+.github
+node_modules
+.next
+out
+coverage
+playwright-report
+test-results
+docs/screenshots
+e2e
+*.md
+!README.md
+.env*
+public/sw.js
