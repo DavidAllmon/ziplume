@@ -201,6 +201,15 @@ export interface Database {
         Args: { p_code: Json; p_password?: string | null };
         Returns: Database["public"]["Tables"]["qr_codes"]["Row"];
       };
+      update_code: {
+        Args: {
+          p_id: string;
+          p_patch: Json;
+          p_password?: string | null;
+          p_password_action?: string;
+        };
+        Returns: Database["public"]["Tables"]["qr_codes"]["Row"];
+      };
       my_team: {
         Args: Record<string, never>;
         Returns: {
