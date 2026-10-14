@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_DESIGN } from "@/features/generator/state/defaults";
 
-import { createCodeWithSettings, type NewCode } from "./api";
+import { createCodes, createCodeWithSettings, type NewCode } from "./api";
 
 const rpc = vi.fn();
-vi.mock("@/lib/supabase/client", () => ({ getBrowserSupabase: () => ({ rpc }) }));
+const from = vi.fn();
+vi.mock("@/lib/supabase/client", () => ({ getBrowserSupabase: () => ({ rpc, from }) }));
 
 const row = { id: "c1", name: "Poster" };
 const base: NewCode = {
@@ -16,7 +17,10 @@ const base: NewCode = {
 };
 const link = { destination: "https://example.com" };
 
-beforeEach(() => rpc.mockReset());
+beforeEach(() => {
+  rpc.mockReset();
+  from.mockReset();
+});
 
 describe("createCodeWithSettings", () => {
   it("sends the code, its folder, dates and password in one call", async () => {
@@ -106,5 +110,27 @@ describe("createCodeWithSettings", () => {
       error: "Link endings use 3–40 letters, numbers or dashes.",
     });
     expect(rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("createCodes", () => {
+  it("reports each saved batch, so a save that stops partway can resume with the rest", async () => {
+    const insert = vi.fn((rows: { name: string }[]) => ({
+      select: async () => ({
+        data: rows.map((row) => ({ id: `id-${row.name}`, name: row.name })),
+        error: null,
+      }),
+    }));
+    from.mockReturnValue({ insert });
+    const inputs = Array.from({ length: 150 }, (_, i) => ({ ...base, name: `Code ${i + 1}` }));
+    const onProgress = vi.fn();
+    const result = await createCodes(inputs, onProgress);
+    expect(result.ok && result.value).toHaveLength(150);
+    expect(onProgress).toHaveBeenCalledTimes(2);
+    expect(onProgress.mock.calls[0]![0]).toBe(100);
+    expect(onProgress.mock.calls[0]![1]).toHaveLength(100);
+    expect(onProgress.mock.calls[1]![0]).toBe(150);
+    expect(onProgress.mock.calls[1]![1]).toHaveLength(50);
+    expect(onProgress.mock.calls[1]![1][0]).toMatchObject({ name: "Code 101" });
   });
 });

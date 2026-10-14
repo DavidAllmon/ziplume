@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/app/PageHeader";
-import { newCodeHref, withWorkspace } from "@/components/app/nav";
+import { bulkCreateHref, newCodeHref } from "@/components/app/nav";
 import { buttonClasses } from "@/components/ui/Button";
 import { CodesView } from "@/features/codes/list/CodesView";
 import { FolderActions } from "@/features/codes/list/FolderActions";
@@ -72,7 +72,7 @@ export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
             <>
               {folder && <FolderActions folder={folder} teamId={teamId} />}
               <Link
-                href={withWorkspace("/bulk", teamId)}
+                href={bulkCreateHref({ folderId: folder?.id, ownerId: teamId })}
                 className={buttonClasses("outline", "md")}
               >
                 <Rows3 aria-hidden /> Bulk create

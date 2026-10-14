@@ -43,6 +43,20 @@ export function newCodeHref({
   return withWorkspace(query ? `/codes/new?${query}` : "/codes/new", ownerId);
 }
 
+/** Bulk creation inside the app, filing the codes in a folder when given, in the given team. */
+export function bulkCreateHref({
+  folderId,
+  ownerId,
+}: {
+  folderId?: string | null;
+  ownerId: string | null;
+}): string {
+  const params = new URLSearchParams();
+  if (folderId) params.set("folder", folderId);
+  const query = params.toString();
+  return withWorkspace(query ? `/codes/bulk?${query}` : "/codes/bulk", ownerId);
+}
+
 /** Whether a nav link points at the current page or a page under it. */
 export function isCurrent(pathname: string, href: string): boolean {
   const path = href.split("?")[0]!;

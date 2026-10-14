@@ -36,6 +36,16 @@ beforeEach(() => {
 });
 
 describe("AppShell", () => {
+  it("opens bulk creation inside the app, in the folder being viewed", async () => {
+    const user = userEvent.setup();
+    search = new URLSearchParams("workspace=t1&folder=f1");
+    renderShell();
+    await user.click(screen.getAllByRole("button", { name: "More ways to create" })[0]!);
+    expect(
+      await screen.findByRole("menuitem", { name: /Bulk create from a spreadsheet/ }),
+    ).toHaveAttribute("href", "/codes/bulk?folder=f1&workspace=t1");
+  });
+
   it("creates in the folder being viewed", () => {
     search = new URLSearchParams("workspace=t1&folder=f1");
     renderShell();

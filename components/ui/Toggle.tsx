@@ -10,10 +10,18 @@ interface ToggleProps {
   onChange: (checked: boolean) => void;
   label: ReactNode;
   description?: ReactNode;
+  disabled?: boolean;
   className?: string;
 }
 
-export function Toggle({ checked, onChange, label, description, className }: ToggleProps) {
+export function Toggle({
+  checked,
+  onChange,
+  label,
+  description,
+  disabled = false,
+  className,
+}: ToggleProps) {
   return (
     <Field className={cn("flex items-start justify-between gap-4", className)}>
       <span className="flex flex-col">
@@ -23,7 +31,8 @@ export function Toggle({ checked, onChange, label, description, className }: Tog
       <Switch
         checked={checked}
         onChange={onChange}
-        className="group relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border border-field-border bg-surface-2 transition-colors data-checked:border-primary data-checked:bg-primary data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring"
+        disabled={disabled}
+        className="group relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border border-field-border bg-surface-2 transition-colors data-checked:border-primary data-checked:bg-primary data-disabled:cursor-not-allowed data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring"
       >
         <span
           aria-hidden
