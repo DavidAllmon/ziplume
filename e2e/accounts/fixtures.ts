@@ -23,6 +23,8 @@ export interface Seed {
   viewerId: string;
   /** The owner's "Spring menu" trackable code. */
   menuId: string;
+  /** The owner's "Flyers" folder, holding the Wi-Fi code. */
+  folderId: string;
 }
 
 /** Ids created by the global setup. Read it inside tests, not at import time. */
