@@ -4,21 +4,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { PageHeader } from "@/components/app/PageHeader";
-import { Card, CardHeader } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
 import { createCodeWithSettings, designForStorage } from "@/features/codes/api";
-import type { ContentEditor } from "@/features/generator/content/types";
 import type { CodeTypeId } from "@/lib/qr/types";
 import type { FolderRow } from "@/types/supabase";
 
-import { CreateMobileBar } from "./CreateMobileBar";
 import { DraftBanner } from "./DraftBanner";
-import { PreviewColumn } from "./PreviewColumn";
-import { ContentSection } from "./sections/ContentSection";
-import { DesignSection } from "./sections/DesignSection";
-import { NameFolderSection } from "./sections/NameFolderSection";
-import { SettingsSection } from "./sections/SettingsSection";
-import { TypeSection } from "./sections/TypeSection";
+import { EditorLayout } from "./EditorLayout";
 import type { CreateState } from "./state";
 import { toNewCode } from "./submit";
 import { useCodeDraft } from "./useCodeDraft";
@@ -40,7 +32,7 @@ export function CreatePage({ userId, folders, initialType, initialFolderId }: Cr
     [initialType, initialFolderId],
   );
   const draft = useCodeDraft(defaults);
-  const { state, dispatch, codeAction } = draft;
+  const { state, dispatch } = draft;
   const restore = useCallback(
     (saved: CreateState) =>
       dispatch({
@@ -61,14 +53,6 @@ export function CreatePage({ userId, folders, initialType, initialFolderId }: Cr
   const [failure, setFailure] = useState<{ message: string; state: CreateState } | null>(null);
   /** Set the moment Create is pressed, so a second press can't start another save. */
   const inFlight = useRef(false);
-
-  const editor: ContentEditor = {
-    state: state.code,
-    setField: draft.setField,
-    setPage: draft.setPage,
-    pageErrors: draft.pageErrors,
-    workspace: null,
-  };
 
   async function create() {
     if (inFlight.current || draft.blocker) return;
@@ -94,8 +78,9 @@ export function CreatePage({ userId, folders, initialType, initialFolderId }: Cr
   }
 
   const controls = {
-    creating,
-    onCreate: () => void create(),
+    mode: "create" as const,
+    submitting: creating,
+    onSubmit: () => void create(),
     error: failure?.state === state ? failure.message : null,
   };
 
@@ -112,45 +97,7 @@ export function CreatePage({ userId, folders, initialType, initialFolderId }: Cr
           onDiscard={drafts.discard}
         />
       )}
-      <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_18.5rem] lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
-        <div className="flex min-w-0 flex-col gap-6">
-          <TypeSection
-            value={state.code.activeType}
-            onChange={(activeType) => codeAction({ type: "setActiveType", activeType })}
-          />
-          <ContentSection
-            editor={editor}
-            onTypeChange={(activeType) => codeAction({ type: "setActiveType", activeType })}
-          />
-          <DesignSection
-            design={state.code.design}
-            dispatch={codeAction}
-            onResetToStyle={() => dispatch({ type: "resetToStyle" })}
-          />
-          <SettingsSection
-            type={state.code.activeType}
-            settings={state.settings}
-            onChange={(patch) => dispatch({ type: "settings", patch })}
-          />
-          <NameFolderSection
-            name={state.code.name}
-            placeholder={draft.defaultName}
-            onName={(name) => codeAction({ type: "setName", name })}
-            folderId={state.folderId}
-            folders={folders}
-            onFolder={(folderId) => dispatch({ type: "setFolder", folderId })}
-          />
-        </div>
-        <aside aria-labelledby="preview-heading" className="hidden md:sticky md:top-6 md:block">
-          <Card>
-            <CardHeader id="preview-heading" title="Preview" />
-            <div className="px-5 pt-4 pb-6">
-              <PreviewColumn draft={draft} {...controls} />
-            </div>
-          </Card>
-        </aside>
-      </div>
-      <CreateMobileBar draft={draft} {...controls} />
+      <EditorLayout draft={draft} folders={folders} mediaOwner={null} controls={controls} />
     </div>
   );
 }

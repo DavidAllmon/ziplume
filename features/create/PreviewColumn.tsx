@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Loader2, Plus } from "lucide-react";
+import { Download, Loader2, Plus, Save } from "lucide-react";
 import { useId, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
@@ -14,19 +14,29 @@ import { typeLabel } from "./catalog";
 import type { CodeDraft } from "./useCodeDraft";
 
 export interface CreateControls {
-  creating: boolean;
-  onCreate: () => void;
-  /** Why the last Create failed, until the next change. */
+  /** "edit" saves changes to a saved code instead of creating one. */
+  mode: "create" | "edit";
+  submitting: boolean;
+  onSubmit: () => void;
+  /** Why the last save failed, until the next change. */
   error: string | null;
+  /** Edit mode: whether anything differs from the saved code. */
+  dirty?: boolean;
+  /** Edit mode: puts the form back the way it was saved. */
+  onDiscard?: () => void;
 }
 
-/** The live code (or page), its scan check and the one Create button. */
+/** The live code (or page), its scan check and the one Create (or Save changes) button. */
 export function PreviewColumn({
   draft,
-  creating,
-  onCreate,
+  mode,
+  submitting,
+  onSubmit,
   error,
+  dirty = false,
+  onDiscard,
 }: { draft: CodeDraft } & CreateControls) {
+  const editing = mode === "edit";
   const { state, renderOptions, summary, info, report, blocker, pageType, trackable, previewSlug } =
     draft;
   const [view, setView] = useState<"code" | "page">("code");
@@ -73,14 +83,31 @@ export function PreviewColumn({
       <ScanIssues report={report} />
       <div className="flex flex-col gap-2">
         <Button
-          onClick={onCreate}
-          disabled={blocker !== null || creating}
+          onClick={onSubmit}
+          disabled={blocker !== null || submitting || (editing && !dirty)}
           aria-describedby={blocker ? reasonId : undefined}
           className="w-full"
         >
-          {creating ? <Loader2 aria-hidden className="animate-spin" /> : <Plus aria-hidden />}
-          {creating ? "Creating…" : "Create code"}
+          {submitting ? (
+            <Loader2 aria-hidden className="animate-spin" />
+          ) : editing ? (
+            <Save aria-hidden />
+          ) : (
+            <Plus aria-hidden />
+          )}
+          {submitting
+            ? editing
+              ? "Saving…"
+              : "Creating…"
+            : editing
+              ? "Save changes"
+              : "Create code"}
         </Button>
+        {editing && dirty && !submitting && onDiscard && (
+          <Button variant="ghost" onClick={onDiscard} className="w-full">
+            Discard changes
+          </Button>
+        )}
         {blocker && (
           <p id={reasonId} className="text-center text-sm text-fg-muted">
             {blocker}
@@ -91,7 +118,7 @@ export function PreviewColumn({
             {error}
           </p>
         )}
-        {!trackable && (
+        {!trackable && !editing && (
           <Button
             variant="ghost"
             onClick={() => void download()}

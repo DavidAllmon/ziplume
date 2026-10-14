@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronUp, Loader2, Plus } from "lucide-react";
+import { ChevronUp, Loader2, Plus, Save } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/Button";
@@ -11,14 +11,11 @@ import { PreviewColumn, type CreateControls } from "./PreviewColumn";
 import type { CodeDraft } from "./useCodeDraft";
 
 /** Phones: a small live preview above the bottom tabs; tap it for the full preview. */
-export function CreateMobileBar({
-  draft,
-  creating,
-  onCreate,
-  error,
-}: { draft: CodeDraft } & CreateControls) {
+export function CreateMobileBar({ draft, ...controls }: { draft: CodeDraft } & CreateControls) {
   const [open, setOpen] = useState(false);
   const { renderOptions, summary, info, blocker } = draft;
+  const { mode, submitting, onSubmit, error, dirty = false } = controls;
+  const editing = mode === "edit";
   return (
     <>
       <div className="fixed inset-x-0 bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 shadow-pop backdrop-blur-md sm:bottom-0 sm:pb-[env(safe-area-inset-bottom)] md:hidden">
@@ -49,15 +46,25 @@ export function CreateMobileBar({
               </span>
             </span>
           </button>
-          <Button onClick={onCreate} disabled={blocker !== null || creating} className="px-4">
-            {creating ? <Loader2 aria-hidden className="animate-spin" /> : <Plus aria-hidden />}
-            {creating ? "Creating…" : "Create"}
+          <Button
+            onClick={onSubmit}
+            disabled={blocker !== null || submitting || (editing && !dirty)}
+            className="px-4"
+          >
+            {submitting ? (
+              <Loader2 aria-hidden className="animate-spin" />
+            ) : editing ? (
+              <Save aria-hidden />
+            ) : (
+              <Plus aria-hidden />
+            )}
+            {submitting ? (editing ? "Saving…" : "Creating…") : editing ? "Save" : "Create"}
           </Button>
         </div>
       </div>
       <Sheet open={open} onClose={() => setOpen(false)} title="Preview">
         <div className="pt-2">
-          <PreviewColumn draft={draft} creating={creating} onCreate={onCreate} error={error} />
+          <PreviewColumn draft={draft} {...controls} />
         </div>
       </Sheet>
     </>
