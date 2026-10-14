@@ -9,6 +9,7 @@ import {
   FolderInput,
   MoreHorizontal,
   Pause,
+  Pencil,
   Play,
   Trash2,
 } from "lucide-react";
@@ -47,6 +48,13 @@ export function CodeActions({
             <ExternalLink aria-hidden /> Open
           </Link>
         </MenuItem>
+        {canEdit && (
+          <MenuItem>
+            <Link href={withWorkspace(`/codes/${code.id}/edit`, teamId)} className={menuItemClass}>
+              <Pencil aria-hidden /> Edit
+            </Link>
+          </MenuItem>
+        )}
         {code.is_dynamic && (
           <MenuItem>
             <Link

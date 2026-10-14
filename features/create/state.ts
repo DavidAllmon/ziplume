@@ -101,7 +101,10 @@ export interface SettingsErrors {
 }
 
 /** What's wrong with the settings, field by field (empty when they can be saved). */
-export function settingsErrors(settings: CreateSettings): SettingsErrors {
+export function settingsErrors(
+  settings: CreateSettings,
+  { requireSlug = false }: { requireSlug?: boolean } = {},
+): SettingsErrors {
   const errors: SettingsErrors = {};
   const { password, startsAt, endsAt, slug } = settings;
   if (password && (password.length < 4 || password.length > 128))
@@ -109,9 +112,12 @@ export function settingsErrors(settings: CreateSettings): SettingsErrors {
   if (startsAt && endsAt && new Date(endsAt).getTime() <= new Date(startsAt).getTime())
     errors.endsAt = "The end date must be after the start date";
   if (slug && !isValidSlug(slug)) errors.slug = "Link endings use 3–40 letters, numbers or dashes";
+  else if (!slug && requireSlug) errors.slug = "Every trackable code needs a link ending";
   return errors;
 }
 
 /** The first settings problem, or null. */
-export const settingsProblem = (settings: CreateSettings): string | null =>
-  Object.values(settingsErrors(settings))[0] ?? null;
+export const settingsProblem = (
+  settings: CreateSettings,
+  options?: { requireSlug?: boolean },
+): string | null => Object.values(settingsErrors(settings, options))[0] ?? null;

@@ -20,9 +20,12 @@ const tileClass =
 export function TypeSection({
   value,
   onChange,
+  locked = false,
 }: {
   value: CodeTypeId;
   onChange: (type: CodeTypeId) => void;
+  /** Editing a saved code: show its type, without letting it change. */
+  locked?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -30,6 +33,25 @@ export function TypeSection({
   const current = tileFor(value);
   const tiles = COMMON_TYPES.includes(current) ? COMMON_TYPES : [...COMMON_TYPES, current];
   const groups = moreTypes(query);
+
+  if (locked) {
+    const Icon = TYPE_ICONS[current];
+    return (
+      <Card aria-labelledby="type-heading">
+        <CardHeader id="type-heading" step={1} title="What it opens" />
+        <div className="flex flex-col gap-2 px-5 pt-4 pb-6 sm:px-6">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <Icon aria-hidden className="size-4 shrink-0 text-fg" />
+            <span className="font-semibold text-fg">{typeLabel(value)}</span>
+            <span className="text-fg-muted">{typeDescription(value)}</span>
+          </p>
+          <p className="text-sm text-fg-muted">
+            Set when the code was created. Duplicate it to make a different type.
+          </p>
+        </div>
+      </Card>
+    );
+  }
 
   function pick(type: CodeTypeId) {
     onChange(type);

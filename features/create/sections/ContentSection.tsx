@@ -26,9 +26,12 @@ const CONTACT_KINDS = [
 export function ContentSection({
   editor,
   onTypeChange,
+  typeLocked = false,
 }: {
   editor: ContentEditor;
   onTypeChange: (type: CodeTypeId) => void;
+  /** Editing a saved code: the contact kind can't change either. */
+  typeLocked?: boolean;
 }) {
   const type = editor.state.activeType;
   return (
@@ -40,7 +43,7 @@ export function ContentSection({
         description={typeDescription(type)}
       />
       <div className="flex flex-col gap-6 px-5 pt-4 pb-6 sm:px-6">
-        {isContactType(type) && (
+        {isContactType(type) && !typeLocked && (
           <RadioGroup
             value={type}
             onChange={onTypeChange}

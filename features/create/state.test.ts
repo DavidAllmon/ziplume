@@ -111,3 +111,12 @@ describe("settingsErrors", () => {
     ).toBe("The end date must be after the start date");
   });
 });
+
+describe("settingsErrors when editing", () => {
+  it("asks for a link ending only when told to", () => {
+    expect(settingsErrors({ ...DEFAULT_SETTINGS, slug: "" }).slug).toBeUndefined();
+    expect(settingsErrors({ ...DEFAULT_SETTINGS, slug: "" }, { requireSlug: true }).slug).toBe(
+      "Every trackable code needs a link ending",
+    );
+  });
+});

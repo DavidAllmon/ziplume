@@ -23,7 +23,7 @@ export default function Home() {
           .
         </p>
       </div>
-      {/* Generator reads ?edit= and ?workspace= with useSearchParams, which needs a boundary. */}
+      {/* Generator reads ?type= with useSearchParams, which needs a boundary. */}
       <Suspense fallback={<div className="min-h-[36rem]" aria-busy="true" />}>
         <Generator />
       </Suspense>

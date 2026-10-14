@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, LayoutGrid, Plus, Users } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { Button, buttonClasses } from "@/components/ui/Button";
@@ -9,16 +9,17 @@ import { Field } from "@/components/ui/Field";
 import { TextInput } from "@/components/ui/inputs";
 import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/features/auth/useSession";
-import { accountsEnabled, shortLinkLabel } from "@/lib/env";
+import { accountsEnabled } from "@/lib/env";
 
 import { MAX_CODE_NAME } from "./state/defaults";
 import type { Generator } from "./useGenerator";
 
-/** Save the current code to the account, or update the saved code being edited. */
+/** Saves the current code to your account, then opens its page. */
 export function SavePanel({ generator }: { generator: Generator }) {
   const { user, loading } = useSession();
+  const router = useRouter();
   const toast = useToast();
-  const { saved, defaultName, save, data, isDynamic, workspace } = generator;
+  const { defaultName, save, data, isDynamic } = generator;
   const name = generator.state.name;
   const [pending, setPending] = useState(false);
 
@@ -46,56 +47,36 @@ export function SavePanel({ generator }: { generator: Generator }) {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setPending(true);
-    const result = await save(name || saved?.name || "");
-    setPending(false);
+    const result = await save(name);
     toast(result.message, result.ok ? "success" : "error");
+    if (result.ok) {
+      router.push(`/codes/${result.id}`);
+      return;
+    }
+    setPending(false);
   }
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
-      <Field label={saved ? "Saved code" : "Save to my codes"}>
+      <Field label="Save to my codes">
         {(control) => (
           <TextInput
             {...control}
-            placeholder={saved?.name ?? defaultName}
+            placeholder={defaultName}
             maxLength={MAX_CODE_NAME}
             value={name}
             onChange={(e) => generator.setName(e.target.value)}
           />
         )}
       </Field>
-      {workspace && saved && (
-        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-fg-muted">
-          <Users aria-hidden className="size-4 text-primary dark:text-link" />
-          <span>
-            In <strong className="font-semibold text-fg">{workspace.label}</strong>’s codes
-          </span>
-        </p>
-      )}
-      {saved?.slug && (
-        <p className="flex items-center gap-1.5 text-sm text-fg-muted">
-          <Check aria-hidden className="size-4 text-success" />
-          Short link <span className="font-mono text-fg">{shortLinkLabel(saved.slug)}</span>
-        </p>
-      )}
       <div className="flex flex-wrap gap-2">
         <Button
           type="submit"
-          variant={isDynamic && !saved ? "primary" : "outline"}
+          variant={isDynamic ? "primary" : "outline"}
           disabled={pending || !data}
         >
-          {pending ? "Saving…" : saved ? "Save changes" : "Save"}
+          {pending ? "Saving…" : "Save"}
         </Button>
-        {saved && (
-          <>
-            <Link href={`/codes/${saved.id}`} className={buttonClasses("ghost", "md")}>
-              <LayoutGrid aria-hidden /> Open code page
-            </Link>
-            <Button variant="ghost" onClick={generator.startNew} disabled={pending}>
-              <Plus aria-hidden /> New code
-            </Button>
-          </>
-        )}
       </div>
     </form>
   );

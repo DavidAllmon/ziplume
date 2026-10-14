@@ -173,7 +173,7 @@ describe("CodesView", () => {
     const menu = screen.getByRole("menu");
     expect(within(menu).getByRole("menuitem", { name: "Open" })).toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: "Download PNG" })).toBeInTheDocument();
-    for (const name of ["Duplicate", "Move to folder", "Pause", "Delete"]) {
+    for (const name of ["Edit", "Duplicate", "Move to folder", "Pause", "Delete"]) {
       expect(within(menu).queryByRole("menuitem", { name })).toBeNull();
     }
     await userEvent.keyboard("{Escape}");
@@ -183,6 +183,15 @@ describe("CodesView", () => {
     for (const name of ["Move", "Pause", "Delete"]) {
       expect(within(bar).queryByRole("button", { name })).toBeNull();
     }
+  });
+
+  it("editors can open a code in the editor, in its team's codes", async () => {
+    renderView({ teamId: "kim" });
+    await userEvent.click(screen.getAllByRole("button", { name: "Actions for Spring menu" })[0]!);
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toHaveAttribute(
+      "href",
+      "/codes/menu/edit?workspace=kim",
+    );
   });
 
   it("a teammate's code is copied into your own codes", async () => {

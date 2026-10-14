@@ -11,7 +11,7 @@ import { DEFAULT_SETTINGS } from "../state";
 import { ContentSection } from "./ContentSection";
 import { DesignSection } from "./DesignSection";
 import { NameFolderSection } from "./NameFolderSection";
-import { SettingsSection } from "./SettingsSection";
+import { SettingsSection, type SavedSettings } from "./SettingsSection";
 import { TypeSection } from "./TypeSection";
 
 // Style previews draw on a canvas, which jsdom does not have.
@@ -192,5 +192,102 @@ describe("NameFolderSection", () => {
     expect(screen.getByLabelText("Folder")).toHaveValue("f1");
     await user.selectOptions(screen.getByLabelText("Folder"), "");
     expect(onFolder).toHaveBeenCalledWith(null);
+  });
+});
+
+describe("the sections when editing a saved code", () => {
+  it("shows the type without letting it change", () => {
+    render(<TypeSection value="wifi" onChange={vi.fn()} locked />);
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "More types" })).toBeNull();
+    expect(
+      screen.getByText("Set when the code was created. Duplicate it to make a different type."),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the contact-kind switch", () => {
+    render(<ContentSection editor={editorFor("contact")} onTypeChange={vi.fn()} typeLocked />);
+    expect(screen.queryByRole("radiogroup", { name: "How should it work?" })).toBeNull();
+  });
+
+  const saved = (overrides: Partial<SavedSettings> = {}): SavedSettings => ({
+    slug: "SPRING",
+    hasPassword: false,
+    removePassword: false,
+    onRemovePassword: vi.fn(),
+    ...overrides,
+  });
+
+  it("explains that Trackable can't change", () => {
+    render(
+      <SettingsSection
+        type="url"
+        settings={{ ...DEFAULT_SETTINGS, slug: "SPRING" }}
+        onChange={vi.fn()}
+        saved={saved()}
+      />,
+    );
+    expect(screen.queryByRole("switch", { name: "Trackable" })).toBeNull();
+    expect(
+      screen.getByText(/Printed codes depend on this, so it can’t change/),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps, replaces or removes an existing password", async () => {
+    const user = userEvent.setup();
+    const onRemovePassword = vi.fn();
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <SettingsSection
+        type="url"
+        settings={{ ...DEFAULT_SETTINGS, slug: "SPRING" }}
+        onChange={onChange}
+        saved={saved({ hasPassword: true, onRemovePassword })}
+      />,
+    );
+    expect(
+      screen.getByText(/This code has a password. Leave this blank to keep it/),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Remove password" }));
+    expect(onRemovePassword).toHaveBeenCalledWith(true);
+    expect(onChange).toHaveBeenCalledWith({ password: "" });
+
+    rerender(
+      <SettingsSection
+        type="url"
+        settings={{ ...DEFAULT_SETTINGS, slug: "SPRING" }}
+        onChange={onChange}
+        saved={saved({ hasPassword: true, removePassword: true, onRemovePassword })}
+      />,
+    );
+    expect(screen.getByText("The password will be removed when you save.")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Code password/)).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Keep the password" }));
+    expect(onRemovePassword).toHaveBeenLastCalledWith(false);
+  });
+
+  it("warns when the link ending changes, and needs one", () => {
+    const { rerender } = render(
+      <SettingsSection
+        type="url"
+        settings={{ ...DEFAULT_SETTINGS, slug: "LUNCH" }}
+        onChange={vi.fn()}
+        saved={saved()}
+      />,
+    );
+    expect(
+      screen.getByText(
+        "Codes you’ve already printed or shared use the current link and will stop working.",
+      ),
+    ).toBeInTheDocument();
+    rerender(
+      <SettingsSection
+        type="url"
+        settings={{ ...DEFAULT_SETTINGS, slug: "" }}
+        onChange={vi.fn()}
+        saved={saved()}
+      />,
+    );
+    expect(screen.getByText("Every trackable code needs a link ending")).toBeInTheDocument();
   });
 });

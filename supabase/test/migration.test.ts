@@ -1677,3 +1677,188 @@ describe("teams (two-way sharing)", () => {
     expect(await names(by(TOM))).not.toContain("Wes code");
   });
 });
+
+describe("update_code", () => {
+  const ZOE = "3c3c3c3c-3c3c-4c3c-8c3c-3c3c3c3c3c3c"; // owner
+  const YAN = "3d3d3d3d-3d3d-4d3d-8d3d-3d3d3d3d3d3d"; // editor on Zoe's team
+  const XIA = "3e3e3e3e-3e3e-4e3e-8e3e-3e3e3e3e3e3e"; // viewer on Zoe's team
+  const by =
+    (userId: string, aal: "aal1" | "aal2" = "aal1") =>
+    <T>(sql: string, params?: unknown[]) =>
+      as<T>("authenticated", userId, sql, params, aal);
+  const UPDATE = "select * from public.update_code($1::uuid, $2::jsonb, $3, $4)";
+  const ids = { menu: "", diary: "", note: "", zoeFolder: "", bobFolder: "" };
+  const read = async (id: string) =>
+    (
+      await asService<Record<string, unknown>>("select * from public.qr_codes where id = $1", [id])
+    )[0]!;
+  const passwordOk = async (slug: string, password: string) =>
+    (
+      await asService<{ ok: boolean }>("select public.check_code_password($1, $2) as ok", [
+        slug,
+        password,
+      ])
+    )[0]!.ok;
+
+  beforeAll(async () => {
+    await db.query(
+      `insert into auth.users (id, email) values
+         ($1, 'zoe@example.com'), ($2, 'yan@example.com'), ($3, 'xia@example.com')`,
+      [ZOE, YAN, XIA],
+    );
+    await asService(
+      `insert into public.team_members (owner_id, member_id, role) values
+         ($1, $2, 'editor'), ($1, $3, 'viewer')`,
+      [ZOE, YAN, XIA],
+    );
+    const folder = async (owner: string, name: string) =>
+      (
+        await asService<{ id: string }>(
+          "insert into public.folders (user_id, name) values ($1, $2) returning id",
+          [owner, name],
+        )
+      )[0]!.id;
+    ids.zoeFolder = await folder(ZOE, "Zoe folder");
+    ids.bobFolder = await folder(BOB, "Bob folder");
+    const code = async (values: string) =>
+      (
+        await asService<{ id: string }>(
+          `insert into public.qr_codes
+           (user_id, name, qr_type, content, design, is_dynamic, slug, destination, is_private)
+         values ${values} returning id`,
+          [ZOE],
+        )
+      )[0]!.id;
+    ids.menu = await code(
+      `($1, 'Menu', 'url', '{"url":"https://zoe.example"}', '{}', true, 'ZOE001', 'https://zoe.example', false)`,
+    );
+    ids.diary = await code(
+      `($1, 'Diary', 'url', '{"url":"https://zoe.example/d"}', '{}', true, 'ZOE002', 'https://zoe.example/d', true)`,
+    );
+    ids.note = await code(`($1, 'Note', 'text', '{"text":"Hi"}', '{}', false, null, null, false)`);
+  });
+
+  it("saves only the fields it is given", async () => {
+    const [row] = await by(ZOE)<{ name: string; destination: string; slug: string }>(UPDATE, [
+      ids.menu,
+      JSON.stringify({
+        name: "Lunch menu",
+        destination: "https://zoe.example/lunch",
+        content: { url: "https://zoe.example/lunch" },
+        active_until: "2030-02-01T09:00:00Z",
+      }),
+      null,
+      "keep",
+    ]);
+    expect(row).toMatchObject({
+      name: "Lunch menu",
+      destination: "https://zoe.example/lunch",
+      slug: "ZOE001",
+    });
+    const saved = await read(ids.menu);
+    expect(saved.content).toEqual({ url: "https://zoe.example/lunch" });
+    expect(new Date(saved.active_until as string).toISOString()).toBe("2030-02-01T09:00:00.000Z");
+    expect(saved.active_from).toBeNull();
+  });
+
+  it("lets a team editor change a shared code, and nobody else", async () => {
+    const [row] = await by(YAN)<{ name: string }>(UPDATE, [
+      ids.menu,
+      '{"name":"Yan menu"}',
+      null,
+      "keep",
+    ]);
+    expect(row?.name).toBe("Yan menu");
+    await expect(by(XIA)(UPDATE, [ids.menu, '{"name":"Xia"}', null, "keep"])).rejects.toThrow(
+      /Not allowed/,
+    );
+    await expect(by(BOB)(UPDATE, [ids.menu, '{"name":"Bob"}', null, "keep"])).rejects.toThrow(
+      /Not allowed/,
+    );
+    await expect(asAnon(UPDATE, [ids.menu, '{"name":"Anon"}', null, "keep"])).rejects.toThrow(
+      /permission denied/,
+    );
+    expect((await read(ids.menu)).name).toBe("Yan menu");
+  });
+
+  it("keeps a private code to its owner", async () => {
+    await expect(by(YAN)(UPDATE, [ids.diary, '{"name":"Peek"}', null, "keep"])).rejects.toThrow(
+      /Not allowed/,
+    );
+    const [row] = await by(ZOE)<{ name: string }>(UPDATE, [
+      ids.diary,
+      '{"name":"Dear diary"}',
+      null,
+      "keep",
+    ]);
+    expect(row?.name).toBe("Dear diary");
+  });
+
+  it("refuses fields it doesn't allow and unknown password actions", async () => {
+    await expect(by(ZOE)(UPDATE, [ids.menu, '{"is_dynamic":false}', null, "keep"])).rejects.toThrow(
+      /Unknown field: is_dynamic/,
+    );
+    await expect(
+      by(ZOE)(UPDATE, [ids.menu, JSON.stringify({ user_id: BOB }), null, "keep"]),
+    ).rejects.toThrow(/Unknown field: user_id/);
+    await expect(by(ZOE)(UPDATE, [ids.menu, "{}", null, "maybe"])).rejects.toThrow(
+      /Unknown password action/,
+    );
+  });
+
+  it("sets, keeps and clears the password with the other changes", async () => {
+    await by(ZOE)(UPDATE, [ids.menu, '{"name":"Locked menu"}', "open sesame", "set"]);
+    expect((await read(ids.menu)).has_password).toBe(true);
+    expect(await passwordOk("zoe001", "open sesame")).toBe(true);
+    await by(ZOE)(UPDATE, [ids.menu, '{"name":"Still locked"}', null, "keep"]);
+    expect(await passwordOk("zoe001", "open sesame")).toBe(true);
+    await by(ZOE)(UPDATE, [ids.menu, "{}", null, "clear"]);
+    expect((await read(ids.menu)).has_password).toBe(false);
+  });
+
+  it("refuses a password on a static code", async () => {
+    await expect(by(ZOE)(UPDATE, [ids.note, "{}", "secret", "set"])).rejects.toThrow(/Not allowed/);
+    await expect(by(ZOE)(UPDATE, [ids.note, "{}", null, "clear"])).rejects.toThrow(/Not allowed/);
+  });
+
+  it("saves nothing when the password part fails", async () => {
+    await expect(
+      by(ZOE)(UPDATE, [ids.menu, '{"name":"Should not stick"}', "abc", "set"]),
+    ).rejects.toThrow(/4 to 128/);
+    await expect(
+      by(ZOE)(UPDATE, [ids.menu, '{"name":"Should not stick"}', "", "set"]),
+    ).rejects.toThrow(/4 to 128/);
+    expect((await read(ids.menu)).name).toBe("Still locked");
+  });
+
+  it("refuses a taken link ending and a folder from another space", async () => {
+    await expect(by(ZOE)(UPDATE, [ids.menu, '{"slug":"zoe002"}', null, "keep"])).rejects.toThrow(
+      /duplicate key/,
+    );
+    await expect(
+      by(ZOE)(UPDATE, [ids.menu, JSON.stringify({ folder_id: ids.bobFolder }), null, "keep"]),
+    ).rejects.toThrow(/qr_codes_folder_fkey/);
+    await by(ZOE)(UPDATE, [ids.menu, JSON.stringify({ folder_id: ids.zoeFolder }), null, "keep"]);
+    expect((await read(ids.menu)).folder_id).toBe(ids.zoeFolder);
+    await by(ZOE)(UPDATE, [ids.menu, '{"folder_id":null}', null, "keep"]);
+    expect((await read(ids.menu)).folder_id).toBeNull();
+  });
+
+  it("needs a two-step session for two-step accounts", async () => {
+    await db.query("insert into auth.mfa_factors (user_id, status) values ($1, 'verified')", [ZOE]);
+    try {
+      await expect(by(ZOE)(UPDATE, [ids.menu, '{"name":"aal1"}', null, "keep"])).rejects.toThrow(
+        /Not allowed/,
+      );
+      const [row] = await by(ZOE, "aal2")<{ name: string }>(UPDATE, [
+        ids.menu,
+        '{"name":"aal2"}',
+        null,
+        "keep",
+      ]);
+      expect(row?.name).toBe("aal2");
+    } finally {
+      await db.query("delete from auth.mfa_factors where user_id = $1", [ZOE]);
+    }
+  });
+});

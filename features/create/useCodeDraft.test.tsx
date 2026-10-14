@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { dynamicPayload, PREVIEW_SLUG } from "@/lib/dynamic/slug";
 
+import { savedRow } from "./fixtures";
+import { fromSavedCode } from "./load";
 import { useCodeDraft } from "./useCodeDraft";
 
 // Real scan checks render to a canvas, which jsdom does not have.
@@ -70,5 +72,19 @@ describe("useCodeDraft", () => {
     const { result } = setup();
     act(() => result.current.setField("url", "url", "example.com"));
     expect(result.current.filename).toMatch(/example-com.*\.png$/);
+  });
+});
+
+describe("useCodeDraft opening a saved code", () => {
+  it("starts from the saved code and previews its real short link", () => {
+    const initial = fromSavedCode(savedRow());
+    const { result } = renderHook(() =>
+      useCodeDraft({ type: "url", folderId: null }, { initial, requireSlug: true }),
+    );
+    expect(result.current.state).toBe(initial);
+    expect(result.current.data).toBe(dynamicPayload("SPRING"));
+    expect(result.current.blocker).toBeNull();
+    act(() => result.current.dispatch({ type: "settings", patch: { slug: "" } }));
+    expect(result.current.blocker).toBe("Every trackable code needs a link ending");
   });
 });

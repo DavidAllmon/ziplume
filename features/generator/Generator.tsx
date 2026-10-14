@@ -12,7 +12,7 @@ import { useGenerator } from "./useGenerator";
 
 export function Generator() {
   const generator = useGenerator();
-  const { state, dispatch, report, saved, isDynamic } = generator;
+  const { state, dispatch, report, isDynamic } = generator;
 
   return (
     <>
@@ -22,17 +22,12 @@ export function Generator() {
             <CardHeader
               id="content-heading"
               step={1}
-              title={saved ? `Editing “${saved.name}”` : "What should it open?"}
-              description={
-                saved
-                  ? "Changes apply when you save. Printed dynamic codes update instantly."
-                  : "Pick a type, then fill in the details."
-              }
+              title="What should it open?"
+              description="Pick a type, then fill in the details."
             />
             <div className="flex flex-col gap-6 px-5 pt-4 pb-6 sm:px-6">
               <TypePicker
                 value={state.activeType}
-                disabled={saved !== null}
                 onChange={(activeType) => dispatch({ type: "setActiveType", activeType })}
               />
               <ContentForm generator={generator} />
@@ -40,8 +35,8 @@ export function Generator() {
                 <DynamicToggle
                   enabled={isDynamic}
                   onChange={generator.setDynamic}
-                  slug={generator.slug}
-                  locked={saved !== null}
+                  slug={null}
+                  locked={false}
                 />
               )}
             </div>

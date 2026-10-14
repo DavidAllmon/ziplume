@@ -3,12 +3,12 @@ import { notFound, redirect } from "next/navigation";
 
 import { withWorkspace } from "@/components/app/nav";
 
-import { CodeEditor } from "@/features/dashboard/CodeEditor";
+import { CodeOverview } from "@/features/dashboard/CodeOverview";
 import { requireUser } from "@/lib/auth/server";
 import { personLabel } from "@/lib/teams/access";
 import { codesHref, personAccess } from "@/lib/teams/server";
 
-export const metadata: Metadata = { title: "Edit code · QuickQReate" };
+export const metadata: Metadata = { title: "Code · QuickQReate" };
 
 export default async function CodePage({ params, searchParams }: PageProps<"/codes/[id]">) {
   const { id } = await params;
@@ -24,8 +24,9 @@ export default async function CodePage({ params, searchParams }: PageProps<"/cod
     personAccess(supabase, user.id, code.user_id),
     supabase.from("folders").select("*").eq("user_id", code.user_id).order("name"),
   ]);
+  const own = code.user_id === user.id;
   return (
-    <CodeEditor
+    <CodeOverview
       code={code}
       canEdit={access?.canEdit ?? false}
       folders={folders ?? []}
@@ -33,6 +34,8 @@ export default async function CodePage({ params, searchParams }: PageProps<"/cod
         href: codesHref(code.user_id, user.id),
         label: access?.person ? `${personLabel(access.person)}’s codes` : "All codes",
       }}
+      editHref={withWorkspace(`/codes/${id}/edit`, own ? null : code.user_id)}
+      fromTeammate={!own}
     />
   );
 }

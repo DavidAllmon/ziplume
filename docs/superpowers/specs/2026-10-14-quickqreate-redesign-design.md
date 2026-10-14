@@ -201,6 +201,9 @@ The preview column holds the live QR, a scan-reliability check and a **Create co
 
 ### 4.3 Code page (`/codes/<id>`)
 
+> Superseded in part: content, design and settings are edited in the Create editor at
+> `/codes/<id>/edit` (Ziplume Release 1). The code page is an overview.
+
 - **Header:**
   - a breadcrumb (Codes / folder)
   - thumbnail, name and status pill
@@ -454,7 +457,7 @@ Each phase gets its own implementation plan, written just before that phase star
 | 1 | App shell (sidebar, bottom tabs, workspace switcher), new tokens and wording, `/codes` list, `/settings` with profile photos, `/team` with email invites, redirects from old routes. | Needs `BREVO_API_KEY` in Coolify (David). Migrations from 6.2 and 6.3. |
 | 2 | `/codes/new` Create page with settings during creation and drafts; `/codes/bulk`. | Migration from 6.1. Signed-in "New code" points here. |
 | 3 | Teams: two-way sharing between teammates, Owner/Editor/Viewer rules for teammates' codes, leaving and keep-or-take removal, the switch row and Everyone view, Private codes. | Added 2026-10-14. Design: `2026-10-14-quickqreate-teams-design.md`. One migration. |
-| 4 | Code page with tabs and the Save bar; `/analytics` overview; `/templates` with a default template. | Migrations from 6.4. `/?edit=` redirect goes live. |
+| 4 | Code page overview polish (editing moved to the Create editor in Ziplume Release 1, see `2026-10-14-ziplume-rebrand-design.md`); `/analytics` overview; `/templates` with a default template. | Migrations from 6.4. (`/?edit=` already forwards to `/codes/<id>/edit`.) |
 | 5 | Public landing page and quick static generator; public `/bulk` and docs restyled; old generator UI removed. | Signed-in `/` redirects to `/codes`. |
 
 ## 9. Success criteria
