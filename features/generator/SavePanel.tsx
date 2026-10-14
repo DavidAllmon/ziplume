@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/features/auth/useSession";
 import { accountsEnabled, shortLinkLabel } from "@/lib/env";
 
+import { MAX_CODE_NAME } from "./state/defaults";
 import type { Generator } from "./useGenerator";
 
 /** Save the current code to the account, or update the saved code being edited. */
@@ -18,7 +19,7 @@ export function SavePanel({ generator }: { generator: Generator }) {
   const { user, loading } = useSession();
   const toast = useToast();
   const { saved, defaultName, save, data, isDynamic, workspace } = generator;
-  const [name, setName] = useState("");
+  const name = generator.state.name;
   const [pending, setPending] = useState(false);
 
   if (!accountsEnabled || loading) return null;
@@ -57,9 +58,9 @@ export function SavePanel({ generator }: { generator: Generator }) {
           <TextInput
             {...control}
             placeholder={saved?.name ?? defaultName}
-            maxLength={120}
+            maxLength={MAX_CODE_NAME}
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => generator.setName(e.target.value)}
           />
         )}
       </Field>

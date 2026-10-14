@@ -60,6 +60,8 @@ export interface GeneratorState {
   exportSettings: ExportSettings;
   /** Error correction the user had before a logo forced it to High; restored on removal. */
   ecBeforeLogo: ErrorCorrection | null;
+  /** The name typed for the code (empty means "use the suggested name"). */
+  name: string;
 }
 
 export type GeneratorAction =
@@ -80,6 +82,9 @@ export type GeneratorAction =
   | { type: "setExport"; patch: Partial<ExportSettings> }
   | { type: "resetDesign" }
   | { type: "hydrate"; saved: PersistedSettings }
+  | { type: "setName"; name: string }
+  /** Start a brand-new code: every setting back to its default. */
+  | { type: "reset" }
   /** Load a saved code (from the dashboard) into the generator for editing. */
   | { type: "loadCode"; qrType: CodeTypeId; content: unknown; design: unknown };
 

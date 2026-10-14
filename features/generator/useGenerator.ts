@@ -252,8 +252,9 @@ export function useGenerator() {
     ],
   );
 
-  /** Leaves edit mode and starts a fresh, unsaved code with the current design. */
+  /** Leaves edit mode and starts a brand-new code with default settings. */
   const startNew = useCallback(() => {
+    dispatch({ type: "reset" });
     setSaved(null);
     setWantsDynamic(false);
     window.history.replaceState(null, "", workspace ? `/?workspace=${workspace.ownerId}` : "/");
@@ -277,11 +278,14 @@ export function useGenerator() {
     [],
   );
 
+  const setName = useCallback((name: string) => dispatch({ type: "setName", name }), []);
+
   return {
     state,
     dispatch,
     setField,
     setPage,
+    setName,
     pageType,
     pageErrors: pageType ? errors : {},
     info,

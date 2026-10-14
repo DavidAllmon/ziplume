@@ -119,3 +119,36 @@ describe("logo icons and templates", () => {
     });
   });
 });
+
+describe("reset", () => {
+  it("returns every setting to its default", () => {
+    let state = initialState();
+    state = reduce(state, { type: "setActiveType", activeType: "wifi" });
+    state = reduce(state, { type: "setField", qrType: "wifi", field: "ssid", value: "Home" });
+    state = reduce(state, { type: "setDesign", patch: { fgColor: "#123456", dotStyle: "dots" } });
+    state = reduce(state, { type: "setLogo", logo: "data:image/png;base64,AAA" });
+    state = reduce(state, { type: "setExport", patch: { format: "svg", size: 2048 } });
+    state = reduce(state, { type: "setName", name: "Front desk" });
+    expect(reduce(state, { type: "reset" })).toEqual(initialState());
+  });
+});
+
+describe("name", () => {
+  it("is stored and capped at 120 characters", () => {
+    let state = reduce(initialState(), { type: "setName", name: "Spring menu" });
+    expect(state.name).toBe("Spring menu");
+    state = reduce(state, { type: "setName", name: "x".repeat(200) });
+    expect(state.name).toHaveLength(120);
+  });
+
+  it("is cleared when a saved code is loaded", () => {
+    let state = reduce(initialState(), { type: "setName", name: "Typed name" });
+    state = reduce(state, {
+      type: "loadCode",
+      qrType: "url",
+      content: { url: "https://example.com" },
+      design: DEFAULT_DESIGN,
+    });
+    expect(state.name).toBe("");
+  });
+});
