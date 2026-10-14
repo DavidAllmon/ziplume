@@ -28,6 +28,7 @@ import {
   isTrackable,
   settingsProblem,
   type CreateDefaults,
+  type CreateState,
 } from "./state";
 
 /** Trackable links redirect, so they can only point at web pages (the database checks this too). */
@@ -38,8 +39,15 @@ const WEB_ADDRESS = /^https?:\/\//i;
  * suggested name and why it can't be created yet. Nothing here is stored anywhere; drafts are
  * the page's explicit job (useDraftStorage).
  */
-export function useCodeDraft(defaults: CreateDefaults) {
-  const [state, dispatch] = useReducer(createReducer, defaults, initialCreateState);
+export function useCodeDraft(
+  defaults: CreateDefaults,
+  options: { initial?: CreateState; requireSlug?: boolean } = {},
+) {
+  const [state, dispatch] = useReducer(
+    createReducer,
+    defaults,
+    (fresh) => options.initial ?? initialCreateState(fresh),
+  );
   const { code, settings } = state;
   const { activeType, design, exportSettings } = code;
   const pageType = isPageType(activeType) ? activeType : null;
@@ -122,7 +130,7 @@ export function useCodeDraft(defaults: CreateDefaults) {
           : !measurement.fits
             ? "Too much content for a QR code"
             : trackable
-              ? settingsProblem(settings)
+              ? settingsProblem(settings, { requireSlug: options.requireSlug })
               : null;
 
   const codeAction = useCallback(
