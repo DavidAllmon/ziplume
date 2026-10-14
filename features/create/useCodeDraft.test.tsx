@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { dynamicPayload } from "@/lib/dynamic/slug";
+import { dynamicPayload, PREVIEW_SLUG } from "@/lib/dynamic/slug";
 
 import { useCodeDraft } from "./useCodeDraft";
 
@@ -20,7 +20,7 @@ describe("useCodeDraft", () => {
     expect(result.current.blocker).toBe("Add a link to start");
     act(() => result.current.setField("url", "url", "example.com/menu"));
     expect(result.current.blocker).toBeNull();
-    expect(result.current.data).toBe(dynamicPayload("PREVIEW"));
+    expect(result.current.data).toBe(dynamicPayload(PREVIEW_SLUG));
     expect(result.current.defaultName).toBe("example.com/menu");
   });
 
@@ -36,7 +36,7 @@ describe("useCodeDraft", () => {
     act(() => result.current.dispatch({ type: "settings", patch: { slug: "SPRING" } }));
     expect(result.current.data).toBe(dynamicPayload("SPRING"));
     act(() => result.current.dispatch({ type: "settings", patch: { slug: "no spaces" } }));
-    expect(result.current.data).toBe(dynamicPayload("PREVIEW"));
+    expect(result.current.data).toBe(dynamicPayload(PREVIEW_SLUG));
     expect(result.current.blocker).toBe("Link endings use 3–40 letters, numbers or dashes");
   });
 
@@ -48,6 +48,16 @@ describe("useCodeDraft", () => {
     );
     expect(result.current.trackable).toBe(false);
     expect(result.current.data).toBe("https://example.com");
+    expect(result.current.blocker).toBeNull();
+  });
+
+  it("explains that a trackable link needs a web address", () => {
+    const { result } = setup();
+    act(() => result.current.setField("url", "url", "mailto:hi@example.com"));
+    expect(result.current.blocker).toBe(
+      "Trackable links need a web address (http or https). Turn off Trackable for other links.",
+    );
+    act(() => result.current.dispatch({ type: "settings", patch: { trackable: false } }));
     expect(result.current.blocker).toBeNull();
   });
 

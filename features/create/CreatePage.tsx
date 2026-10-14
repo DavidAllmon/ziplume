@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/app/PageHeader";
 import { withWorkspace } from "@/components/app/nav";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
-import { createCodeWithSettings } from "@/features/codes/api";
+import { createCodeWithSettings, designForStorage } from "@/features/codes/api";
 import type { ContentEditor } from "@/features/generator/content/types";
 import type { CodeTypeId } from "@/lib/qr/types";
 import type { FolderRow } from "@/types/supabase";
@@ -69,6 +69,8 @@ export function CreatePage({
   );
   const drafts = useDraftStorage({ userId, state, defaults, onRestore: restore });
   const [creating, setCreating] = useState(false);
+  /** Why the last Create failed, shown until the page changes. */
+  const [failure, setFailure] = useState<{ message: string; state: CreateState } | null>(null);
   /** Set the moment Create is pressed, so a second press can't start another save. */
   const inFlight = useRef(false);
 
@@ -90,15 +92,24 @@ export function CreatePage({
     if (!result.ok) {
       inFlight.current = false;
       setCreating(false);
+      setFailure({ message: result.error, state });
       toast(result.error, "error");
       return;
     }
     drafts.finished();
-    toast("Code created");
+    toast(
+      designForStorage(state.code.design).droppedLogo
+        ? "Code created. The logo was too large to store and was left out."
+        : "Code created",
+    );
     router.push(`${withWorkspace(`/codes/${result.value.id}`, teamId)}#download`);
   }
 
-  const controls = { creating, onCreate: () => void create() };
+  const controls = {
+    creating,
+    onCreate: () => void create(),
+    error: failure?.state === state ? failure.message : null,
+  };
 
   return (
     <div className="flex flex-col gap-6 pb-24 md:pb-0">

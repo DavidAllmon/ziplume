@@ -135,12 +135,37 @@ describe("CreatePage", () => {
     renderPage();
     await user.type(screen.getByLabelText("Website address"), "https://example.com");
     await user.click(preview().getByRole("button", { name: "Create code" }));
-    expect(
-      await screen.findByText("That link ending is already taken. Try another."),
-    ).toBeInTheDocument();
+    expect(await preview().findByRole("alert")).toHaveTextContent(
+      "That link ending is already taken. Try another.",
+    );
     expect(push).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Website address")).toHaveValue("https://example.com");
     expect(preview().getByRole("button", { name: "Create code" })).toBeEnabled();
+    // The reason stays next to Create (a toast fades and is cut short on phones) until the next edit.
+    await user.type(screen.getByLabelText("Website address"), "/x");
+    expect(preview().queryByRole("alert")).toBeNull();
+  });
+
+  it("says when the logo was too large to keep", async () => {
+    const user = userEvent.setup();
+    vi.mocked(createCodeWithSettings).mockResolvedValue({ ok: true, value: created });
+    const withLogo = createReducer(
+      createReducer(initialCreateState({ type: "url", folderId: null }), {
+        type: "code",
+        action: { type: "setField", qrType: "url", field: "url", value: "https://example.com" },
+      }),
+      {
+        type: "code",
+        action: { type: "setLogo", logo: `data:image/png;base64,${"A".repeat(250_000)}` },
+      },
+    );
+    saveDraft(USER, withLogo);
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: "Resume" }));
+    await user.click(preview().getByRole("button", { name: "Create code" }));
+    expect(
+      await screen.findByText("Code created. The logo was too large to store and was left out."),
+    ).toBeInTheDocument();
   });
 
   it("offers an unfinished code and restores it only on Resume", async () => {

@@ -16,6 +16,8 @@ import type { CodeDraft } from "./useCodeDraft";
 export interface CreateControls {
   creating: boolean;
   onCreate: () => void;
+  /** Why the last Create failed, until the next change. */
+  error: string | null;
 }
 
 /** The live code (or page), its scan check and the one Create button. */
@@ -23,6 +25,7 @@ export function PreviewColumn({
   draft,
   creating,
   onCreate,
+  error,
 }: { draft: CodeDraft } & CreateControls) {
   const { state, renderOptions, summary, info, report, blocker, pageType, trackable, previewSlug } =
     draft;
@@ -81,6 +84,11 @@ export function PreviewColumn({
         {blocker && (
           <p id={reasonId} className="text-center text-sm text-fg-muted">
             {blocker}
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="text-center text-sm text-danger">
+            {error}
           </p>
         )}
         {!trackable && (

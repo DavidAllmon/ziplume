@@ -15,6 +15,7 @@ export function CreateMobileBar({
   draft,
   creating,
   onCreate,
+  error,
 }: { draft: CodeDraft } & CreateControls) {
   const [open, setOpen] = useState(false);
   const { renderOptions, summary, info, blocker } = draft;
@@ -39,7 +40,13 @@ export function CreateMobileBar({
               <span className="flex items-center gap-1 text-sm font-semibold text-fg">
                 Preview <ChevronUp aria-hidden className="size-4 text-fg-muted" />
               </span>
-              <span className="truncate text-[13px] text-fg-muted">{blocker ?? summary}</span>
+              <span
+                className={
+                  error ? "truncate text-[13px] text-danger" : "truncate text-[13px] text-fg-muted"
+                }
+              >
+                {error ?? blocker ?? summary}
+              </span>
             </span>
           </button>
           <Button onClick={onCreate} disabled={blocker !== null || creating} className="px-4">
@@ -50,7 +57,7 @@ export function CreateMobileBar({
       </div>
       <Sheet open={open} onClose={() => setOpen(false)} title="Preview">
         <div className="pt-2">
-          <PreviewColumn draft={draft} creating={creating} onCreate={onCreate} />
+          <PreviewColumn draft={draft} creating={creating} onCreate={onCreate} error={error} />
         </div>
       </Sheet>
     </>

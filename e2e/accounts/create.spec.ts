@@ -62,6 +62,19 @@ test.describe("creating codes", () => {
     await expect(page.getByText(/You have an unfinished code/)).toHaveCount(0);
   });
 
+  test("phones get full-size controls on the Create page", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("codes/new");
+    for (const control of [
+      page.getByRole("button", { name: "Reset to style" }),
+      page.getByRole("button", { name: "More types" }),
+      page.getByRole("button", { name: "Create", exact: true }),
+    ]) {
+      const box = await control.boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+  });
+
   test("a code started from a folder is created in that folder", async ({ page }) => {
     const { makerFolderId } = seed();
     await page.goto(`codes?folder=${makerFolderId}`);

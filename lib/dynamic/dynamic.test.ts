@@ -7,7 +7,7 @@ import { isUnlocked, tooManyAttempts, unlockToken } from "./unlock";
 import { measure } from "@/lib/qr/capacity";
 
 import { decodeHeaderText, scanContext, visitorHash } from "./scan-context";
-import { dynamicPayload, generateSlug, isValidSlug, SLUG_ALPHABET } from "./slug";
+import { dynamicPayload, generateSlug, isValidSlug, PREVIEW_SLUG, SLUG_ALPHABET } from "./slug";
 import { readUtm, withUtm } from "./utm";
 
 const IPHONE =
@@ -16,6 +16,10 @@ const DESKTOP_CHROME =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36";
 
 describe("slugs", () => {
+  it("previews use an ending nobody can claim", () => {
+    expect(isValidSlug(PREVIEW_SLUG)).toBe(false);
+  });
+
   it("generates readable, valid endings", () => {
     for (let i = 0; i < 200; i++) {
       const slug = generateSlug();

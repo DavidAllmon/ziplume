@@ -5,10 +5,11 @@ import { useCallback, useMemo, useReducer } from "react";
 import { useScanVerification } from "@/features/generator/preview/useScanVerification";
 import type { GeneratorAction } from "@/features/generator/state/types";
 import { moduleColors } from "@/features/generator/useGenerator";
-import { dynamicPayload, isValidSlug } from "@/lib/dynamic/slug";
+import { dynamicPayload, isValidSlug, PREVIEW_SLUG } from "@/lib/dynamic/slug";
 import type { PageContentMap } from "@/lib/pages/types";
 import { pageSummary, validatePage } from "@/lib/pages/validate";
 import { measure } from "@/lib/qr/capacity";
+import { normalizeUrl } from "@/lib/qr/normalize";
 import { codeTypeInfo } from "@/lib/qr/code-types";
 import { buildFilename } from "@/lib/qr/filename";
 import {
@@ -29,6 +30,9 @@ import {
   type CreateDefaults,
 } from "./state";
 
+/** Trackable links redirect, so they can only point at web pages (the database checks this too). */
+const WEB_ADDRESS = /^https?:\/\//i;
+
 /**
  * The Create page's state and everything derived from it: preview data, the scan check, a
  * suggested name and why it can't be created yet. Nothing here is stored anywhere; drafts are
@@ -44,7 +48,7 @@ export function useCodeDraft(defaults: CreateDefaults) {
   const page = pageType ? code.pages[pageType] : null;
   const trackable = isTrackable(state);
   /** The ending the preview shows: the chosen one, or a placeholder until the code exists. */
-  const previewSlug = settings.slug && isValidSlug(settings.slug) ? settings.slug : "PREVIEW";
+  const previewSlug = settings.slug && isValidSlug(settings.slug) ? settings.slug : PREVIEW_SLUG;
 
   const errors: Record<string, string> = useMemo(() => {
     if (pageType && page) return validatePage(pageType, page);
@@ -113,11 +117,13 @@ export function useCodeDraft(defaults: CreateDefaults) {
       ? info.emptyHint
       : !isValid
         ? (firstError ?? info.emptyHint)
-        : !measurement.fits
-          ? "Too much content for a QR code"
-          : trackable
-            ? settingsProblem(settings)
-            : null;
+        : trackable && activeType === "url" && !WEB_ADDRESS.test(normalizeUrl(code.content.url.url))
+          ? "Trackable links need a web address (http or https). Turn off Trackable for other links."
+          : !measurement.fits
+            ? "Too much content for a QR code"
+            : trackable
+              ? settingsProblem(settings)
+              : null;
 
   const codeAction = useCallback(
     (action: GeneratorAction) => dispatch({ type: "code", action }),

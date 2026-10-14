@@ -7,6 +7,12 @@ import { SITE_URL } from "@/lib/env";
 export const SLUG_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 export const SLUG_PATTERN = /^[A-Za-z0-9-]{3,40}$/;
 
+/**
+ * The ending previews show before a code has its own. The dot keeps it out of SLUG_PATTERN, so
+ * nobody can claim it and scanning a preview on screen never opens someone else's code.
+ */
+export const PREVIEW_SLUG = "PREVIEW.CODE";
+
 export function generateSlug(length = 6): string {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);

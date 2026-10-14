@@ -49,7 +49,7 @@ export function DesignSection({
         title="Design"
         description="Start from a style, then make it yours. The preview updates as you go."
         action={
-          <Button variant="ghost" size="sm" onClick={onResetToStyle}>
+          <Button variant="ghost" onClick={onResetToStyle}>
             <RotateCcw aria-hidden />
             <span className="max-sm:sr-only">Reset to style</span>
           </Button>

@@ -36,6 +36,21 @@ beforeEach(() => {
 });
 
 describe("AppShell", () => {
+  it("creates in the folder being viewed", () => {
+    search = new URLSearchParams("workspace=t1&folder=f1");
+    renderShell();
+    expect(new Set(hrefs(/^Create( code)?$/))).toEqual(
+      new Set(["/codes/new?folder=f1&workspace=t1"]),
+    );
+  });
+
+  it("ignores a folder outside the codes list", () => {
+    pathname = "/team";
+    search = new URLSearchParams("folder=f1");
+    renderShell();
+    expect(new Set(hrefs(/^Create( code)?$/))).toEqual(new Set(["/codes/new"]));
+  });
+
   it("links every section, keeping the team you're looking at", () => {
     search = new URLSearchParams("workspace=t1");
     renderShell();
