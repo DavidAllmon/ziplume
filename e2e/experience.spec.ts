@@ -24,17 +24,42 @@ test("switching types keeps what you typed", async ({ page }) => {
   await expect(page.getByLabel("Network name (SSID)")).toHaveValue("HomeNet");
 });
 
-test("design and theme are remembered, content is not", async ({ page }) => {
+test("only the theme is remembered; design, type and content start fresh", async ({ page }) => {
   await page.getByRole("radio", { name: "Dark theme" }).click();
   await page.getByRole("button", { name: "Forest preset" }).click();
   await page.getByLabel("Website address").fill("example.com/private");
+  await chooseType(page, "Wi-Fi");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.getByRole("button", { name: "Forest preset" })).toHaveAttribute(
     "aria-pressed",
-    "true",
+    "false",
   );
+  // Link is the default type, so its field is back, and empty.
   await expect(page.getByLabel("Website address")).toHaveValue("");
+});
+
+test("settings saved by older versions are ignored and removed", async ({ page }) => {
+  await page.evaluate(() => {
+    window.localStorage.setItem(
+      "quickqreate:v1",
+      JSON.stringify({
+        version: 1,
+        activeType: "wifi",
+        design: { fgColor: "#14532D", bgColor: "#F0FDF4" },
+        exportSettings: { format: "svg", size: 2048 },
+      }),
+    );
+  });
+  await page.reload();
+  await expect(page.getByLabel("Website address")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Forest preset" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect
+    .poll(() => page.evaluate(() => window.localStorage.getItem("quickqreate:v1")))
+    .toBeNull();
 });
 
 test("layout never scrolls sideways", async ({ page }) => {

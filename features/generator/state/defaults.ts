@@ -27,6 +27,8 @@ export const DEFAULT_DESIGN: DesignState = {
 };
 
 export const MAX_FRAME_TEXT = 28;
+/** Longest code name the account stores (matches the save field's maxLength). */
+export const MAX_CODE_NAME = 120;
 export const FRAME_TEXT_SUGGESTIONS = [
   "SCAN ME",
   "Scan for the menu",
@@ -95,5 +97,6 @@ export function initialState(): GeneratorState {
     design: { ...DEFAULT_DESIGN },
     exportSettings: { ...DEFAULT_EXPORT },
     ecBeforeLogo: null,
+    name: "",
   };
 }

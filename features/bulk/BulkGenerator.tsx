@@ -2,7 +2,7 @@
 
 import { AlertCircle, CheckCircle2, Download, FileUp, Users } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -16,9 +16,6 @@ import { codePayload, codeRenderOptions } from "@/features/dashboard/codeRender"
 import { createFolder, MAX_FOLDER_NAME } from "@/features/folders/api";
 import { QrTile } from "@/features/generator/preview/QrTile";
 import { DEFAULT_DESIGN } from "@/features/generator/state/defaults";
-import { loadSettings, STORAGE_KEY } from "@/features/generator/state/persistence";
-import { sanitizeDesign } from "@/features/generator/state/sanitize";
-import type { DesignState } from "@/features/generator/state/types";
 import { editableWorkspace, type Workspace } from "@/features/teams/workspace";
 import { csvField } from "@/lib/analytics/shape";
 import { bulkColumns, MAX_BULK_ROWS, parseBulk, templateCsv } from "@/lib/bulk/rows";
@@ -40,24 +37,6 @@ const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const PREVIEW_ROWS = 100;
 const NEW_FOLDER = "__new__";
 
-const noopSubscribe = () => () => {};
-let cachedDesign: { raw: string | null; design: DesignState } | null = null;
-
-/** The design saved by the generator, cached so the same value is returned until it changes. */
-function storedDesign(): DesignState {
-  let raw: string | null = null;
-  try {
-    raw = window.localStorage.getItem(STORAGE_KEY);
-  } catch {
-    // Storage can be blocked; fall back to the default design.
-  }
-  if (!cachedDesign || cachedDesign.raw !== raw) {
-    const saved = loadSettings();
-    cachedDesign = { raw, design: saved ? sanitizeDesign(saved.design) : DEFAULT_DESIGN };
-  }
-  return cachedDesign.design;
-}
-
 /** One QR code per spreadsheet row, downloaded together as a ZIP and optionally saved. */
 export function BulkGenerator() {
   const toast = useToast();
@@ -66,8 +45,8 @@ export function BulkGenerator() {
   const [type, setType] = useState<QrTypeId>("url");
   const [text, setText] = useState("");
   const [fileError, setFileError] = useState("");
-  // The generator's current design, so bulk codes match the one you've been designing.
-  const design = useSyncExternalStore(noopSubscribe, storedDesign, () => DEFAULT_DESIGN);
+  // Bulk codes use the classic design; they never copy the last code you designed.
+  const design = DEFAULT_DESIGN;
   const [format, setFormat] = useState<ExportFormat>("png");
   const [save, setSave] = useState(false);
   const [dynamic, setDynamic] = useState(false);
@@ -391,11 +370,7 @@ export function BulkGenerator() {
                 className="size-24 shrink-0"
               />
               <p className="text-sm text-fg-muted">
-                Every code uses your current design.{" "}
-                <Link href="/" className="font-medium text-link underline-offset-4 hover:underline">
-                  Change it in the generator
-                </Link>
-                .
+                Every code uses the classic black-and-white design, which scans most reliably.
               </p>
             </div>
             <Field label="File format">

@@ -1,4 +1,10 @@
-import { DEFAULT_DESIGN, MAX_EXPORT_SIZE, MIN_EXPORT_SIZE } from "./defaults";
+import {
+  DEFAULT_DESIGN,
+  initialState,
+  MAX_CODE_NAME,
+  MAX_EXPORT_SIZE,
+  MIN_EXPORT_SIZE,
+} from "./defaults";
 import { sanitizePage } from "@/lib/pages/sanitize";
 import { isPageType } from "@/lib/qr/types";
 
@@ -107,6 +113,12 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
         pages: { ...state.pages, [action.pageType]: sanitizePage(action.pageType, action.content) },
       };
 
+    case "setName":
+      return { ...state, name: action.name.slice(0, MAX_CODE_NAME) };
+
+    case "reset":
+      return initialState();
+
     case "loadCode": {
       const design = sanitizeDesign(action.design);
       if (isPageType(action.qrType)) {
@@ -116,6 +128,7 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
           pages: { ...state.pages, [action.qrType]: sanitizePage(action.qrType, action.content) },
           design,
           ecBeforeLogo: null,
+          name: "",
         };
       }
       return {
@@ -127,19 +140,7 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
         },
         design,
         ecBeforeLogo: null,
-      };
-    }
-
-    case "hydrate": {
-      const { design, exportSettings, activeType } = action.saved;
-      return {
-        ...state,
-        activeType,
-        design: sanitizeDesign(design),
-        exportSettings: {
-          ...exportSettings,
-          size: clamp(Math.round(exportSettings.size), MIN_EXPORT_SIZE, MAX_EXPORT_SIZE),
-        },
+        name: "",
       };
     }
   }

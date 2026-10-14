@@ -1,11 +1,13 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { createCode, designForStorage, updateCode } from "@/features/codes/api";
 import { editableWorkspace, type Workspace } from "@/features/teams/workspace";
 import { dynamicPayload } from "@/lib/dynamic/slug";
 import { normalizeUrl } from "@/lib/qr/normalize";
+import { removeKey } from "@/lib/storage";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 import { measure } from "@/lib/qr/capacity";
@@ -30,9 +32,9 @@ import {
   type QrTypeId,
 } from "@/lib/qr/types";
 
+import { editTransition } from "./editTransition";
 import { useScanVerification } from "./preview/useScanVerification";
 import { initialState } from "./state/defaults";
-import { loadSettings, saveSettings } from "./state/persistence";
 import { generatorReducer } from "./state/reducer";
 import type { DesignState } from "./state/types";
 
@@ -58,62 +60,77 @@ function moduleColors(design: DesignState): string[] {
 
 const isCodeType = (value: string): value is CodeTypeId => isStaticType(value) || isPageType(value);
 
+/** Versions before October 2026 remembered the last design here; it is cleared on load. */
+export const LEGACY_SETTINGS_KEY = "quickqreate:v1";
+
 export function useGenerator() {
   const [state, dispatch] = useReducer(generatorReducer, undefined, initialState);
-  const hydrated = useRef(false);
   const [saved, setSaved] = useState<SavedCode | null>(null);
   /** True when the user switched a new Link code to dynamic (before it is saved). */
   const [wantsDynamic, setWantsDynamic] = useState(false);
   /** A team workspace new codes are saved into (/?workspace=<owner id>); null = your own. */
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit");
+  const ownerParam = searchParams.get("workspace");
+  /** The open code's id, updated before the URL changes so a save never looks like "leave". */
+  const savedIdRef = useRef<string | null>(null);
 
-  // Declared before the loading effect so the defaults from the first render are never saved
-  // over the user's stored settings.
-  useEffect(() => {
-    if (hydrated.current) saveSettings(state);
-  }, [state]);
+  // New codes always start from the defaults. Remove settings an older version remembered.
+  useEffect(() => removeKey(LEGACY_SETTINGS_KEY), []);
 
-  // Saved settings live in localStorage, which only exists in the browser, so they are
-  // applied after the first render to keep server and client HTML identical.
+  // The address bar decides what is open: /?edit=<id> edits that saved code, plain / is a new
+  // code, and /?workspace=<owner id> saves new codes into a team workspace.
   useEffect(() => {
-    const saved = loadSettings();
-    if (saved) dispatch({ type: "hydrate", saved });
-    hydrated.current = true;
-  }, []);
-
-  // Opening /?edit=<id> from the dashboard loads that saved code for editing, and
-  // /?workspace=<owner id> saves new codes into a team workspace.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("edit");
-    const owner = params.get("workspace");
+    const transition = editTransition(editId, savedIdRef.current);
+    if (transition === "reset") {
+      dispatch({ type: "reset" });
+      savedIdRef.current = null;
+      setSaved(null);
+      setWantsDynamic(false);
+      setWorkspace(null);
+    }
     const supabase = getBrowserSupabase();
     if (!supabase) return;
-    if (!id) {
-      if (owner) void editableWorkspace(owner).then(setWorkspace);
-      return;
-    }
-    supabase
-      .from("qr_codes")
-      .select("id, user_id, name, qr_type, content, design, is_dynamic, slug, destination")
-      .eq("id", id)
-      .maybeSingle()
-      .then(async ({ data: code }) => {
-        if (!code || !isCodeType(code.qr_type)) return;
-        const { data: session } = await supabase.auth.getSession();
-        if (code.user_id !== session.session?.user.id) {
-          setWorkspace(await editableWorkspace(code.user_id));
-        }
-        const linkCode = code.is_dynamic && code.qr_type === "url";
-        dispatch({
-          type: "loadCode",
-          qrType: code.qr_type,
-          content: linkCode ? { url: code.destination ?? "" } : code.content,
-          design: code.design,
+    // Answers that arrive after the address bar changed again are ignored.
+    let cancelled = false;
+    if (!editId) {
+      if (ownerParam) {
+        void editableWorkspace(ownerParam).then((found) => {
+          if (!cancelled) setWorkspace(found);
         });
-        setSaved({ id: code.id, name: code.name, isDynamic: code.is_dynamic, slug: code.slug });
-      });
-  }, []);
+      }
+    } else if (transition === "load") {
+      void supabase
+        .from("qr_codes")
+        .select("id, user_id, name, qr_type, content, design, is_dynamic, slug, destination")
+        .eq("id", editId)
+        .maybeSingle()
+        .then(async ({ data: code }) => {
+          if (cancelled || !code || !isCodeType(code.qr_type)) return;
+          const { data: session } = await supabase.auth.getSession();
+          if (cancelled) return;
+          const owner =
+            code.user_id !== session.session?.user.id
+              ? await editableWorkspace(code.user_id)
+              : null;
+          if (cancelled) return;
+          setWorkspace(owner);
+          const linkCode = code.is_dynamic && code.qr_type === "url";
+          dispatch({
+            type: "loadCode",
+            qrType: code.qr_type,
+            content: linkCode ? { url: code.destination ?? "" } : code.content,
+            design: code.design,
+          });
+          savedIdRef.current = code.id;
+          setSaved({ id: code.id, name: code.name, isDynamic: code.is_dynamic, slug: code.slug });
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [editId, ownerParam]);
 
   const { activeType, design, exportSettings } = state;
   const pageType = isPageType(activeType) ? activeType : null;
@@ -221,7 +238,10 @@ export function useGenerator() {
               : { content: values }),
         });
         if (!result.ok) return { ok: false, message: result.error };
-        setSaved({ ...saved, name: result.value.name });
+        // Only rename it if it is still open: New code or the logo may have closed it meanwhile.
+        setSaved((current) =>
+          current?.id === saved.id ? { ...current, name: result.value.name } : current,
+        );
         return { ok: true, message: `Saved changes to “${result.value.name}”.${note}` };
       }
       const result = await createCode({
@@ -234,6 +254,7 @@ export function useGenerator() {
       });
       if (!result.ok) return { ok: false, message: result.error };
       const code = result.value;
+      savedIdRef.current = code.id;
       setSaved({ id: code.id, name: code.name, isDynamic: code.is_dynamic, slug: code.slug });
       window.history.replaceState(null, "", `/?edit=${code.id}`);
       return { ok: true, message: `Saved “${code.name}” to your codes.${note}` };
@@ -252,8 +273,10 @@ export function useGenerator() {
     ],
   );
 
-  /** Leaves edit mode and starts a fresh, unsaved code with the current design. */
+  /** Leaves edit mode and starts a brand-new code with default settings. */
   const startNew = useCallback(() => {
+    dispatch({ type: "reset" });
+    savedIdRef.current = null;
     setSaved(null);
     setWantsDynamic(false);
     window.history.replaceState(null, "", workspace ? `/?workspace=${workspace.ownerId}` : "/");
@@ -277,11 +300,14 @@ export function useGenerator() {
     [],
   );
 
+  const setName = useCallback((name: string) => dispatch({ type: "setName", name }), []);
+
   return {
     state,
     dispatch,
     setField,
     setPage,
+    setName,
     pageType,
     pageErrors: pageType ? errors : {},
     info,
