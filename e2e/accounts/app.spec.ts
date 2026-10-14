@@ -9,6 +9,7 @@ const PAGES = [
   "codes",
   "codes?folder={folder}",
   "codes/new",
+  "codes/bulk",
   "codes/{menu}",
   "codes/{menu}/analytics",
   "team",
