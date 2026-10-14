@@ -5,7 +5,8 @@ import Link from "next/link";
 import { PageHeader } from "@/components/app/PageHeader";
 import { withWorkspace } from "@/components/app/nav";
 import { buttonClasses } from "@/components/ui/Button";
-import { CodeList } from "@/features/dashboard/CodeList";
+import { CodesView } from "@/features/codes/list/CodesView";
+import { FolderActions } from "@/features/codes/list/FolderActions";
 import { formatCount } from "@/features/dashboard/format";
 import { ROLE_LABELS, workspaceLabel } from "@/features/teams/roles";
 import { requireUser } from "@/lib/auth/server";
@@ -15,6 +16,7 @@ export const metadata: Metadata = { title: "Codes · QuickQReate" };
 export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
   const params = await searchParams;
   const requested = typeof params.workspace === "string" ? params.workspace : null;
+  const folderParam = typeof params.folder === "string" ? params.folder : null;
   const { supabase, user } = await requireUser(
     requested ? `/codes?workspace=${requested}` : "/codes",
   );
@@ -25,31 +27,49 @@ export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
   const teamId = membership?.owner_id ?? null;
   const canEdit = !membership || membership.role === "editor";
 
-  const [{ data: codes }, { data: folders }] = await Promise.all([
-    supabase
-      .from("qr_codes")
-      .select("*")
-      .eq("user_id", ownerId)
-      .order("updated_at", { ascending: false }),
-    supabase.from("folders").select("*").eq("user_id", ownerId).order("name"),
+  const { data: folders } = await supabase
+    .from("folders")
+    .select("*")
+    .eq("user_id", ownerId)
+    .order("name");
+  // Only a folder of this workspace counts; anything else shows all codes.
+  const folder = (folders ?? []).find((f) => f.id === folderParam) ?? null;
+  let query = supabase
+    .from("qr_codes")
+    .select("*")
+    .eq("user_id", ownerId)
+    .order("updated_at", { ascending: false });
+  if (folder) query = query.eq("folder_id", folder.id);
+  const [{ data: codes }, { data: scans }] = await Promise.all([
+    query,
+    supabase.rpc("recent_scan_counts", { p_owner: ownerId }),
   ]);
   const list = codes ?? [];
-  const totalScans = list.reduce((sum, c) => sum + c.scan_count, 0);
+  const recentScans = Object.fromEntries(
+    (scans ?? []).map((row) => [row.code_id, Number(row.scans)]),
+  );
+  const totalScans = list.reduce((sum, code) => sum + (recentScans[code.id] ?? 0), 0);
+  const title = folder
+    ? folder.name
+    : membership
+      ? `${workspaceLabel(membership)}’s codes`
+      : "All codes";
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={membership ? `${workspaceLabel(membership)}’s codes` : "All codes"}
+        title={title}
         description={
           <>
             {membership && <>{ROLE_LABELS[membership.role]} · </>}
             {formatCount(list.length)} {list.length === 1 ? "code" : "codes"} ·{" "}
-            {formatCount(totalScans)} {totalScans === 1 ? "scan" : "scans"}
+            {formatCount(totalScans)} {totalScans === 1 ? "scan" : "scans"} in the last 30 days
           </>
         }
         actions={
           canEdit && (
             <>
+              {folder && <FolderActions folder={folder} teamId={teamId} />}
               <Link
                 href={withWorkspace("/bulk", teamId)}
                 className={buttonClasses("outline", "md")}
@@ -72,13 +92,16 @@ export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
         </p>
       )}
 
-      <CodeList
-        key={ownerId}
+      <CodesView
+        key={`${ownerId}:${folder?.id ?? "all"}`}
+        userId={user.id}
         codes={list}
         folders={folders ?? []}
+        folder={folder}
         ownerId={ownerId}
+        teamId={teamId}
         canEdit={canEdit}
-        newHref={withWorkspace("/", teamId)}
+        recentScans={recentScans}
       />
     </div>
   );
