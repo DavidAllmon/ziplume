@@ -30,6 +30,9 @@ Success means:
   - Hosted pages and API keys keep working on the old address.
   - Google sign-in, email sign-up, password reset and team invites work on the new address, with
     mail from `no-reply@ziplume.com`.
+- **No old name left behind:** Google's sign-in screen says "continue to ziplume.com".
+  Public file links, the GitHub repo, new API keys and the admin-side names (Coolify, Google Cloud,
+  Supabase panel) say Ziplume too.
 
 ## 2. Decisions
 
@@ -42,14 +45,23 @@ Success means:
 | App address | `ziplume.com`. `www.ziplume.com` forwards to it. Short links are `ziplume.com/r/<slug>`. |
 | Old address | `qr.techitdave.com` stays forever: short links, hosted pages, the API and their files answer directly, and everything else forwards |
 | Mail sender | `Ziplume <no-reply@ziplume.com>`, verified in Brevo |
+| Mail to ziplume.com | Cloudflare Email Routing forwards `support@ziplume.com` and `dmarc@ziplume.com` to `dallmon@techitdave.com` |
+| Google sign-in screen | Shows ziplume.com. The app passes `/auth/v1/authorize` and `/auth/v1/callback` through to the Supabase project, which keeps the shared server untouched. |
+| Public file links | Hosted-page images and profile photos load from `ziplume.com/storage/v1/object/public/…`, which the app passes through to Supabase |
+| GitHub repo | Renamed `DavidAllmon/ziplume`. A new, tiny `DavidAllmon/QuickQReate` repo keeps the old GitHub Pages address forwarding. |
+| API keys | New keys start with `zl_`. Existing `qq_` keys keep working. |
+| Old printed codes' scan locations | Proxy `qr.techitdave.com` through Cloudflare, only with changes scoped to that one hostname, and only after David approves the exact techitdave.com settings shown to him |
+| Admin-side names | The Coolify app, the Google Cloud project's display name, the Supabase panel's project name and the Brevo key labels are renamed to Ziplume, wherever the service allows it |
 
 **Global constraints.** These carry over from the earlier work:
 
 - **Secrets and sign-ins:** David enters every password, key and secret, and signs in to
   Cloudflare, Google Cloud and Brevo himself. Claude never types them, and never writes them into
   git, docs, screenshots or messages.
-- **DNS:** only the records named in this spec are added, all in the ziplume.com zone. No record
-  in `techitdave.com` changes.
+- **DNS:** only the records named in this spec are added, all in the ziplume.com zone.
+  - The one exception in `techitdave.com` is turning on the proxy for the `qr` record (5.6).
+  - That happens only after David sees and approves the exact settings involved.
+  - No other techitdave.com record or setting changes.
 - **Shared server:** the Supabase Multitenant resource is left untouched. Project-level auth
   settings are changed through the panel's project environment, as at go-live.
 - **Migrations:** applied live only after a verified backup and before merging, never with
@@ -394,8 +406,17 @@ Inter is today. Inter is removed.
   - "Your Ziplume sign-in link"
 
   Then restart only the auth service. A test email checks the new look.
-- **Google Cloud (David signs in):** rename the OAuth consent screen app from "QuickQReate" to
-  "Ziplume". No logo is uploaded, because a logo triggers Google's brand review.
+- **Google Cloud (David signs in):**
+  - Rename the OAuth consent screen app from "QuickQReate" to "Ziplume". No logo is uploaded,
+    because a logo triggers Google's brand review.
+  - Rename the project's display name to "Ziplume". Its ID `quickqreate` can't change, and only
+    admins see it.
+- **Other admin-side names** become "Ziplume" wherever the service allows a rename:
+  - the Coolify app
+  - the Supabase panel's project name (its slug and address stay)
+  - the Brevo key labels `quickqreate-auth` and `quickqreate-invites`
+
+  Where a service has no rename, the old label stays and is noted in the runbook.
 
 ### 4.6 Defaults for new codes and pages
 
@@ -406,20 +427,28 @@ Inter is today. Inter is removed.
 - Saved codes and pages keep their colors.
 - The gradient presets keep passing the existing 4.5:1-on-white test.
 
-### 4.7 Internal names that stay
+### 4.7 API keys, and the internal names that stay
 
-These keep their old internal names, because no person sees them and changing them would break
-saved data or issued keys:
-- the API key prefix `qq_`
+**API keys:**
+- New API keys start with `zl_` instead of `qq_`. The same Release 2 migration that renames the
+  invite message replaces the key-creating function from
+  `20261013150000_power_tools.sql`.
+- The API accepts both prefixes, so every key already issued keeps working. The check in
+  `lib/api/v1.ts` becomes `(qq|zl)_` followed by the same 48 hex characters.
+- The developers page shows `zl_` in its examples.
+
+**Internal names that stay.** These keep their old names, because no person sees them and changing
+them would break saved data:
 - the unlock cookie `qq_unlock_<SLUG>`
 - the SVG id `qq-frame-inner`
 - the iCal UID suffix
 - the sentinel `quickqreate.invalid`
 - the applied migration file names
 - `supabase/config.toml`'s `project_id`
-- the GitHub repo name and its Pages path
 
-The localStorage keys and the service-worker cache prefix are renamed in Release 3 (see 5.6).
+The GitHub repo is renamed in Release 3 (5.6).
+
+The localStorage keys and the service-worker cache prefix are renamed in Release 3 (see 5.7).
 Window event names and `package.json`'s name are renamed in Release 2, because nothing outside the
 page reads them.
 
@@ -433,7 +462,10 @@ page reads them.
   `pages-redirect/`. Only an allowlist of the internal names in 4.7 may contain it.
 - **Accessibility:** the axe sweeps run as they do today: the app pages at 390, 820 and 1280 px,
   dark `/codes`, `/team`, home, `/bulk` and `/developers` in light and dark.
-- **Migration:** the PGlite migration test covers the renamed limit message.
+- **Migration:** the PGlite migration test covers the renamed limit message and the new `zl_`
+  prefix. The existing `qq_` assertions become "an old-style key still authenticates".
+- **API:** `e2e/server.spec.ts` checks that a `zl_` key and a `qq_` key both work, and that any
+  other prefix is rejected.
 
 ## 5. Release 3: the move to ziplume.com
 
@@ -468,6 +500,28 @@ page reads them.
 The `/R/` rewrite stays. A pure function `legacyHostAction(host, pathname)` makes the rule
 unit-testable.
 
+**Pass-through to Supabase on ziplume.com.** These requests are proxied to the Supabase project
+(`NEXT_PUBLIC_SUPABASE_URL`), so visitors only ever see ziplume.com:
+
+| Path on ziplume.com | Proxied to | Why |
+| --- | --- | --- |
+| `/auth/v1/authorize` | `<Supabase>/auth/v1/authorize` | The Google button starts here. Google's account chooser then names the redirect address, so it says "continue to ziplume.com" instead of the Supabase host. |
+| `/auth/v1/callback` | `<Supabase>/auth/v1/callback` | Google returns here. `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI` points at it. |
+| `/storage/v1/object/public/*` | `<Supabase>/storage/v1/object/public/*` | Hosted-page images and profile photos. Cloudflare caches them at its edge. |
+
+How the pass-through works:
+- **Next.js rewrites to an external address:** the rules are path rewrites in `next.config.ts`.
+  The upstream response, including its redirects, goes back to the browser unchanged.
+- **Google sign-in:** the app asks supabase-js for the Google sign-in address without leaving the
+  page (`skipBrowserRedirect`), swaps its origin for the site address, then navigates there.
+- **Public file links:** `lib/pages/urls.ts` and `lib/avatar.ts` build them from the site address
+  instead of the Supabase address.
+  - Absolute links already saved in content or profiles keep working, because the Supabase host
+    still serves them.
+  - Uploads, the database API and realtime keep talking to Supabase directly. People never see
+    those addresses.
+- **On the old address:** these paths fall under "everything else" and forward to ziplume.com.
+
 **What changes automatically with `SITE_URL`** (the address is baked in at build time, so it takes
 effect after a rebuild):
 - short links, QR payloads and downloads
@@ -488,34 +542,44 @@ Nothing changes for users during preparation.
      certificate renewals on plain HTTP
    - turn on **Managed Transforms → Add visitor location headers**
    - leave caching at the default (only versioned files, no page rules)
-2. **Brevo (David signs in):**
+2. **Cloudflare Email Routing, ziplume.com zone:**
+   - turn on Email Routing, which adds its MX records and an SPF record
+   - add `dallmon@techitdave.com` as the destination. Cloudflare emails it a verification link,
+     which David clicks.
+   - create two routes to it: `support@ziplume.com` and `dmarc@ziplume.com`
+   - the zone keeps **one** SPF record that includes both senders:
+     `v=spf1 include:_spf.mx.cloudflare.net include:spf.brevo.com ~all`
+3. **Brevo (David signs in):**
    - add ziplume.com and add the records Brevo shows to the ziplume.com zone: the `brevo-code`
-     TXT, two DKIM CNAMEs and a `_dmarc` TXT, starting with `p=none` and a report address
+     TXT, two DKIM CNAMEs, and `_dmarc` TXT
+     `v=DMARC1; p=none; rua=mailto:dmarc@ziplume.com`
    - wait until Brevo shows the domain authenticated
    - add the sender **Ziplume <no-reply@ziplume.com>**
    - keep the techitdave.com sender
-3. **Coolify:**
+4. **Coolify:**
    - add `https://ziplume.com` and `https://www.ziplume.com` to the app's domains, next to
      `https://qr.techitdave.com`
    - set the direction to redirect `www` to non-www
    - wait for both Let's Encrypt certificates
-4. **Cloudflare proxy:**
+5. **Cloudflare proxy:**
    - turn the proxy on (orange cloud) for `ziplume.com` and `www`
    - check that the site loads through Cloudflare with a valid certificate
    - check that a request to `http://ziplume.com/.well-known/acme-challenge/<random>` reaches the
      server's certificate handler, not the app
    - write the first renewal date (about 60 days out) in the runbook
-5. **Supabase project env:** add `https://ziplume.com/auth/callback` and
+6. **Supabase project env:** add `https://ziplume.com/auth/callback` and
    `https://ziplume.com/auth/confirm` to the allowed redirects (`GOTRUE_URI_ALLOW_LIST`),
    keeping the old ones.
-6. **Google Cloud (David signs in):**
+7. **Google Cloud (David signs in):**
    - add `https://ziplume.com` to the client's JavaScript origins, keeping the old one
+   - add `https://ziplume.com/auth/v1/callback` to its redirect URIs, keeping the Supabase one
    - add `ziplume.com` to the consent screen's authorized domains
    - point its home page, privacy and terms links at `https://ziplume.com/…`
-   - the redirect URI (the Supabase callback) is unchanged
-7. **Read-only database check:** count saved codes, destinations and page contents that contain
-   `qr.techitdave.com`. Any found keep working through the old-address rules, and are listed for
-   David.
+8. **Read-only database check:** count saved codes, destinations, page contents and profile photo
+   links that contain `qr.techitdave.com` or the Supabase host.
+   - Old-address links keep working through the old-address rules.
+   - Supabase-host image links keep working because Supabase still serves them.
+   - Both lists go to David.
 
 ### 5.3 The switch (about 15 minutes)
 
@@ -530,10 +594,12 @@ Nothing changes for users during preparation.
    - `SITE_URL=https://ziplume.com`
    - `GOTRUE_MAILER_TEMPLATES_*` set to `https://ziplume.com/email-templates/…`
    - `SMTP_ADMIN_EMAIL=no-reply@ziplume.com`
+   - `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://ziplume.com/auth/v1/callback`
 
    Then restart only this project's auth service.
 4. **GitHub Pages:** run the workflow with `redirect_to=https://ziplume.com`, so the old Pages
-   address forwards straight to the new one.
+   address forwards straight to the new one. This is temporary until 5.6 moves it to the keeper
+   repo.
 5. **Records:** update `docs/accounts-setup.md`, the runbook and the go-live memory with the new
    address, the settings, and the certificate renewal date.
 
@@ -551,6 +617,10 @@ Nothing changes for users during preparation.
   city.
 - **Sign-in and email:**
   - Google sign-in and email sign-in work on ziplume.com.
+  - Google's account chooser says "continue to ziplume.com", and the address bar never shows the
+    Supabase host.
+  - A hosted-page image and a profile photo load from `ziplume.com/storage/v1/object/public/…`.
+  - A test message to `support@ziplume.com` arrives at `dallmon@techitdave.com`.
   - A sign-up confirmation, a password reset and a team invite arrive from
     `no-reply@ziplume.com`, pass DKIM, show the new look, and link to ziplume.com.
   - David runs these with his test account `dvdallmon+qrtest@gmail.com`.
@@ -564,10 +634,44 @@ Nothing changes for users during preparation.
 
 - **Before step 3 of the switch:** set `NEXT_PUBLIC_SITE_URL` back, empty `LEGACY_HOSTS`, and
   redeploy. This restores the old behavior.
-- **After step 3:** also put back `SITE_URL`, the template addresses and the sender.
+- **After step 3:** also put back `SITE_URL`, the template addresses, the sender and
+  `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI`. Google keeps both redirect URIs, so either setting works.
 - `qr.techitdave.com` never stops serving short links at any point.
 
-### 5.6 Renames that ride along
+### 5.6 After the switch: the repo, the old Pages address and old-code scan locations
+
+These run once the live checks pass, one at a time, each with its own check.
+
+1. **Rename the GitHub repo.**
+   - `DavidAllmon/QuickQReate` becomes `DavidAllmon/ziplume`, with description
+     "Make it. Link it. Share it." and homepage `https://ziplume.com`.
+   - Update the local `origin` remote and Coolify's repository address.
+   - Confirm that a push still triggers a Coolify deploy: watch for the new build ID.
+   - In code (a small follow-up PR): `REPO_URL` in `lib/env.ts`, the README links, and `ci.yml`.
+     That PR also drops the `deploy-pages` and `redirect-pages` jobs and the `pages-redirect/`
+     folder, which move to the keeper repo.
+   - Turn off GitHub Pages on `ziplume`.
+2. **Keep the old Pages address alive.**
+   - A renamed repo's Pages address stops working, so a new public repo `DavidAllmon/QuickQReate`
+     holds only the redirect page (today's `pages-redirect/` files, filled in for
+     `https://ziplume.com`) and serves it with GitHub Pages.
+   - `https://davidallmon.github.io/QuickQReate/…` then keeps forwarding.
+   - This is created only after step 1's address updates, because a repo that reuses the old name
+     ends GitHub's automatic forwarding of the old git address.
+3. **Scan locations for old printed codes (needs David's approval first).**
+   - Read the techitdave.com zone's current SSL/TLS mode, Always Use HTTPS and Managed Transforms,
+     without changing anything.
+   - Show David exactly what would change. The plan:
+     - turn on the proxy for the `qr` record only
+     - add a Configuration Rule for `qr.techitdave.com` alone, setting SSL Full (strict)
+     - turn on the visitor-location Managed Transform. It is zone-wide, but only adds request
+       headers.
+   - If any step would change how another techitdave.com site behaves, that step is dropped and
+     old-code scans stay without locations.
+   - After a yes, run the same checks as for ziplume.com: the certificate, the renewal path, and a
+     scan that records a place.
+
+### 5.7 Renames that ride along
 
 The new address starts with empty browser storage anyway, so Release 3 renames these at no extra
 cost:
@@ -578,11 +682,17 @@ cost:
 
 The literal `quickqreate:v1` stays, because the generator only ever deletes it.
 
-### 5.7 Tests (Release 3)
+### 5.8 Tests (Release 3)
 
-- **Unit:** `legacyHostAction` with no legacy setting, the canonical host, `www`, each
-  directly-served path and its uppercase or nested forms, other paths with query strings, and
-  unknown hosts. Plus the storage-key and service-worker prefix changes.
+- **Unit:**
+  - `legacyHostAction` with no legacy setting, the canonical host, `www`, each directly-served
+    path and its uppercase or nested forms, other paths with query strings, and unknown hosts.
+  - The storage-key and service-worker prefix changes.
+  - Public file links built from the site address.
+  - The Google sign-in address rewritten to the site origin, with its query kept exactly.
+- **Signed-in suite (local Supabase):** `/auth/v1/callback` and
+  `/storage/v1/object/public/<file>` on the app return Supabase's own response, a redirect and
+  the file's bytes, unchanged.
 - **Browser (public suite):**
   - Requests with `Host: qr.techitdave.com` to a short link and a hosted page are served.
   - `/codes` and `/` get a 308 to the canonical address with path and query kept.
@@ -613,20 +723,24 @@ The literal `quickqreate:v1` stays, because the generator only ever deletes it.
   often. DMARC starts at `p=none` and moves to `quarantine` after a few clean weeks.
 - **Everyone signs in again** on ziplume.com, and unsaved Create drafts on the old address don't
   carry over.
-- **Old printed codes show no scan location,** because `qr.techitdave.com` stays DNS-only and its
-  record isn't touched.
-- **Google's account chooser** may still show the Supabase host
-  (`quickqreate-1791927515091.supabase.techitdave.com`) in its "continue to" line. Changing it
-  needs a custom auth domain on the shared Supabase server, which is out of scope.
+- **Old printed codes' scan locations** depend on David approving the techitdave.com change in
+  5.6. Until then, and if a step is dropped, those scans have no place.
+- **The sign-in and file pass-through** adds one hop through the app server. If Google sign-in
+  through it ever fails, rolling back means one setting:
+  `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI` goes back to the Supabase callback, and the app's Google
+  button goes back to the plain address. The Supabase host then shows on Google's screen again.
+  Images are cached by Cloudflare, so the extra hop costs little.
+- **Repo rename:** Coolify, CI and the local clone must all point at the new address before the
+  keeper repo is created. 5.6 orders it that way.
 - **Fonts:** Archivo's width axis makes the display font larger. Only the Latin subset loads.
 - **Cloudflare security features** could challenge scanners or API scripts; switch day checks for
   this (5.4).
 
-## 8. Out of scope
+## 8. Not part of this work
 
-- a custom auth domain (for example `auth.ziplume.com`)
-- renaming the GitHub repo
-- changing the API key prefix
-- proxying or otherwise changing `qr.techitdave.com`'s DNS
-- an inbox or forwarding for ziplume.com mail
-- Phase 3b, 4 and 5 features
+- **Phase 3b, 4 and 5 features:** these follow these releases as already planned (section 6).
+- **The Supabase project's own address** (`quickqreate-1791927515091.supabase.techitdave.com`)
+  stays, because changing it means changing the shared Supabase server. People no longer see it:
+  sign-in and public files go through ziplume.com.
+- **The local folder** `~/Repos/QuickQReate` keeps its name, because tools and notes on this Mac
+  point at it.
