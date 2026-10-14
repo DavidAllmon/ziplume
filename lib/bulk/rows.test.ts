@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { parseCsv } from "@/lib/csv/parse";
 
-import { MAX_BULK_ROWS, parseBulk, templateCsv } from "./rows";
+import { MAX_BULK_ROWS, NOT_A_WEB_ADDRESS, parseBulk, requireWebLinks, templateCsv } from "./rows";
 
 describe("parseBulk", () => {
   it("makes one code per row and names them", () => {
@@ -89,5 +89,21 @@ describe("parseBulk", () => {
         type,
       ).toEqual(result.rows.map(() => null));
     }
+  });
+});
+
+describe("requireWebLinks", () => {
+  it("flags links that aren't web addresses and keeps the rest", () => {
+    const { rows } = parseBulk(
+      "url",
+      "name,url\nMenu,example.com/menu\nMail,mailto:hi@example.com\nBad,not a link",
+      "M",
+    );
+    const checked = requireWebLinks(rows);
+    expect(checked[0]!.error).toBeNull();
+    expect(checked[1]!.error).toBe(NOT_A_WEB_ADDRESS);
+    // A row that already needs fixing keeps its own reason.
+    expect(checked[2]!.error).toBe(rows[2]!.error);
+    expect(checked[2]!.error).not.toBeNull();
   });
 });

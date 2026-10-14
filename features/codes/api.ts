@@ -140,11 +140,12 @@ export async function createCodeWithSettings(
 
 /**
  * Saves many codes at once (bulk creation), in batches. Random link endings that collide are
- * re-rolled. Returns the saved rows in the same order as the input.
+ * re-rolled. Returns the saved rows in the same order as the input. Reports the running total and
+ * the rows each batch saved, so a caller can resume after a failure with the rows that weren't saved.
  */
 export async function createCodes(
   inputs: NewCode[],
-  onProgress?: (saved: number) => void,
+  onProgress?: (saved: number, batch: QrCodeRow[]) => void,
 ): Promise<Result<QrCodeRow[]>> {
   const supabase = getBrowserSupabase();
   if (!supabase) return unavailable;
@@ -183,7 +184,7 @@ export async function createCodes(
       };
     }
     saved.push(...rows);
-    onProgress?.(saved.length);
+    onProgress?.(saved.length, rows);
   }
   return { ok: true, value: saved };
 }

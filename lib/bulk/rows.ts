@@ -205,3 +205,13 @@ export function parseBulk(
     error: null,
   };
 }
+
+/** Trackable links redirect, so they can only open web pages (the database checks this too). */
+export const NOT_A_WEB_ADDRESS = "Trackable links need a web address (http or https)";
+
+/** Marks rows whose link isn't a web address, for lists saved as trackable links. */
+export function requireWebLinks(rows: BulkRow[]): BulkRow[] {
+  return rows.map((row) =>
+    row.error || /^https?:\/\//i.test(row.payload) ? row : { ...row, error: NOT_A_WEB_ADDRESS },
+  );
+}
