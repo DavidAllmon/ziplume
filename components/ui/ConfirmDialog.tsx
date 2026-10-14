@@ -27,7 +27,8 @@ export function ConfirmDialog({
   onClose,
 }: ConfirmDialogProps) {
   return (
-    <Dialog open={open} onClose={onClose} className="relative z-50">
+    // While the action runs the dialog stays open: closing it wouldn't stop the work.
+    <Dialog open={open} onClose={() => !pending && onClose()} className="relative z-50">
       <DialogBackdrop
         transition
         className="fixed inset-0 bg-slate-950/50 transition-opacity duration-200 data-closed:opacity-0"
@@ -42,7 +43,7 @@ export function ConfirmDialog({
             {description}
           </Description>
           <div className="mt-6 flex justify-end gap-2">
-            <Button variant="ghost" onClick={onClose}>
+            <Button variant="ghost" onClick={onClose} disabled={pending}>
               Cancel
             </Button>
             <Button

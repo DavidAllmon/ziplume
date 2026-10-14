@@ -1188,3 +1188,70 @@ describe("email invites", () => {
     await record(asVera, mine!.id);
   });
 });
+
+describe("codes list scans", () => {
+  const WREN = "16161616-1616-4616-8616-161616161616"; // owner
+  const YUKI = "17171717-1717-4717-8717-171717171717"; // viewer on Wren's team
+  const ZED = "18181818-1818-4818-8818-181818181818"; // outsider
+  const asWren = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", WREN, sql, params);
+  const asYuki = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", YUKI, sql, params);
+  const asZed = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", ZED, sql, params);
+  let scanned = "";
+
+  beforeAll(async () => {
+    await db.query(
+      `insert into auth.users (id, email) values
+         ($1, 'wren@example.com'), ($2, 'yuki@example.com'), ($3, 'zed@example.com')`,
+      [WREN, YUKI, ZED],
+    );
+    const codes = await asWren<{ id: string }>(
+      `insert into public.qr_codes (name, qr_type, is_dynamic, slug, destination) values
+         ('Busy', 'url', true, 'WREN01', 'https://a.example'),
+         ('Quiet', 'url', true, 'WREN02', 'https://b.example')
+       returning id`,
+    );
+    scanned = codes[0]!.id;
+    await asService(
+      `insert into public.scan_events (code_id, visitor_hash, scanned_at) values
+         ($1, 'a', now() - interval '1 day'), ($1, 'b', now() - interval '2 days'),
+         ($1, 'c', now() - interval '29 days'), ($1, 'd', now() - interval '40 days')`,
+      [scanned],
+    );
+    await asService(
+      "insert into public.team_members (owner_id, member_id, role) values ($1, $2, 'viewer')",
+      [WREN, YUKI],
+    );
+  });
+
+  it("count each code's scans in the last 30 days, for people who can see the codes", async () => {
+    const counts = async (who: typeof asWren) =>
+      (
+        await who<{ code_id: string; scans: string | number }>(
+          "select code_id, scans from public.recent_scan_counts($1)",
+          [WREN],
+        )
+      ).map((row) => [row.code_id, Number(row.scans)]);
+    expect(await counts(asWren)).toEqual([[scanned, 3]]);
+    expect(await counts(asYuki)).toEqual([[scanned, 3]]);
+    expect(await counts(asZed)).toEqual([]);
+    await expect(asAnon("select * from public.recent_scan_counts($1)", [WREN])).rejects.toThrow(
+      /permission denied/,
+    );
+  });
+
+  it("hide team details from password-only sessions of two-step accounts", async () => {
+    await db.query(
+      "insert into auth.mfa_factors (user_id, status) values ($1, 'verified'), ($2, 'verified')",
+      [YUKI, WREN],
+    );
+    expect(await asYuki("select owner_id from public.my_workspaces()")).toEqual([]);
+    expect(
+      await as("authenticated", YUKI, "select owner_id from public.my_workspaces()", [], "aal2"),
+    ).toHaveLength(1);
+    expect(await asWren("select member_id from public.team_overview()")).toEqual([]);
+    expect(
+      await as("authenticated", WREN, "select member_id from public.team_overview()", [], "aal2"),
+    ).toHaveLength(1);
+    await db.query("delete from auth.mfa_factors where user_id in ($1, $2)", [YUKI, WREN]);
+  });
+});

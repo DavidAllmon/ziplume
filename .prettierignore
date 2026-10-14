@@ -6,3 +6,4 @@ test-results
 package-lock.json
 public
 *.md
+e2e/accounts/.auth

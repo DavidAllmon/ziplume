@@ -73,6 +73,7 @@ export function useGenerator() {
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
   const ownerParam = searchParams.get("workspace");
+  const typeParam = searchParams.get("type");
   /** The open code's id, updated before the URL changes so a save never looks like "leave". */
   const savedIdRef = useRef<string | null>(null);
 
@@ -131,6 +132,13 @@ export function useGenerator() {
       cancelled = true;
     };
   }, [editId, ownerParam]);
+
+  // /?type=wifi (from the Codes page's quick starts) opens a new code of that type.
+  useEffect(() => {
+    if (!editId && typeParam && isCodeType(typeParam)) {
+      dispatch({ type: "setActiveType", activeType: typeParam });
+    }
+  }, [editId, typeParam]);
 
   const { activeType, design, exportSettings } = state;
   const pageType = isPageType(activeType) ? activeType : null;

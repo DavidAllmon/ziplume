@@ -18,7 +18,6 @@ export function UserMenu({ user, collapsed = false }: { user: ShellUser; collaps
     <Menu as="div" className="relative">
       <form id={formId} action="/auth/signout" method="post" hidden />
       <MenuButton
-        aria-label="Account menu"
         className={cn(
           "flex min-h-11 w-full items-center gap-2.5 rounded-control p-2 text-left hover:bg-surface-2 data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring",
           collapsed && "max-lg:justify-center max-lg:p-1",

@@ -40,7 +40,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             className="pointer-events-auto flex max-w-sm items-center gap-2 rounded-full border border-border bg-fg px-4 py-2.5 text-sm font-medium text-bg shadow-pop"
           >
             {toast.tone === "success" ? (
-              <CheckCircle2 aria-hidden className="size-4 shrink-0 text-success" />
+              <CheckCircle2 aria-hidden className="size-4 shrink-0 text-success-soft" />
             ) : (
               <CircleAlert aria-hidden className="size-4 shrink-0 text-danger-soft" />
             )}

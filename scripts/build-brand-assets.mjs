@@ -17,11 +17,6 @@ async function fontFace(family, file, weight) {
 }
 
 const fonts = [
-  await fontFace(
-    "Space Grotesk",
-    "space-grotesk/files/space-grotesk-latin-wght-normal.woff2",
-    "300 700",
-  ),
   await fontFace("Inter", "inter/files/inter-latin-wght-normal.woff2", "100 900"),
 ].join("");
 
@@ -121,7 +116,7 @@ await render(svgPage(bleed, 512), {
 const lockup = (dark) =>
   page(
     `<div class="lockup">${markSvg({ ink: dark ? "#818CF8" : BRAND.indigo }).replace("<svg ", '<svg width="88" height="88" ')}<span>Quick<b>QR</b>eate</span></div>`,
-    `.lockup{display:flex;align-items:center;gap:20px;padding:16px 8px;font:700 72px/1 "Space Grotesk";letter-spacing:-0.025em;color:${dark ? "#E8ECF7" : BRAND.ink}}
+    `.lockup{display:flex;align-items:center;gap:20px;padding:16px 8px;font:700 72px/1 "Inter";letter-spacing:-0.025em;color:${dark ? "#E8ECF7" : BRAND.ink}}
      .lockup b{font-weight:700;color:${dark ? "#A5B4FC" : BRAND.indigo}}`,
   );
 await render(lockup(false), { width: 560, height: 120, path: "public/brand/logo-lockup.png" });
@@ -143,9 +138,9 @@ const og = page(
   `body{width:1200px;height:630px;background:#0B1020;font-family:Inter;color:#E8ECF7;overflow:hidden}
    main{position:relative;display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 88px;
      background:radial-gradient(700px 500px at 85% 40%,rgba(91,91,240,.35),transparent 70%),radial-gradient(500px 400px at 0% 100%,rgba(163,230,53,.12),transparent 70%)}
-   .lockup{display:flex;align-items:center;gap:14px;font:700 40px/1 "Space Grotesk";letter-spacing:-0.025em}
+   .lockup{display:flex;align-items:center;gap:14px;font:700 40px/1 "Inter";letter-spacing:-0.025em}
    .lockup b{font-weight:700;color:#A5B4FC}
-   h1{margin-top:48px;font:700 68px/1.05 "Space Grotesk";letter-spacing:-0.03em}
+   h1{margin-top:48px;font:700 68px/1.05 "Inter";letter-spacing:-0.03em}
    p{margin-top:24px;font-size:28px;line-height:1.4;color:#9AA4BF}
    .card{position:relative;padding:28px;border-radius:36px;background:#fff;box-shadow:0 30px 80px -20px rgba(0,0,0,.6);transform:rotate(3deg)}
    #qr canvas{display:block;width:340px;height:340px}

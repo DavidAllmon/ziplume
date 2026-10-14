@@ -191,6 +191,36 @@ export async function deleteCode(id: string): Promise<Result<null>> {
     : { ok: true, value: null };
 }
 
+/** Pauses or resumes many trackable codes in one request; returns the codes that changed. */
+export async function setCodesStatus(
+  ids: string[],
+  status: QrStatus,
+): Promise<Result<QrCodeRow[]>> {
+  const supabase = getBrowserSupabase();
+  if (!supabase) return unavailable;
+  if (ids.length === 0) return { ok: true, value: [] };
+  const { data, error } = await supabase
+    .from("qr_codes")
+    .update({ status })
+    .in("id", ids)
+    .eq("is_dynamic", true)
+    .select();
+  return error || !data
+    ? { ok: false, error: "The codes couldn't be changed. Please try again." }
+    : { ok: true, value: data };
+}
+
+/** Deletes many codes in one request; returns the ids that were deleted. */
+export async function deleteCodes(ids: string[]): Promise<Result<string[]>> {
+  const supabase = getBrowserSupabase();
+  if (!supabase) return unavailable;
+  if (ids.length === 0) return { ok: true, value: [] };
+  const { data, error } = await supabase.from("qr_codes").delete().in("id", ids).select("id");
+  return error || !data
+    ? { ok: false, error: "The codes couldn't be deleted. Please try again." }
+    : { ok: true, value: data.map((row) => row.id) };
+}
+
 export async function duplicateCode(code: QrCodeRow): Promise<Result<QrCodeRow>> {
   return createCode({
     ownerId: code.user_id,

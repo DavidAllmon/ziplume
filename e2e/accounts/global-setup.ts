@@ -66,8 +66,21 @@ export default async function globalSetup(config: FullConfig) {
     .insert({ owner_id: ownerId, member_id: viewerId, role: "viewer" });
   if (teamError) throw teamError;
 
-  const menu = codes.find((code) => code.name === "Spring menu");
-  const seeded: Seed = { ownerId, viewerId, menuId: menu!.id };
+  const menu = codes.find((code) => code.name === "Spring menu")!;
+  const wifi = codes.find((code) => code.name === "Front desk Wi-Fi")!;
+  const { data: flyers, error: folderError } = await admin
+    .from("folders")
+    .insert({ user_id: ownerId, name: "Flyers" })
+    .select("id")
+    .single();
+  if (folderError || !flyers) throw folderError ?? new Error("Couldn't create the folder");
+  await admin.from("qr_codes").update({ folder_id: flyers.id }).eq("id", wifi.id);
+  // Three recent scans for the menu, so the Scans column has something to show.
+  const { error: scanError } = await admin
+    .from("scan_events")
+    .insert(["a", "b", "c"].map((visitor) => ({ code_id: menu.id, visitor_hash: visitor })));
+  if (scanError) throw scanError;
+  const seeded: Seed = { ownerId, viewerId, menuId: menu.id, folderId: flyers.id };
   mkdirSync(AUTH_DIR, { recursive: true });
   writeFileSync(SEED_FILE, JSON.stringify(seeded));
 

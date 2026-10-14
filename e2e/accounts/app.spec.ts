@@ -7,6 +7,7 @@ const WIDTHS = [390, 820, 1280];
 // {menu} is the seeded "Spring menu" code.
 const PAGES = [
   "codes",
+  "codes?folder={folder}",
   "codes/{menu}",
   "codes/{menu}/analytics",
   "team",
@@ -16,7 +17,8 @@ const PAGES = [
   "settings/account",
 ];
 
-const resolve = (path: string) => path.replace("{menu}", seed().menuId);
+const resolve = (path: string) =>
+  path.replace("{menu}", seed().menuId).replace("{folder}", seed().folderId);
 
 async function expectNoSidewaysScroll(page: Page) {
   const overflow = await page.evaluate(
@@ -26,6 +28,11 @@ async function expectNoSidewaysScroll(page: Page) {
 }
 
 async function expectNoAxeViolations(page: Page) {
+  // Loading panels are dimmed (aria-busy) and fade back in; check the settled page, not the fade.
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== "running"),
+  );
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
 }
@@ -44,6 +51,71 @@ test.describe("signed in as an owner", () => {
       });
     }
   }
+
+  test("the list shows one status and recent scans per code", async ({ page }) => {
+    await page.goto("codes");
+    const menu = page.getByRole("listitem", { name: "Spring menu" });
+    // The phone line comes first in the DOM and is hidden at this width; check the visible copy.
+    await expect(menu.getByText("Active").filter({ visible: true }).first()).toBeVisible();
+    await expect(
+      menu
+        .getByText(/^3 scans in the last 30 days$/)
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible();
+    await expect(
+      page
+        .getByRole("listitem", { name: "Front desk Wi-Fi" })
+        .getByText("Static")
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible();
+  });
+
+  test("grid view is remembered after a reload", async ({ page }) => {
+    await page.goto("codes");
+    await page.getByRole("radio", { name: "Grid view" }).click();
+    await page.reload();
+    await expect(page.getByRole("list", { name: "Codes" })).toHaveAttribute("data-view", "grid");
+  });
+
+  test("folders in the sidebar filter the list", async ({ page }) => {
+    await page.goto("codes");
+    await page
+      .getByRole("list", { name: "Folders" })
+      .getByRole("link", { name: /Flyers/ })
+      .click();
+    await expect(page.getByRole("heading", { level: 1, name: "Flyers" })).toBeVisible();
+    await expect(page.getByRole("listitem", { name: "Front desk Wi-Fi" })).toBeVisible();
+    await expect(page.getByRole("listitem", { name: "Spring menu" })).toHaveCount(0);
+  });
+
+  test("an unknown folder shows all codes", async ({ page }) => {
+    await page.goto(`codes?folder=${"0".repeat(8)}-0000-4000-8000-${"0".repeat(12)}`);
+    await expect(page.getByRole("heading", { level: 1, name: "All codes" })).toBeVisible();
+    await expect(page.getByRole("listitem", { name: "Spring menu" })).toBeVisible();
+  });
+
+  test("filters that match nothing offer to clear them", async ({ page }) => {
+    await page.goto("codes");
+    await page.getByLabel("Status").selectOption("expired");
+    await expect(page.getByRole("heading", { name: "No codes match" })).toBeVisible();
+    await page.getByRole("button", { name: "Clear filters" }).click();
+    await expect(page.getByRole("listitem", { name: "Spring menu" })).toBeVisible();
+  });
+
+  test("phones can reach folders and tap list controls easily", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("codes");
+    const checkbox = page.getByRole("checkbox", { name: "Select Spring menu" });
+    const target = page.locator("label", { has: checkbox });
+    expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(
+      (await page.getByRole("radio", { name: "Grid view" }).boundingBox())!.height,
+    ).toBeGreaterThanOrEqual(44);
+    await page.getByLabel("Folder", { exact: true }).selectOption({ label: "Flyers" });
+    await expect(page.getByRole("heading", { level: 1, name: "Flyers" })).toBeVisible();
+  });
 
   test("/codes passes axe in dark mode", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "dark" });
@@ -84,6 +156,12 @@ test.describe("signed in as an owner", () => {
     }
     await expect(tabs.getByRole("button", { name: "More" })).toBeVisible();
     await expect(page.getByRole("complementary", { name: "Sidebar" })).toBeHidden();
+    const logo = page.getByRole("banner").getByRole("link", { name: "QuickQReate codes" });
+    expect((await logo.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await tabs.getByRole("button", { name: "More" }).click();
+    for (const link of await page.getByRole("dialog", { name: "More" }).getByRole("link").all()) {
+      expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
   });
 });
 

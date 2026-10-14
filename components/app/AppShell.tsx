@@ -25,6 +25,7 @@ import { cn } from "@/lib/cn";
 import { BUY_ME_A_COFFEE_URL } from "@/lib/env";
 
 import { CreateButton } from "./CreateButton";
+import { FolderNav } from "./FolderNav";
 import { isCurrent, withWorkspace, type ShellTeam, type ShellUser } from "./nav";
 import { UserMenu } from "./UserMenu";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
@@ -37,7 +38,7 @@ interface NavItem {
 }
 
 const sideLinkClass =
-  "flex min-h-10 items-center gap-3 rounded-control px-2.5 text-sm font-medium text-fg-muted hover:bg-surface-2 hover:text-fg aria-[current=page]:bg-surface-2 aria-[current=page]:font-semibold aria-[current=page]:text-fg focus-ring [&_svg]:size-5 [&_svg]:shrink-0";
+  "flex min-h-11 items-center gap-3 rounded-control px-2.5 text-sm font-medium text-fg-muted hover:bg-surface-2 hover:text-fg aria-[current=page]:bg-surface-2 aria-[current=page]:font-semibold aria-[current=page]:text-fg focus-ring [&_svg]:size-5 [&_svg]:shrink-0";
 
 const tabClass =
   "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[13px] font-medium text-fg-muted aria-[current=page]:text-fg focus-ring [&_svg]:size-5";
@@ -193,7 +194,15 @@ export function AppShell({
         )}
 
         <nav aria-label="Main" className="flex flex-col gap-0.5">
-          {main.map(sideLink)}
+          {sideLink(main[0]!)}
+          <FolderNav
+            ownerId={team?.ownerId ?? user.id}
+            teamId={ownerId}
+            canEdit={canCreate}
+            expanded={expanded}
+            onNavigate={collapse}
+          />
+          {main.slice(1).map(sideLink)}
         </nav>
 
         <div className="mt-auto flex flex-col gap-0.5 border-t border-border pt-3">
@@ -214,7 +223,7 @@ export function AppShell({
         <Link
           href={codesHref}
           aria-label="QuickQReate codes"
-          className="rounded-control focus-ring"
+          className="grid size-11 place-items-center rounded-control focus-ring"
         >
           <LogoMark className="size-7" />
         </Link>

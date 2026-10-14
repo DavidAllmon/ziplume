@@ -194,6 +194,10 @@ export interface Database {
       accept_invite: { Args: { p_token: string }; Returns: string };
       record_invite_send: { Args: { p_invite: string }; Returns: undefined };
       my_pending_invite: { Args: Record<string, never>; Returns: string | null };
+      recent_scan_counts: {
+        Args: { p_owner: string; p_days?: number };
+        Returns: { code_id: string; scans: number }[];
+      };
       my_workspaces: {
         Args: Record<string, never>;
         Returns: {
