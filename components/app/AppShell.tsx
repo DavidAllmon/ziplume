@@ -25,6 +25,7 @@ import { cn } from "@/lib/cn";
 import { BUY_ME_A_COFFEE_URL } from "@/lib/env";
 
 import { CreateButton } from "./CreateButton";
+import { FolderNav } from "./FolderNav";
 import { isCurrent, withWorkspace, type ShellTeam, type ShellUser } from "./nav";
 import { UserMenu } from "./UserMenu";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
@@ -193,7 +194,15 @@ export function AppShell({
         )}
 
         <nav aria-label="Main" className="flex flex-col gap-0.5">
-          {main.map(sideLink)}
+          {sideLink(main[0]!)}
+          <FolderNav
+            ownerId={team?.ownerId ?? user.id}
+            teamId={ownerId}
+            canEdit={canCreate}
+            expanded={expanded}
+            onNavigate={collapse}
+          />
+          {main.slice(1).map(sideLink)}
         </nav>
 
         <div className="mt-auto flex flex-col gap-0.5 border-t border-border pt-3">
