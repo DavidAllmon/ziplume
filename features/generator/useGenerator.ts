@@ -92,34 +92,41 @@ export function useGenerator() {
     }
     const supabase = getBrowserSupabase();
     if (!supabase) return;
-    if (!editId) {
-      if (ownerParam) void editableWorkspace(ownerParam).then(setWorkspace);
-      return;
-    }
-    if (transition !== "load") return;
+    // Answers that arrive after the address bar changed again are ignored.
     let cancelled = false;
-    void supabase
-      .from("qr_codes")
-      .select("id, user_id, name, qr_type, content, design, is_dynamic, slug, destination")
-      .eq("id", editId)
-      .maybeSingle()
-      .then(async ({ data: code }) => {
-        if (cancelled || !code || !isCodeType(code.qr_type)) return;
-        const { data: session } = await supabase.auth.getSession();
-        if (cancelled) return;
-        setWorkspace(
-          code.user_id !== session.session?.user.id ? await editableWorkspace(code.user_id) : null,
-        );
-        const linkCode = code.is_dynamic && code.qr_type === "url";
-        dispatch({
-          type: "loadCode",
-          qrType: code.qr_type,
-          content: linkCode ? { url: code.destination ?? "" } : code.content,
-          design: code.design,
+    if (!editId) {
+      if (ownerParam) {
+        void editableWorkspace(ownerParam).then((found) => {
+          if (!cancelled) setWorkspace(found);
         });
-        savedIdRef.current = code.id;
-        setSaved({ id: code.id, name: code.name, isDynamic: code.is_dynamic, slug: code.slug });
-      });
+      }
+    } else if (transition === "load") {
+      void supabase
+        .from("qr_codes")
+        .select("id, user_id, name, qr_type, content, design, is_dynamic, slug, destination")
+        .eq("id", editId)
+        .maybeSingle()
+        .then(async ({ data: code }) => {
+          if (cancelled || !code || !isCodeType(code.qr_type)) return;
+          const { data: session } = await supabase.auth.getSession();
+          if (cancelled) return;
+          const owner =
+            code.user_id !== session.session?.user.id
+              ? await editableWorkspace(code.user_id)
+              : null;
+          if (cancelled) return;
+          setWorkspace(owner);
+          const linkCode = code.is_dynamic && code.qr_type === "url";
+          dispatch({
+            type: "loadCode",
+            qrType: code.qr_type,
+            content: linkCode ? { url: code.destination ?? "" } : code.content,
+            design: code.design,
+          });
+          savedIdRef.current = code.id;
+          setSaved({ id: code.id, name: code.name, isDynamic: code.is_dynamic, slug: code.slug });
+        });
+    }
     return () => {
       cancelled = true;
     };
@@ -231,7 +238,10 @@ export function useGenerator() {
               : { content: values }),
         });
         if (!result.ok) return { ok: false, message: result.error };
-        setSaved({ ...saved, name: result.value.name });
+        // Only rename it if it is still open: New code or the logo may have closed it meanwhile.
+        setSaved((current) =>
+          current?.id === saved.id ? { ...current, name: result.value.name } : current,
+        );
         return { ok: true, message: `Saved changes to “${result.value.name}”.${note}` };
       }
       const result = await createCode({
