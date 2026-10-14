@@ -68,11 +68,10 @@ export function useGenerator() {
   const [saved, setSaved] = useState<SavedCode | null>(null);
   /** True when the user switched a new Link code to dynamic (before it is saved). */
   const [wantsDynamic, setWantsDynamic] = useState(false);
-  /** A team workspace new codes are saved into (/?workspace=<owner id>); null = your own. */
+  /** The teammate whose code is open for editing; null for your own codes (new codes are always yours). */
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
-  const ownerParam = searchParams.get("workspace");
   const typeParam = searchParams.get("type");
   /** The open code's id, updated before the URL changes so a save never looks like "leave". */
   const savedIdRef = useRef<string | null>(null);
@@ -80,8 +79,8 @@ export function useGenerator() {
   // New codes always start from the defaults. Remove settings an older version remembered.
   useEffect(() => removeKey(LEGACY_SETTINGS_KEY), []);
 
-  // The address bar decides what is open: /?edit=<id> edits that saved code, plain / is a new
-  // code, and /?workspace=<owner id> saves new codes into a team workspace.
+  // The address bar decides what is open: /?edit=<id> edits that saved code, and plain / is a
+  // new code (always saved to your own account).
   useEffect(() => {
     const transition = editTransition(editId, savedIdRef.current);
     if (transition === "reset") {
@@ -95,13 +94,7 @@ export function useGenerator() {
     if (!supabase) return;
     // Answers that arrive after the address bar changed again are ignored.
     let cancelled = false;
-    if (!editId) {
-      if (ownerParam) {
-        void editableWorkspace(ownerParam).then((found) => {
-          if (!cancelled) setWorkspace(found);
-        });
-      }
-    } else if (transition === "load") {
+    if (editId && transition === "load") {
       void supabase
         .from("qr_codes")
         .select("id, user_id, name, qr_type, content, design, is_dynamic, slug, destination")
@@ -131,7 +124,7 @@ export function useGenerator() {
     return () => {
       cancelled = true;
     };
-  }, [editId, ownerParam]);
+  }, [editId]);
 
   // /?type=wifi (from the Codes page's quick starts) opens a new code of that type.
   useEffect(() => {
@@ -252,8 +245,8 @@ export function useGenerator() {
         );
         return { ok: true, message: `Saved changes to “${result.value.name}”.${note}` };
       }
+      // New codes always go in your own account.
       const result = await createCode({
-        ownerId: workspace?.ownerId,
         name: label,
         qrType: activeType,
         content: pageType ? page : values,
@@ -287,14 +280,10 @@ export function useGenerator() {
     savedIdRef.current = null;
     setSaved(null);
     setWantsDynamic(false);
-    window.history.replaceState(null, "", workspace ? `/?workspace=${workspace.ownerId}` : "/");
-  }, [workspace]);
-
-  /** Saves new codes to your own account instead of a team workspace. */
-  const leaveWorkspace = useCallback(() => {
+    // A new code is always yours, even after editing a teammate's.
     setWorkspace(null);
-    if (!saved) window.history.replaceState(null, "", "/");
-  }, [saved]);
+    window.history.replaceState(null, "", "/");
+  }, []);
 
   const setField = useCallback(
     (qrType: QrTypeId, field: string, value: string | boolean) =>
@@ -332,7 +321,6 @@ export function useGenerator() {
     saved,
     defaultName,
     workspace,
-    leaveWorkspace,
     setDynamic: setWantsDynamic,
     save,
     startNew,

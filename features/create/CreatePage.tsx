@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { PageHeader } from "@/components/app/PageHeader";
-import { withWorkspace } from "@/components/app/nav";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
 import { createCodeWithSettings, designForStorage } from "@/features/codes/api";
@@ -27,24 +26,13 @@ import { useDraftStorage } from "./useDraftStorage";
 
 export interface CreatePageProps {
   userId: string;
-  /** The team workspace to create in (its owner's id); null for your own codes. */
-  teamId: string | null;
-  /** The team owner's name for the header; null for your own codes. */
-  workspaceLabel: string | null;
   folders: FolderRow[];
   initialType: CodeTypeId;
   initialFolderId: string | null;
 }
 
 /** One page: sections on the left in any order, the live preview and Create on the right. */
-export function CreatePage({
-  userId,
-  teamId,
-  workspaceLabel,
-  folders,
-  initialType,
-  initialFolderId,
-}: CreatePageProps) {
+export function CreatePage({ userId, folders, initialType, initialFolderId }: CreatePageProps) {
   const router = useRouter();
   const toast = useToast();
   const defaults = useMemo(
@@ -79,7 +67,7 @@ export function CreatePage({
     setField: draft.setField,
     setPage: draft.setPage,
     pageErrors: draft.pageErrors,
-    workspace: teamId ? { ownerId: teamId } : null,
+    workspace: null,
   };
 
   async function create() {
@@ -87,7 +75,7 @@ export function CreatePage({
     inFlight.current = true;
     setCreating(true);
     const name = state.code.name.trim() || draft.defaultName;
-    const { input, settings } = toNewCode(state, teamId, name);
+    const { input, settings } = toNewCode(state, null, name);
     const result = await createCodeWithSettings(input, settings);
     if (!result.ok) {
       inFlight.current = false;
@@ -102,7 +90,7 @@ export function CreatePage({
         ? "Code created. The logo was too large to store and was left out."
         : "Code created",
     );
-    router.push(`${withWorkspace(`/codes/${result.value.id}`, teamId)}#download`);
+    router.push(`/codes/${result.value.id}#download`);
   }
 
   const controls = {
@@ -115,11 +103,7 @@ export function CreatePage({
     <div className="flex flex-col gap-6 pb-24 md:pb-0">
       <PageHeader
         title="Create a code"
-        description={
-          workspaceLabel
-            ? `Saving to ${workspaceLabel}’s codes`
-            : "Fill in the sections in any order. The preview updates as you go."
-        }
+        description="Fill in the sections in any order. The preview updates as you go."
       />
       {drafts.offer && (
         <DraftBanner

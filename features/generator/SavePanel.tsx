@@ -64,22 +64,12 @@ export function SavePanel({ generator }: { generator: Generator }) {
           />
         )}
       </Field>
-      {workspace && (
+      {workspace && saved && (
         <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-fg-muted">
           <Users aria-hidden className="size-4 text-primary dark:text-link" />
           <span>
-            {saved ? "In" : "Saving to"}{" "}
-            <strong className="font-semibold text-fg">{workspace.label}</strong>’s workspace
+            In <strong className="font-semibold text-fg">{workspace.label}</strong>’s codes
           </span>
-          {!saved && (
-            <button
-              type="button"
-              className="font-medium text-link underline-offset-4 hover:underline"
-              onClick={generator.leaveWorkspace}
-            >
-              Use my account instead
-            </button>
-          )}
         </p>
       )}
       {saved?.slug && (

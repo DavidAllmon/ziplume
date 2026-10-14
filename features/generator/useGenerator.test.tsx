@@ -109,21 +109,11 @@ describe("useGenerator: answers that arrive after you moved on", () => {
     expect(result.current.state.content.url.url).toBe("");
   });
 
-  it("a team workspace lookup that finishes after you left it is ignored", async () => {
-    const lookup = deferred<Workspace | null>();
-    vi.mocked(editableWorkspace).mockReturnValue(lookup.promise);
+  it("new codes always save to your own account, whatever ?workspace= says", async () => {
     search = new URLSearchParams("workspace=owner-1");
-    const { result, rerender } = renderHook(() => useGenerator());
-
-    // "Use my account instead" before the lookup answers.
-    act(() => result.current.leaveWorkspace());
-    search = new URLSearchParams();
-    rerender();
-    await act(async () => {
-      lookup.resolve(TEAM);
-      await lookup.promise;
-    });
-
+    const { result } = renderHook(() => useGenerator());
+    await act(async () => {});
+    expect(editableWorkspace).not.toHaveBeenCalled();
     expect(result.current.workspace).toBeNull();
   });
   it("opens a new code of the type in ?type= (the Codes page's quick starts)", async () => {

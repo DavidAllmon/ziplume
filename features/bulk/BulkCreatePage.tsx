@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 
 import { PageHeader } from "@/components/app/PageHeader";
-import { withWorkspace } from "@/components/app/nav";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
@@ -29,12 +28,8 @@ const NEW_FOLDER = "__new__";
 const codes = (n: number) => `${n} ${n === 1 ? "code" : "codes"}`;
 
 export interface BulkCreatePageProps {
-  /** The workspace the codes go into: yours, or a team owner's. */
+  /** You: new codes and folders always go in your own space. */
   ownerId: string;
-  /** The team owner's id when creating in a team; null for your own codes. */
-  teamId: string | null;
-  /** The team owner's name for the header; null for your own codes. */
-  workspaceLabel: string | null;
   folders: FolderRow[];
   initialFolderId: string | null;
 }
@@ -42,8 +37,6 @@ export interface BulkCreatePageProps {
 /** Bulk creation inside the app: every ready row becomes a code in your account or team. */
 export function BulkCreatePage({
   ownerId,
-  teamId,
-  workspaceLabel,
   folders: initialFolders,
   initialFolderId,
 }: BulkCreatePageProps) {
@@ -120,7 +113,6 @@ export function BulkCreatePage({
     setCreating(`Creating 0 of ${batch.length}…`);
     const answer = await createCodes(
       batch.map((row) => ({
-        ownerId: teamId ?? undefined,
         folderId: folder,
         name: row.name,
         qrType: type,
@@ -168,11 +160,7 @@ export function BulkCreatePage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Create codes in bulk"
-        description={
-          workspaceLabel
-            ? `Saving to ${workspaceLabel}’s codes`
-            : "Turn a spreadsheet into codes in your account, one per row."
-        }
+        description="Turn a spreadsheet into codes in your account, one per row."
       />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
         <div className="flex min-w-0 flex-col gap-6">
@@ -321,7 +309,7 @@ export function BulkCreatePage({
                     {downloading ?? "Download ZIP"}
                   </Button>
                   <Link
-                    href={withWorkspace(placedIn ? `/codes?folder=${placedIn}` : "/codes", teamId)}
+                    href={placedIn ? `/codes?folder=${placedIn}` : "/codes"}
                     className={cn(buttonClasses("ghost", "md"), "max-w-full")}
                   >
                     {/* A long folder name is cut short instead of pushing the page sideways. */}
