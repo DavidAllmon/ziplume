@@ -15,3 +15,13 @@ export function googlePhotoOf(user: Pick<User, "identities" | "user_metadata">):
     usable(user.user_metadata?.picture)
   );
 }
+
+/**
+ * True when this account's Google sign-in was added within the last minute: Google was just
+ * linked. Signing in with Google later never counts, so a removed photo stays removed.
+ */
+export function googleJustLinked(user: Pick<User, "identities">, now = Date.now()): boolean {
+  const google = user.identities?.find((identity) => identity.provider === "google");
+  const added = google?.created_at ? Date.parse(google.created_at) : Number.NaN;
+  return Number.isFinite(added) && Math.abs(now - added) < 60_000;
+}
