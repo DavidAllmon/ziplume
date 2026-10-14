@@ -47,7 +47,7 @@ export interface SavedCode {
 }
 
 /** Colors other than the main code color that modules are drawn in. */
-function moduleColors(design: DesignState): string[] {
+export function moduleColors(design: DesignState): string[] {
   const colors: string[] = [];
   if (design.gradientType !== "none") {
     // Sample the blend too: its midpoint can be lighter than either end.
