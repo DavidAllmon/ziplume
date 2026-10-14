@@ -12,6 +12,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const MIGRATIONS = resolve(process.cwd(), "supabase/migrations");
 const ALICE = "11111111-1111-4111-8111-111111111111";
 const BOB = "22222222-2222-4222-8222-222222222222";
+// Signed up before profile photos existed, so the back-fill has someone to fill in.
+const OLIVE = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const PROFILE_PHOTOS = "20261014120000_profile_photos.sql";
 
 // Mirrors the parts of a Supabase database the migration depends on.
 const SUPABASE_STUB = `
@@ -92,6 +95,13 @@ beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } });
   await db.exec(SUPABASE_STUB);
   for (const file of readdirSync(MIGRATIONS).sort()) {
+    if (file === PROFILE_PHOTOS) {
+      await db.query(
+        `insert into auth.users (id, email, raw_user_meta_data)
+         values ($1, 'olive@example.com', '{"picture":"https://lh3.googleusercontent.com/a/olive"}')`,
+        [OLIVE],
+      );
+    }
     await db.exec(readFileSync(resolve(MIGRATIONS, file), "utf8"));
   }
   await db.query(
@@ -882,5 +892,299 @@ describe("power tools", () => {
   it("members can leave and lose access", async () => {
     await asIvy("delete from public.team_members where member_id = $1", [IVY]);
     expect(await asIvy("select id from public.qr_codes where id = $1", [codeId])).toEqual([]);
+  });
+});
+
+describe("profile photos", () => {
+  const PAT = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"; // signs up with Google
+  const QUINN = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"; // signs up with email
+  const asPat = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", PAT, sql, params);
+  const asQuinn = <T>(sql: string, params?: unknown[]) =>
+    as<T>("authenticated", QUINN, sql, params);
+  const photo = async (id: string) =>
+    (
+      await asService<{ avatar_url: string | null }>(
+        "select avatar_url from public.profiles where id = $1",
+        [id],
+      )
+    )[0]?.avatar_url ?? null;
+
+  beforeAll(async () => {
+    await db.query(
+      `insert into auth.users (id, email, raw_user_meta_data) values
+         ($1, 'pat@example.com', '{"full_name":"Pat","avatar_url":"https://lh3.googleusercontent.com/a/pat"}'),
+         ($2, 'quinn@example.com', '{"picture":"http://insecure.example/q.png"}')`,
+      [PAT, QUINN],
+    );
+  });
+
+  it("copy the Google photo at sign-up and back-fill older accounts", async () => {
+    expect(await photo(PAT)).toBe("https://lh3.googleusercontent.com/a/pat");
+    expect(await photo(OLIVE)).toBe("https://lh3.googleusercontent.com/a/olive");
+  });
+
+  it("ignore photo addresses that aren't https", async () => {
+    expect(await photo(QUINN)).toBeNull();
+  });
+
+  it("let people set and clear only their own photo, and only https addresses", async () => {
+    await asQuinn("update public.profiles set avatar_url = $1 where id = $2", [
+      "https://cdn.example/q.webp",
+      QUINN,
+    ]);
+    expect(await photo(QUINN)).toBe("https://cdn.example/q.webp");
+    await asPat("update public.profiles set avatar_url = $1 where id = $2", [
+      "https://evil.example/x.png",
+      QUINN,
+    ]);
+    expect(await photo(QUINN)).toBe("https://cdn.example/q.webp");
+    await expect(
+      asQuinn("update public.profiles set avatar_url = 'javascript:alert(1)' where id = $1", [
+        QUINN,
+      ]),
+    ).rejects.toThrow(/check constraint/);
+    await expect(
+      asQuinn("update public.profiles set avatar_url = $1 where id = $2", [
+        `https://x.example/${"a".repeat(2048)}`,
+        QUINN,
+      ]),
+    ).rejects.toThrow(/check constraint/);
+    await asQuinn("update public.profiles set avatar_url = null where id = $1", [QUINN]);
+    expect(await photo(QUINN)).toBeNull();
+  });
+
+  it("show in team lists and on invite links", async () => {
+    await asService(
+      "insert into public.team_members (owner_id, member_id, role) values ($1, $2, 'viewer')",
+      [PAT, QUINN],
+    );
+    await asQuinn("update public.profiles set avatar_url = $1 where id = $2", [
+      "https://cdn.example/q2.webp",
+      QUINN,
+    ]);
+    expect(
+      await asPat<{ email: string; avatar_url: string | null }>(
+        "select email, avatar_url from public.team_overview()",
+      ),
+    ).toEqual([{ email: "quinn@example.com", avatar_url: "https://cdn.example/q2.webp" }]);
+    expect(
+      await asQuinn<{ owner_email: string; owner_avatar_url: string | null }>(
+        "select owner_email, owner_avatar_url from public.my_workspaces()",
+      ),
+    ).toEqual([
+      {
+        owner_email: "pat@example.com",
+        owner_avatar_url: "https://lh3.googleusercontent.com/a/pat",
+      },
+    ]);
+    const [invite] = await asPat<{ token: string }>(
+      "insert into public.team_invites (email, role) values ('rae@example.com', 'editor') returning token",
+    );
+    const [{ details }] = (await asQuinn<{ details: Record<string, unknown> }>(
+      "select public.invite_details($1) as details",
+      [invite!.token],
+    )) as [{ details: Record<string, unknown> }];
+    expect(details).toMatchObject({
+      owner_name: "Pat",
+      owner_avatar_url: "https://lh3.googleusercontent.com/a/pat",
+    });
+    await expect(asAnon("select public.team_overview()")).rejects.toThrow(/permission denied/);
+  });
+});
+
+describe("profile photo storage", () => {
+  const RITA = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+  const SAM = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+  const asRita = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", RITA, sql, params);
+  const asSam = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", SAM, sql, params);
+  const add = (who: typeof asRita, name: string) =>
+    who("insert into storage.objects (bucket_id, name) values ('avatars', $1)", [name]);
+
+  beforeAll(async () => {
+    await db.query(
+      "insert into auth.users (id, email) values ($1, 'rita@example.com'), ($2, 'sam@example.com')",
+      [RITA, SAM],
+    );
+  });
+
+  it("keeps photos in each owner's folder, in a public 2 MB bucket for images", async () => {
+    await add(asRita, `${RITA}/me.webp`);
+    await expect(add(asSam, `${RITA}/evil.webp`)).rejects.toThrow(/row-level security/);
+    await expect(
+      asAnon("insert into storage.objects (bucket_id, name) values ('avatars', 'x/y.webp')"),
+    ).rejects.toThrow(/row-level security/);
+    expect(await asSam("select name from storage.objects where bucket_id = 'avatars'")).toEqual([]);
+    await asSam("delete from storage.objects where bucket_id = 'avatars'");
+    expect(await asRita("select name from storage.objects where bucket_id = 'avatars'")).toEqual([
+      { name: `${RITA}/me.webp` },
+    ]);
+    await asRita("delete from storage.objects where name = $1", [`${RITA}/me.webp`]);
+    expect(await asRita("select name from storage.objects where bucket_id = 'avatars'")).toEqual(
+      [],
+    );
+    const [bucket] = await asService<{
+      public: boolean;
+      file_size_limit: string;
+      allowed_mime_types: string[];
+    }>(
+      "select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'avatars'",
+    );
+    expect(bucket).toMatchObject({
+      public: true,
+      allowed_mime_types: ["image/png", "image/jpeg", "image/webp"],
+    });
+    expect(Number(bucket?.file_size_limit)).toBe(2097152);
+  });
+
+  it("need a two-factor session for accounts with two-factor", async () => {
+    await db.query("insert into auth.mfa_factors (user_id, status) values ($1, 'verified')", [SAM]);
+    await expect(add(asSam, `${SAM}/me.webp`)).rejects.toThrow(/row-level security/);
+    await as(
+      "authenticated",
+      SAM,
+      "insert into storage.objects (bucket_id, name) values ('avatars', $1)",
+      [`${SAM}/me.webp`],
+      "aal2",
+    );
+    await db.query("delete from auth.mfa_factors where user_id = $1", [SAM]);
+  });
+});
+
+describe("email invites", () => {
+  const TESS = "12121212-1212-4212-8212-121212121212"; // sends invites
+  const UMA = "13131313-1313-4313-8313-131313131313"; // another owner
+  const XENA = "14141414-1414-4414-8414-141414141414"; // signs up after being invited
+  const asTess = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", TESS, sql, params);
+  const asUma = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", UMA, sql, params);
+  const asXena = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", XENA, sql, params);
+  const record = (who: typeof asTess, id: string) =>
+    who("select public.record_invite_send($1)", [id]);
+
+  beforeAll(async () => {
+    await db.query(
+      "insert into auth.users (id, email) values ($1, 'tess@example.com'), ($2, 'uma@example.com')",
+      [TESS, UMA],
+    );
+  });
+
+  it("count each email and stop at 5 for one invite", async () => {
+    const [invite] = await asTess<{ id: string }>(
+      "insert into public.team_invites (email, role) values ('vic@example.com', 'viewer') returning id",
+    );
+    await expect(record(asUma, invite!.id)).rejects.toThrow(/no longer valid/);
+    for (let i = 0; i < 5; i++) await record(asTess, invite!.id);
+    await expect(record(asTess, invite!.id)).rejects.toThrow(/5 times/);
+    const [row] = await asTess<{ send_count: number; last_sent_at: string | null }>(
+      "select send_count, last_sent_at from public.team_invites where id = $1",
+      [invite!.id],
+    );
+    expect(row?.send_count).toBe(5);
+    expect(row?.last_sent_at).not.toBeNull();
+  });
+
+  it("allow 20 emails an hour per owner, even across revoked invites", async () => {
+    const invites = await asTess<{ id: string }>(
+      `insert into public.team_invites (email, role)
+       select 'p' || g || '@example.com', 'viewer' from generate_series(1, 16) g returning id`,
+    );
+    for (const invite of invites.slice(0, 15)) await record(asTess, invite.id);
+    // 5 + 15 = 20 emails this hour.
+    await expect(record(asTess, invites[15]!.id)).rejects.toThrow(/20 invites/);
+    await asTess("delete from public.team_invites");
+    const [fresh] = await asTess<{ id: string }>(
+      "insert into public.team_invites (email, role) values ('new@example.com', 'editor') returning id",
+    );
+    await expect(record(asTess, fresh!.id)).rejects.toThrow(/20 invites/);
+  });
+
+  it("keep the send log private", async () => {
+    await expect(asTess("select * from public.invite_sends")).rejects.toThrow(/permission denied/);
+    await expect(
+      asTess("insert into public.invite_sends (owner_id) values ($1)", [TESS]),
+    ).rejects.toThrow(/permission denied/);
+    await expect(asAnon("select public.record_invite_send(gen_random_uuid())")).rejects.toThrow(
+      /permission denied/,
+    );
+  });
+
+  it("refuse used or expired invites", async () => {
+    const [used] = await asUma<{ id: string; token: string }>(
+      "insert into public.team_invites (email, role) values ('tess@example.com', 'viewer') returning id, token",
+    );
+    await asTess("select public.accept_invite($1)", [used!.token]);
+    await expect(record(asUma, used!.id)).rejects.toThrow(/no longer valid/);
+    const [old] = await asUma<{ id: string }>(
+      "insert into public.team_invites (email, role) values ('old@example.com', 'viewer') returning id",
+    );
+    await asService(
+      "update public.team_invites set expires_at = now() - interval '1 minute' where id = $1",
+      [old!.id],
+    );
+    await expect(record(asUma, old!.id)).rejects.toThrow(/no longer valid/);
+  });
+
+  it("show invite details to anyone holding the link", async () => {
+    const [invite] = await asUma<{ token: string }>(
+      "insert into public.team_invites (email, role) values ('wes@example.com', 'editor') returning token",
+    );
+    const [{ details }] = (await asAnon<{ details: Record<string, unknown> }>(
+      "select public.invite_details($1) as details",
+      [invite!.token],
+    )) as [{ details: Record<string, unknown> }];
+    expect(details).toMatchObject({
+      email: "wes@example.com",
+      role: "editor",
+      valid: true,
+      owner_email: "uma@example.com",
+    });
+    const [{ details: none }] = (await asAnon<{ details: unknown }>(
+      "select public.invite_details($1) as details",
+      ["0".repeat(48)],
+    )) as [{ details: unknown }];
+    expect(none).toBeNull();
+  });
+
+  it("find the invite waiting for a new account’s address", async () => {
+    await db.query("insert into auth.users (id, email) values ($1, 'xena@example.com')", [XENA]);
+    const [invite] = await asUma<{ token: string }>(
+      "insert into public.team_invites (email, role) values ('Xena@Example.com', 'viewer') returning token",
+    );
+    const pending = async (who: typeof asTess) =>
+      (await who<{ token: string | null }>("select public.my_pending_invite() as token"))[0]
+        ?.token ?? null;
+    expect(await pending(asXena)).toBe(invite!.token);
+    expect(await pending(asTess)).toBeNull();
+    await asXena("select public.accept_invite($1)", [invite!.token]);
+    expect(await pending(asXena)).toBeNull();
+    await expect(asAnon("select public.my_pending_invite()")).rejects.toThrow(/permission denied/);
+  });
+
+  it("stop at 50 emails a day per owner and 200 a day for everyone", async () => {
+    const VERA = "15151515-1515-4515-8515-151515151515";
+    const asVera = <T>(sql: string, params?: unknown[]) =>
+      as<T>("authenticated", VERA, sql, params);
+    await db.query("insert into auth.users (id, email) values ($1, 'vera@example.com')", [VERA]);
+    const [invite] = await asUma<{ id: string }>(
+      "insert into public.team_invites (email, role) values ('yan@example.com', 'viewer') returning id",
+    );
+    // Earlier today, outside the hourly window.
+    await asService(
+      `insert into public.invite_sends (owner_id, sent_at)
+       select $1, now() - interval '3 hours' from generate_series(1, 50)`,
+      [UMA],
+    );
+    await expect(record(asUma, invite!.id)).rejects.toThrow(/50 invites today/);
+
+    await asService(
+      `insert into public.invite_sends (owner_id, sent_at)
+       select $1, now() - interval '5 hours' from generate_series(1, 150)`,
+      [TESS],
+    );
+    const [mine] = await asVera<{ id: string }>(
+      "insert into public.team_invites (email, role) values ('zoe@example.com', 'viewer') returning id",
+    );
+    await expect(record(asVera, mine!.id)).rejects.toThrow(/all the invite emails it can today/);
+    await asService("delete from public.invite_sends where sent_at < now() - interval '2 hours'");
+    await record(asVera, mine!.id);
   });
 });

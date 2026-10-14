@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { TeamManager } from "@/features/teams/TeamManager";
 import { requireUser } from "@/lib/auth/server";
+import { emailConfigured } from "@/lib/email/brevo";
 
 export const metadata: Metadata = { title: "Team · QuickQReate" };
 
@@ -13,7 +14,7 @@ export default async function TeamPage() {
     supabase.rpc("team_overview"),
     supabase
       .from("team_invites")
-      .select("id, email, role, token, created_at, expires_at")
+      .select("id, email, role, token, created_at, expires_at, last_sent_at, send_count")
       .is("accepted_at", null)
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false }),
@@ -33,10 +34,10 @@ export default async function TeamPage() {
       </div>
       <TeamManager
         userId={user.id}
-        email={user.email ?? ""}
         members={members.data ?? []}
         invites={invites.data ?? []}
         workspaces={workspaces.data ?? []}
+        emailEnabled={emailConfigured()}
       />
     </div>
   );

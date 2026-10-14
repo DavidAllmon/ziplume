@@ -3,15 +3,16 @@
 import { redirect } from "next/navigation";
 
 import { getAuthState } from "@/lib/auth/server";
+import { AVATAR_BUCKET } from "@/lib/avatar";
 import { MEDIA_BUCKET } from "@/lib/pages/urls";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 type Admin = NonNullable<ReturnType<typeof getAdminSupabase>>;
 
 /** Best effort: a missing Storage service or a failed listing must not block deletion. */
-async function removeUserMedia(admin: Admin, userId: string) {
+async function removeUserFiles(admin: Admin, userId: string, bucketName: string) {
   try {
-    const bucket = admin.storage.from(MEDIA_BUCKET);
+    const bucket = admin.storage.from(bucketName);
     for (let round = 0; round < 50; round++) {
       const { data, error } = await bucket.list(userId, { limit: 1000 });
       if (error || !data?.length) return;
@@ -43,8 +44,9 @@ export async function deleteAccount(
   const admin = getAdminSupabase();
   if (!admin) return { error: "Account deletion isn't configured on this server yet." };
 
-  // Remove the user's uploaded page files first; their codes and scans cascade with the user.
-  await removeUserMedia(admin, user.id);
+  // Remove the user's uploaded files first; their codes and scans cascade with the user.
+  await removeUserFiles(admin, user.id, MEDIA_BUCKET);
+  await removeUserFiles(admin, user.id, AVATAR_BUCKET);
   const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
   if (deleteError) return { error: "Your account couldn't be deleted. Please try again." };
 

@@ -13,9 +13,19 @@ export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: { id: string; display_name: string | null; created_at: string };
-        Insert: { id: string; display_name?: string | null; created_at?: string };
-        Update: { display_name?: string | null };
+        Row: {
+          id: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          created_at?: string;
+        };
+        Update: { display_name?: string | null; avatar_url?: string | null };
         Relationships: [];
       };
       qr_codes: {
@@ -103,6 +113,8 @@ export interface Database {
           expires_at: string;
           accepted_at: string | null;
           accepted_by: string | null;
+          last_sent_at: string | null;
+          send_count: number;
         };
         Insert: { email: string; role: TeamRole };
         Update: never;
@@ -180,6 +192,8 @@ export interface Database {
       set_code_password: { Args: { p_code: string; p_password: string }; Returns: undefined };
       invite_details: { Args: { p_token: string }; Returns: Json };
       accept_invite: { Args: { p_token: string }; Returns: string };
+      record_invite_send: { Args: { p_invite: string }; Returns: undefined };
+      my_pending_invite: { Args: Record<string, never>; Returns: string | null };
       my_workspaces: {
         Args: Record<string, never>;
         Returns: {
@@ -187,6 +201,7 @@ export interface Database {
           owner_email: string;
           owner_name: string | null;
           role: TeamRole;
+          owner_avatar_url: string | null;
         }[];
       };
       team_overview: {
@@ -197,6 +212,7 @@ export interface Database {
           name: string | null;
           role: TeamRole;
           created_at: string;
+          avatar_url: string | null;
         }[];
       };
       create_api_key: { Args: { p_name: string }; Returns: Json };
