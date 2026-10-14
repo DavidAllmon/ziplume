@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isCurrent, newCodeHref, withWorkspace } from "./nav";
+import { bulkCreateHref, isCurrent, newCodeHref, withWorkspace } from "./nav";
 
 describe("withWorkspace", () => {
   it("adds the team to a link, keeping its other parameters", () => {
@@ -31,6 +31,15 @@ describe("newCodeHref", () => {
     );
     expect(newCodeHref({ type: "links", folderId: "f1", ownerId: null })).toBe(
       "/codes/new?type=links&folder=f1",
+    );
+  });
+});
+
+describe("bulkCreateHref", () => {
+  it("opens bulk creation in the app, in a folder and team when given", () => {
+    expect(bulkCreateHref({ ownerId: null })).toBe("/codes/bulk");
+    expect(bulkCreateHref({ folderId: "f1", ownerId: "t1" })).toBe(
+      "/codes/bulk?folder=f1&workspace=t1",
     );
   });
 });

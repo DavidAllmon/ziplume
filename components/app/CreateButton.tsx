@@ -7,7 +7,7 @@ import Link from "next/link";
 import { buttonClasses } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
-import { menuItemClass, menuPanelClass, newCodeHref, withWorkspace } from "./nav";
+import { bulkCreateHref, menuItemClass, menuPanelClass, newCodeHref } from "./nav";
 
 /** "+ Create code", with bulk creation one click away. */
 export function CreateButton({
@@ -49,7 +49,7 @@ export function CreateButton({
         <MenuItems anchor={{ to: "bottom end", gap: 6 }} transition className={menuPanelClass}>
           <MenuItem>
             <Link
-              href={withWorkspace("/bulk", ownerId)}
+              href={bulkCreateHref({ folderId, ownerId })}
               onClick={onNavigate}
               className={menuItemClass}
             >
