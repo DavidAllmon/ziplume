@@ -18,6 +18,14 @@ export const VIEWER = {
   state: `${AUTH_DIR}/viewer.json`,
 };
 
+/** Creates codes in the Create tests, so the owner's seeded list stays as the other tests expect. */
+export const MAKER = {
+  email: "maker@example.com",
+  password: "maker-e2e-pass-2026",
+  name: "Max Maker",
+  state: `${AUTH_DIR}/maker.json`,
+};
+
 export interface Seed {
   ownerId: string;
   viewerId: string;
@@ -25,6 +33,9 @@ export interface Seed {
   menuId: string;
   /** The owner's "Flyers" folder, holding the Wi-Fi code. */
   folderId: string;
+  /** The Maker account, and its empty "Posters" folder. */
+  makerId: string;
+  makerFolderId: string;
 }
 
 /** Ids created by the global setup. Read it inside tests, not at import time. */

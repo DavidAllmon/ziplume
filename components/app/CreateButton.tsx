@@ -7,22 +7,25 @@ import Link from "next/link";
 import { buttonClasses } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
-import { menuItemClass, menuPanelClass, withWorkspace } from "./nav";
+import { menuItemClass, menuPanelClass, newCodeHref, withWorkspace } from "./nav";
 
 /** "+ Create code", with bulk creation one click away. */
 export function CreateButton({
   ownerId,
+  folderId = null,
   collapsed = false,
   onNavigate,
 }: {
   ownerId: string | null;
+  /** The folder being viewed; new codes go into it. */
+  folderId?: string | null;
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
   return (
     <div className={cn("flex", collapsed && "max-lg:justify-center")}>
       <Link
-        href={withWorkspace("/", ownerId)}
+        href={newCodeHref({ folderId, ownerId })}
         onClick={onNavigate}
         className={cn(
           buttonClasses("primary", "md"),

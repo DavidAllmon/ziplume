@@ -26,7 +26,7 @@ import { BUY_ME_A_COFFEE_URL } from "@/lib/env";
 
 import { CreateButton } from "./CreateButton";
 import { FolderNav } from "./FolderNav";
-import { isCurrent, withWorkspace, type ShellTeam, type ShellUser } from "./nav";
+import { isCurrent, newCodeHref, withWorkspace, type ShellTeam, type ShellUser } from "./nav";
 import { UserMenu } from "./UserMenu";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
@@ -102,6 +102,8 @@ export function AppShell({
     : user;
   const team = teams.find((t) => t.ownerId === searchParams.get("workspace")) ?? null;
   const ownerId = team?.ownerId ?? null;
+  // Creating while a folder is open in the codes list puts the new code in that folder.
+  const folderId = pathname === "/codes" ? searchParams.get("folder") : null;
   const canCreate = !team || team.role === "editor";
   // The tablet rail stays open only on the page it was opened on: any navigation closes it.
   const here = `${pathname}?${searchParams.toString()}`;
@@ -190,7 +192,12 @@ export function AppShell({
 
         <WorkspaceSwitcher user={me} teams={teams} current={team} collapsed={!expanded} />
         {canCreate && (
-          <CreateButton ownerId={ownerId} collapsed={!expanded} onNavigate={collapse} />
+          <CreateButton
+            ownerId={ownerId}
+            folderId={folderId}
+            collapsed={!expanded}
+            onNavigate={collapse}
+          />
         )}
 
         <nav aria-label="Main" className="flex flex-col gap-0.5">
@@ -254,7 +261,7 @@ export function AppShell({
           <QrCode aria-hidden /> Codes
         </Link>
         {canCreate && (
-          <Link href={withWorkspace("/", ownerId)} className={tabClass}>
+          <Link href={newCodeHref({ folderId, ownerId })} className={tabClass}>
             <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-fg [&_svg]:size-5">
               <Plus aria-hidden />
             </span>

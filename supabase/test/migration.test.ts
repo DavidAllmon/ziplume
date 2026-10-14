@@ -1255,3 +1255,143 @@ describe("codes list scans", () => {
     await db.query("delete from auth.mfa_factors where user_id in ($1, $2)", [YUKI, WREN]);
   });
 });
+describe("create_code", () => {
+  const XAVI = "19191919-1919-4919-8919-191919191919"; // owner
+  const UMA = "1a1a1a1a-1a1a-4a1a-8a1a-1a1a1a1a1a1a"; // editor on Xavi's team
+  const VERA = "1b1b1b1b-1b1b-4b1b-8b1b-1b1b1b1b1b1b"; // viewer on Xavi's team
+  const asXavi = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", XAVI, sql, params);
+  const asUma = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", UMA, sql, params);
+  const asVera = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", VERA, sql, params);
+  const CREATE = "select * from public.create_code($1::jsonb, $2)";
+  const code = (overrides: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      name: "Poster",
+      qr_type: "url",
+      is_dynamic: true,
+      destination: "https://xavi.example",
+      content: { url: "https://xavi.example" },
+      slug: "XAVI01",
+      ...overrides,
+    });
+  const countXavi = async () =>
+    Number(
+      (
+        await asService<{ n: string | number }>(
+          "select count(*) as n from public.qr_codes where user_id = $1",
+          [XAVI],
+        )
+      )[0]!.n,
+    );
+
+  beforeAll(async () => {
+    await db.query(
+      `insert into auth.users (id, email) values
+         ($1, 'xavi@example.com'), ($2, 'uma@example.com'), ($3, 'vera@example.com')`,
+      [XAVI, UMA, VERA],
+    );
+    await asService(
+      `insert into public.team_members (owner_id, member_id, role) values
+         ($1, $2, 'editor'), ($1, $3, 'viewer')`,
+      [XAVI, UMA, VERA],
+    );
+  });
+
+  it("creates a trackable code with its password and dates in one step", async () => {
+    const [row] = await asXavi<{
+      user_id: string;
+      is_dynamic: boolean;
+      has_password: boolean;
+      active_from: unknown;
+      active_until: unknown;
+    }>(CREATE, [
+      code({ active_from: "2030-01-01T09:00:00Z", active_until: "2030-02-01T09:00:00Z" }),
+      "open sesame",
+    ]);
+    expect(row).toMatchObject({ user_id: XAVI, is_dynamic: true, has_password: true });
+    expect(new Date(row!.active_from as string).toISOString()).toBe("2030-01-01T09:00:00.000Z");
+    expect(new Date(row!.active_until as string).toISOString()).toBe("2030-02-01T09:00:00.000Z");
+    const check = (password: string) =>
+      asService<{ ok: boolean }>("select public.check_code_password('xavi01', $1) as ok", [
+        password,
+      ]);
+    expect((await check("open sesame"))[0]?.ok).toBe(true);
+    expect((await check("wrong"))[0]?.ok).toBe(false);
+  });
+
+  it("lets editors create in the owner's workspace and refuses viewers, outsiders and anon", async () => {
+    const [row] = await asUma<{ user_id: string; has_password: boolean }>(CREATE, [
+      code({ user_id: XAVI, slug: "XAVI02" }),
+      null,
+    ]);
+    expect(row).toMatchObject({ user_id: XAVI, has_password: false });
+    const before = await countXavi();
+    await expect(asVera(CREATE, [code({ user_id: XAVI, slug: "XAVI03" }), null])).rejects.toThrow(
+      /row-level security/,
+    );
+    await expect(asBob(CREATE, [code({ user_id: XAVI, slug: "XAVI04" }), null])).rejects.toThrow(
+      /row-level security/,
+    );
+    await expect(asAnon(CREATE, [code({ user_id: XAVI, slug: "XAVI05" }), null])).rejects.toThrow(
+      /permission denied/,
+    );
+    expect(await countXavi()).toBe(before);
+  });
+
+  it("needs a two-step session for two-step accounts", async () => {
+    await db.query("insert into auth.mfa_factors (user_id, status) values ($1, 'verified')", [
+      XAVI,
+    ]);
+    try {
+      await expect(asXavi(CREATE, [code({ slug: "XAVI06" }), null])).rejects.toThrow(
+        /row-level security/,
+      );
+      const rows = await as<{ slug: string }>(
+        "authenticated",
+        XAVI,
+        CREATE,
+        [code({ slug: "XAVI06" }), null],
+        "aal2",
+      );
+      expect(rows[0]?.slug).toBe("XAVI06");
+    } finally {
+      await db.query("delete from auth.mfa_factors where user_id = $1", [XAVI]);
+    }
+  });
+
+  it("saves nothing when any part fails", async () => {
+    const before = await countXavi();
+    // A password on a static code.
+    await expect(
+      asXavi(CREATE, [
+        code({
+          qr_type: "text",
+          is_dynamic: false,
+          destination: null,
+          slug: null,
+          content: { text: "Hi" },
+        }),
+        "secret",
+      ]),
+    ).rejects.toThrow(/Not allowed/);
+    // An end before the start.
+    await expect(
+      asXavi(CREATE, [
+        code({
+          slug: "XAVI07",
+          active_from: "2030-02-01T00:00:00Z",
+          active_until: "2030-01-01T00:00:00Z",
+        }),
+        null,
+      ]),
+    ).rejects.toThrow(/qr_codes_active_window/);
+    // A password that's too short, after the row went in.
+    await expect(asXavi(CREATE, [code({ slug: "XAVI08" }), "abc"])).rejects.toThrow(/4 to 128/);
+    // A date that isn't one.
+    await expect(
+      asXavi(CREATE, [code({ slug: "XAVI09", active_from: "next tuesday" }), null]),
+    ).rejects.toThrow(/invalid input syntax/);
+    // A link ending that's taken (endings ignore case).
+    await expect(asXavi(CREATE, [code({ slug: "xavi01" }), null])).rejects.toThrow(/duplicate key/);
+    expect(await countXavi()).toBe(before);
+  });
+});

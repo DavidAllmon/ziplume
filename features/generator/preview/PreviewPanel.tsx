@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { PREVIEW_SLUG } from "@/lib/dynamic/slug";
 import type { ScanReport } from "@/lib/qr/scannability";
 
 import { SavePanel } from "../SavePanel";
@@ -43,7 +44,7 @@ export function PreviewPanel({ generator, report }: PreviewPanelProps) {
         <PagePreview
           type={pageType}
           page={state.pages[pageType]}
-          slug={generator.slug ?? "PREVIEW"}
+          slug={generator.slug ?? PREVIEW_SLUG}
         />
       ) : (
         <QrTile

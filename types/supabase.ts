@@ -194,6 +194,10 @@ export interface Database {
       accept_invite: { Args: { p_token: string }; Returns: string };
       record_invite_send: { Args: { p_invite: string }; Returns: undefined };
       my_pending_invite: { Args: Record<string, never>; Returns: string | null };
+      create_code: {
+        Args: { p_code: Json; p_password?: string | null };
+        Returns: Database["public"]["Tables"]["qr_codes"]["Row"];
+      };
       recent_scan_counts: {
         Args: { p_owner: string; p_days?: number };
         Returns: { code_id: string; scans: number }[];

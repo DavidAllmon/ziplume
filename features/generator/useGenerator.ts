@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 
 import { createCode, designForStorage, updateCode } from "@/features/codes/api";
 import { editableWorkspace, type Workspace } from "@/features/teams/workspace";
-import { dynamicPayload } from "@/lib/dynamic/slug";
+import { dynamicPayload, PREVIEW_SLUG } from "@/lib/dynamic/slug";
 import { normalizeUrl } from "@/lib/qr/normalize";
 import { removeKey } from "@/lib/storage";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -47,7 +47,7 @@ export interface SavedCode {
 }
 
 /** Colors other than the main code color that modules are drawn in. */
-function moduleColors(design: DesignState): string[] {
+export function moduleColors(design: DesignState): string[] {
   const colors: string[] = [];
   if (design.gradientType !== "none") {
     // Sample the blend too: its midpoint can be lighter than either end.
@@ -152,7 +152,7 @@ export function useGenerator() {
     : pageType !== null || (wantsDynamic && activeType === "url");
   const destination = isDynamic && activeType === "url" ? normalizeUrl(state.content.url.url) : "";
   // A new dynamic code previews a placeholder ending; downloads wait until it's saved.
-  const slug = saved?.slug ?? "PREVIEW";
+  const slug = saved?.slug ?? PREVIEW_SLUG;
 
   const errors: Record<string, string> = useMemo(() => {
     if (pageType && page) return validatePage(pageType, page);

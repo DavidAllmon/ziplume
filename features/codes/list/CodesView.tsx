@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { withWorkspace } from "@/components/app/nav";
+import { newCodeHref } from "@/components/app/nav";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
@@ -209,9 +209,17 @@ export function CodesView({
         <h2 className="text-lg font-semibold text-fg">This folder is empty</h2>
         <p className="max-w-md text-sm text-fg-muted">
           {canEdit
-            ? "Use “Move to folder” on any code to add it here."
+            ? "Create a code here, or use “Move to folder” on any code to add it."
             : "Codes added to this folder will show up here."}
         </p>
+        {canEdit && (
+          <Link
+            href={newCodeHref({ folderId: folder.id, ownerId: teamId })}
+            className={buttonClasses("outline", "md")}
+          >
+            <Plus aria-hidden /> Create a code here
+          </Link>
+        )}
       </div>
     ) : (
       <div className="flex flex-col items-center gap-4 rounded-card border border-dashed border-field-border px-6 py-12 text-center">
@@ -225,7 +233,7 @@ export function CodesView({
               {QUICK_STARTS.map(({ type, label, hint, icon: Icon }) => (
                 <li key={type}>
                   <Link
-                    href={withWorkspace(`/?type=${type}`, teamId)}
+                    href={newCodeHref({ type, ownerId: teamId })}
                     className="flex min-h-11 flex-col items-center gap-1 rounded-control border border-border bg-surface px-4 py-4 text-center focus-ring hover:bg-surface-2"
                   >
                     <Icon aria-hidden className="size-5 text-fg-muted" />
@@ -235,7 +243,10 @@ export function CodesView({
                 </li>
               ))}
             </ul>
-            <Link href={withWorkspace("/", teamId)} className={buttonClasses("outline", "md")}>
+            <Link
+              href={newCodeHref({ ownerId: teamId })}
+              className={buttonClasses("outline", "md")}
+            >
               <Plus aria-hidden /> Other types
             </Link>
           </>

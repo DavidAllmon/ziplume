@@ -11,7 +11,7 @@ import { accountsEnabled } from "@/lib/env";
 import { PAGE_TYPES, type PageContentMap } from "@/lib/pages/types";
 import type { PageTypeId } from "@/lib/qr/types";
 
-import type { Generator } from "../useGenerator";
+import type { ContentEditor } from "./types";
 
 const PERKS = [
   "A mobile page hosted for free, with no limits",
@@ -20,7 +20,13 @@ const PERKS = [
 ];
 
 /** Hosted pages need an account (they're stored and served by QuickQReate). */
-export function HostedPageForm({ generator, type }: { generator: Generator; type: PageTypeId }) {
+export function HostedPageForm({
+  generator,
+  type,
+}: {
+  generator: ContentEditor;
+  type: PageTypeId;
+}) {
   const { user, loading } = useSession();
   const info = PAGE_TYPES[type];
 

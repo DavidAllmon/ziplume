@@ -26,6 +26,23 @@ export function withWorkspace(href: string, ownerId: string | null): string {
   return `${path}?${params.toString()}`;
 }
 
+/** The Create page, optionally for a type and inside a folder, in the given team's codes. */
+export function newCodeHref({
+  type,
+  folderId,
+  ownerId,
+}: {
+  type?: string;
+  folderId?: string | null;
+  ownerId: string | null;
+}): string {
+  const params = new URLSearchParams();
+  if (type) params.set("type", type);
+  if (folderId) params.set("folder", folderId);
+  const query = params.toString();
+  return withWorkspace(query ? `/codes/new?${query}` : "/codes/new", ownerId);
+}
+
 /** Whether a nav link points at the current page or a page under it. */
 export function isCurrent(pathname: string, href: string): boolean {
   const path = href.split("?")[0]!;
