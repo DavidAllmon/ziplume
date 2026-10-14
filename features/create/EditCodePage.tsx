@@ -97,7 +97,10 @@ function EditForm({ code, folders, mediaOwner, codeHref }: EditCodePageProps) {
         ? "Changes saved. The logo was too large to store and was left out."
         : "Changes saved",
     );
-    router.push(codeHref);
+    // Replace (not push) so Back skips the editor, and refresh so Next's back/forward cache
+    // can't bring back the editor as it was before this save.
+    router.replace(codeHref);
+    router.refresh();
   }
 
   function discard() {

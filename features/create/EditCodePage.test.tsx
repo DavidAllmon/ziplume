@@ -11,7 +11,9 @@ import { EditCodePage } from "./EditCodePage";
 import { savedRow } from "./fixtures";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
+const replace = vi.fn();
+const refresh = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace, refresh }) }));
 vi.mock("@/features/codes/api", async (original) => ({
   ...(await original<typeof CodesApi>()),
   updateCodeWithSettings: vi.fn(),
@@ -37,6 +39,8 @@ const saveButton = () => preview().getByRole("button", { name: "Save changes" })
 
 beforeEach(() => {
   push.mockReset();
+  replace.mockReset();
+  refresh.mockReset();
   vi.mocked(updateCodeWithSettings).mockReset();
   vi.spyOn(window, "confirm").mockReturnValue(true);
 });
@@ -64,7 +68,11 @@ describe("EditCodePage", () => {
       { name: "Lunch menu" },
       { action: "keep" },
     );
-    await waitFor(() => expect(push).toHaveBeenCalledWith(CODE_HREF));
+    // The editor's history entry becomes the code page, and the refresh clears Next's
+    // back/forward cache, so Back can never reopen the editor as it was before saving.
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(CODE_HREF));
+    expect(refresh).toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
     expect(await screen.findByText("Changes saved")).toBeInTheDocument();
     expect(window.confirm).not.toHaveBeenCalled();
   });
@@ -80,7 +88,7 @@ describe("EditCodePage", () => {
     await user.click(button);
     expect(updateCodeWithSettings).toHaveBeenCalledTimes(1);
     finish({ ok: true, value: savedRow() });
-    await waitFor(() => expect(push).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(replace).toHaveBeenCalledTimes(1));
   });
 
   it("shows why a save failed and stays", async () => {
@@ -96,7 +104,7 @@ describe("EditCodePage", () => {
     expect(await preview().findByRole("alert")).toHaveTextContent(
       "That link ending is already taken",
     );
-    expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it("Discard puts everything back the way it was saved", async () => {
