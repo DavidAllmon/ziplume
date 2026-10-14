@@ -28,7 +28,7 @@ interface StyleCardProps {
   dispatch: (action: GeneratorAction) => void;
 }
 
-function Swatches({ design }: { design: DesignState }) {
+export function Swatches({ design }: { design: DesignState }) {
   return (
     <span className="flex items-center">
       <span className="sr-only">

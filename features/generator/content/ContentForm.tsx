@@ -2,7 +2,7 @@
 
 import { isPageType } from "@/lib/qr/types";
 
-import type { Generator } from "../useGenerator";
+import type { ContentEditor } from "./types";
 import { ContactForm } from "./forms/ContactForm";
 import { EmailForm } from "./forms/EmailForm";
 import { LocationForm } from "./forms/LocationForm";
@@ -15,7 +15,7 @@ import { WhatsAppForm } from "./forms/WhatsAppForm";
 import { WifiForm } from "./forms/WifiForm";
 import { HostedPageForm } from "./HostedPageForm";
 
-export function ContentForm({ generator }: { generator: Generator }) {
+export function ContentForm({ generator }: { generator: ContentEditor }) {
   const { state, setField } = generator;
   const { activeType, content } = state;
   if (isPageType(activeType)) return <HostedPageForm generator={generator} type={activeType} />;
