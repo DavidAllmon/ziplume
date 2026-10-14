@@ -283,10 +283,16 @@ export async function deleteCodes(ids: string[]): Promise<Result<string[]>> {
     : { ok: true, value: data.map((row) => row.id) };
 }
 
-export async function duplicateCode(code: QrCodeRow): Promise<Result<QrCodeRow>> {
+/**
+ * Copies a code into your own codes (a teammate's code too: new codes only ever go in your own
+ * space). Its folder is kept only when it's yours.
+ */
+export async function duplicateCode(
+  code: QrCodeRow,
+  { keepFolder }: { keepFolder: boolean },
+): Promise<Result<QrCodeRow>> {
   return createCode({
-    ownerId: code.user_id,
-    folderId: code.folder_id,
+    folderId: keepFolder ? code.folder_id : null,
     name: `Copy of ${code.name}`.slice(0, 120),
     qrType: code.qr_type as CodeTypeId,
     content: code.content,

@@ -5,7 +5,6 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import Link from "next/link";
 
 import { Avatar } from "@/components/ui/Avatar";
-import { ROLE_LABELS } from "@/features/teams/roles";
 import { cn } from "@/lib/cn";
 
 import {
@@ -76,12 +75,16 @@ export function WorkspaceSwitcher({
             <Link href={withWorkspace("/codes", team.ownerId)} className={menuItemClass}>
               <Avatar id={team.ownerId} name={team.label} src={team.avatarUrl} size="sm" />
               <span className="min-w-0 flex-1 truncate">{team.label}’s codes</span>
-              <span className="text-fg-muted">{ROLE_LABELS[team.role]}</span>
+              <span className="text-fg-muted">
+                {team.role === "editor" ? "Can edit" : "Can view"}
+              </span>
             </Link>
           </MenuItem>
         ))}
         {teams.length === 0 && (
-          <p className="px-3 py-2 text-sm text-fg-muted">Teams you join show up here.</p>
+          <p className="px-3 py-2 text-sm text-fg-muted">
+            Teammates show up here once you invite someone or join a team.
+          </p>
         )}
       </MenuItems>
     </Menu>

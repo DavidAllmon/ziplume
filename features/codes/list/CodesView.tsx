@@ -179,10 +179,15 @@ export function CodesView({
   }
 
   async function duplicate(code: QrCodeRow) {
-    const result = await duplicateCode(code);
+    // A teammate's code is copied into your own codes, so it doesn't join this list.
+    const result = await duplicateCode(code, { keepFolder: !teamId });
     if (!result.ok) return toast(result.error, "error");
-    setCodes((current) => [result.value, ...current]);
-    toast(`Duplicated as “${result.value.name}”`);
+    if (teamId) {
+      toast(`Copied “${code.name}” to your codes`);
+    } else {
+      setCodes((current) => [result.value, ...current]);
+      toast(`Duplicated as “${result.value.name}”`);
+    }
     changed();
   }
 
@@ -208,11 +213,11 @@ export function CodesView({
         <FolderOpen aria-hidden className="size-8 text-fg-muted" />
         <h2 className="text-lg font-semibold text-fg">This folder is empty</h2>
         <p className="max-w-md text-sm text-fg-muted">
-          {canEdit
+          {canEdit && !teamId
             ? "Create a code here, or use “Move to folder” on any code to add it."
             : "Codes added to this folder will show up here."}
         </p>
-        {canEdit && (
+        {canEdit && !teamId && (
           <Link
             href={newCodeHref({ folderId: folder.id, ownerId: teamId })}
             className={buttonClasses("outline", "md")}
@@ -223,8 +228,11 @@ export function CodesView({
       </div>
     ) : (
       <div className="flex flex-col items-center gap-4 rounded-card border border-dashed border-field-border px-6 py-12 text-center">
-        <h2 className="text-lg font-semibold text-fg">Create your first QR code</h2>
-        {canEdit ? (
+        <h2 className="text-lg font-semibold text-fg">
+          {teamId ? "No codes here yet" : "Create your first QR code"}
+        </h2>
+        {/* New codes go in your own space, so a teammate's empty list offers no create links. */}
+        {canEdit && !teamId ? (
           <>
             <p className="max-w-md text-sm text-fg-muted">
               Pick what it should open. You can change everything later.

@@ -4,7 +4,7 @@ import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "@/components/ui/Toast";
-import { deleteCodes, setCodesStatus } from "@/features/codes/api";
+import { deleteCodes, duplicateCode, setCodesStatus } from "@/features/codes/api";
 import type { QrCodeRow } from "@/types/supabase";
 
 import { CodesView } from "./CodesView";
@@ -180,6 +180,22 @@ describe("CodesView", () => {
     for (const name of ["Move", "Pause", "Delete"]) {
       expect(within(bar).queryByRole("button", { name })).toBeNull();
     }
+  });
+
+  it("a teammate's code is copied into your own codes", async () => {
+    const user = userEvent.setup();
+    vi.mocked(duplicateCode).mockResolvedValue({
+      ok: true,
+      value: { ...MENU, id: "copy", name: "Copy of Spring menu" },
+    });
+    renderView({ teamId: "kim" });
+    await user.click(screen.getAllByRole("button", { name: "Actions for Spring menu" })[0]!);
+    await user.click(screen.getByRole("menuitem", { name: /Duplicate/ }));
+    expect(duplicateCode).toHaveBeenCalledWith(expect.objectContaining({ name: "Spring menu" }), {
+      keepFolder: false,
+    });
+    expect(await screen.findByText("Copied “Spring menu” to your codes")).toBeInTheDocument();
+    expect(screen.queryByText("Copy of Spring menu")).toBeNull();
   });
 
   it("welcomes a first-time user with quick starts", () => {
