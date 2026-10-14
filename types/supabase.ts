@@ -13,9 +13,19 @@ export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: { id: string; display_name: string | null; created_at: string };
-        Insert: { id: string; display_name?: string | null; created_at?: string };
-        Update: { display_name?: string | null };
+        Row: {
+          id: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          created_at?: string;
+        };
+        Update: { display_name?: string | null; avatar_url?: string | null };
         Relationships: [];
       };
       qr_codes: {
@@ -187,6 +197,7 @@ export interface Database {
           owner_email: string;
           owner_name: string | null;
           role: TeamRole;
+          owner_avatar_url: string | null;
         }[];
       };
       team_overview: {
@@ -197,6 +208,7 @@ export interface Database {
           name: string | null;
           role: TeamRole;
           created_at: string;
+          avatar_url: string | null;
         }[];
       };
       create_api_key: { Args: { p_name: string }; Returns: Json };

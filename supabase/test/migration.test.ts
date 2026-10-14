@@ -12,6 +12,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const MIGRATIONS = resolve(process.cwd(), "supabase/migrations");
 const ALICE = "11111111-1111-4111-8111-111111111111";
 const BOB = "22222222-2222-4222-8222-222222222222";
+// Signed up before profile photos existed, so the back-fill has someone to fill in.
+const OLIVE = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const PROFILE_PHOTOS = "20261014120000_profile_photos.sql";
 
 // Mirrors the parts of a Supabase database the migration depends on.
 const SUPABASE_STUB = `
@@ -92,6 +95,13 @@ beforeAll(async () => {
   db = new PGlite({ extensions: { pgcrypto } });
   await db.exec(SUPABASE_STUB);
   for (const file of readdirSync(MIGRATIONS).sort()) {
+    if (file === PROFILE_PHOTOS) {
+      await db.query(
+        `insert into auth.users (id, email, raw_user_meta_data)
+         values ($1, 'olive@example.com', '{"picture":"https://lh3.googleusercontent.com/a/olive"}')`,
+        [OLIVE],
+      );
+    }
     await db.exec(readFileSync(resolve(MIGRATIONS, file), "utf8"));
   }
   await db.query(
@@ -882,5 +892,102 @@ describe("power tools", () => {
   it("members can leave and lose access", async () => {
     await asIvy("delete from public.team_members where member_id = $1", [IVY]);
     expect(await asIvy("select id from public.qr_codes where id = $1", [codeId])).toEqual([]);
+  });
+});
+
+describe("profile photos", () => {
+  const PAT = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"; // signs up with Google
+  const QUINN = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"; // signs up with email
+  const asPat = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", PAT, sql, params);
+  const asQuinn = <T>(sql: string, params?: unknown[]) =>
+    as<T>("authenticated", QUINN, sql, params);
+  const photo = async (id: string) =>
+    (
+      await asService<{ avatar_url: string | null }>(
+        "select avatar_url from public.profiles where id = $1",
+        [id],
+      )
+    )[0]?.avatar_url ?? null;
+
+  beforeAll(async () => {
+    await db.query(
+      `insert into auth.users (id, email, raw_user_meta_data) values
+         ($1, 'pat@example.com', '{"full_name":"Pat","avatar_url":"https://lh3.googleusercontent.com/a/pat"}'),
+         ($2, 'quinn@example.com', '{"picture":"http://insecure.example/q.png"}')`,
+      [PAT, QUINN],
+    );
+  });
+
+  it("copy the Google photo at sign-up and back-fill older accounts", async () => {
+    expect(await photo(PAT)).toBe("https://lh3.googleusercontent.com/a/pat");
+    expect(await photo(OLIVE)).toBe("https://lh3.googleusercontent.com/a/olive");
+  });
+
+  it("ignore photo addresses that aren't https", async () => {
+    expect(await photo(QUINN)).toBeNull();
+  });
+
+  it("let people set and clear only their own photo, and only https addresses", async () => {
+    await asQuinn("update public.profiles set avatar_url = $1 where id = $2", [
+      "https://cdn.example/q.webp",
+      QUINN,
+    ]);
+    expect(await photo(QUINN)).toBe("https://cdn.example/q.webp");
+    await asPat("update public.profiles set avatar_url = $1 where id = $2", [
+      "https://evil.example/x.png",
+      QUINN,
+    ]);
+    expect(await photo(QUINN)).toBe("https://cdn.example/q.webp");
+    await expect(
+      asQuinn("update public.profiles set avatar_url = 'javascript:alert(1)' where id = $1", [
+        QUINN,
+      ]),
+    ).rejects.toThrow(/check constraint/);
+    await expect(
+      asQuinn("update public.profiles set avatar_url = $1 where id = $2", [
+        `https://x.example/${"a".repeat(2048)}`,
+        QUINN,
+      ]),
+    ).rejects.toThrow(/check constraint/);
+    await asQuinn("update public.profiles set avatar_url = null where id = $1", [QUINN]);
+    expect(await photo(QUINN)).toBeNull();
+  });
+
+  it("show in team lists and on invite links", async () => {
+    await asService(
+      "insert into public.team_members (owner_id, member_id, role) values ($1, $2, 'viewer')",
+      [PAT, QUINN],
+    );
+    await asQuinn("update public.profiles set avatar_url = $1 where id = $2", [
+      "https://cdn.example/q2.webp",
+      QUINN,
+    ]);
+    expect(
+      await asPat<{ email: string; avatar_url: string | null }>(
+        "select email, avatar_url from public.team_overview()",
+      ),
+    ).toEqual([{ email: "quinn@example.com", avatar_url: "https://cdn.example/q2.webp" }]);
+    expect(
+      await asQuinn<{ owner_email: string; owner_avatar_url: string | null }>(
+        "select owner_email, owner_avatar_url from public.my_workspaces()",
+      ),
+    ).toEqual([
+      {
+        owner_email: "pat@example.com",
+        owner_avatar_url: "https://lh3.googleusercontent.com/a/pat",
+      },
+    ]);
+    const [invite] = await asPat<{ token: string }>(
+      "insert into public.team_invites (email, role) values ('rae@example.com', 'editor') returning token",
+    );
+    const [{ details }] = (await asQuinn<{ details: Record<string, unknown> }>(
+      "select public.invite_details($1) as details",
+      [invite!.token],
+    )) as [{ details: Record<string, unknown> }];
+    expect(details).toMatchObject({
+      owner_name: "Pat",
+      owner_avatar_url: "https://lh3.googleusercontent.com/a/pat",
+    });
+    await expect(asAnon("select public.team_overview()")).rejects.toThrow(/permission denied/);
   });
 });
