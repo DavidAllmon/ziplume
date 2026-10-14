@@ -176,6 +176,24 @@ describe("sendInvites", () => {
     });
   });
 
+  it("stops emailing after the first failed send and gives links for the rest", async () => {
+    vi.mocked(sendEmail).mockResolvedValue({ ok: false, error: "network" });
+    const fake = fakeSupabase();
+    signIn(fake);
+    const result = await sendInvites({
+      emails: "a@cafe.com, b@cafe.com, c@cafe.com",
+      role: "viewer",
+      email: true,
+    });
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(fake.recorded).toEqual(["id-a@cafe.com"]);
+    expect(result.outcomes.map((o) => o.status)).toEqual(["failed", "link", "link"]);
+    expect(result.outcomes[1]).toMatchObject({
+      token: TOKEN,
+      message: "Email isn’t working right now. Share the link instead.",
+    });
+  });
+
   it("reuses a pending invite for the same address, and replaces one with another role", async () => {
     const fake = fakeSupabase({
       pending: [

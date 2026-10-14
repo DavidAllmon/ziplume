@@ -1,11 +1,12 @@
 export const AVATAR_ACCEPT = ["image/jpeg", "image/png", "image/webp"];
-const MAX_INPUT_BYTES = 10 * 1024 * 1024;
+// Phone cameras make 10–20 MB photos; only the 512px result is uploaded.
+const MAX_INPUT_BYTES = 30 * 1024 * 1024;
 /** Uploaded photos are at most this many pixels square (smaller photos aren't enlarged). */
 const AVATAR_SIZE = 512;
 
 export function validateAvatarFile(file: Pick<File, "type" | "size">): string | null {
   if (!AVATAR_ACCEPT.includes(file.type)) return "Use a JPG, PNG or WebP photo.";
-  if (file.size > MAX_INPUT_BYTES) return "That photo is over 10 MB. Try a smaller one.";
+  if (file.size > MAX_INPUT_BYTES) return "That photo is over 30 MB. Try a smaller one.";
   return null;
 }
 

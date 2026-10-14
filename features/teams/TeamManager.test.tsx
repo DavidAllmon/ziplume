@@ -79,6 +79,17 @@ describe("TeamManager invites", () => {
     expect(await screen.findByText("Invite up to 10 people at a time.")).toBeInTheDocument();
   });
 
+  it("recovers when the server can’t be reached", async () => {
+    vi.mocked(sendInvites).mockRejectedValue(new Error("fetch failed"));
+    renderTeam();
+    await userEvent.type(screen.getByLabelText("Email addresses"), "sam@cafe.com");
+    await userEvent.click(screen.getByRole("button", { name: "Send invites" }));
+    expect(
+      await screen.findByText("The invites couldn’t be sent. Check your connection and try again."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send invites" })).toBeEnabled();
+  });
+
   it("lists pending invites with when they were emailed, and resends them", async () => {
     const invite: Invite = {
       id: "i1",

@@ -1,6 +1,7 @@
 -- Email invites: QuickQReate emails team invites from the server (through Brevo). Each email is
--- recorded first, and the limits below stop one account from using invites to send lots of
--- email: at most 5 emails for one invite and 20 an hour for one owner.
+-- recorded first, and the limits below stop invites being used to send lots of email: at most
+-- 5 emails for one invite, 20 an hour and 50 a day for one owner, and 200 a day for the whole
+-- site (Brevo also sends sign-up and password emails, which must keep working).
 
 begin;
 
@@ -18,6 +19,7 @@ create table public.invite_sends (
 );
 
 create index invite_sends_owner on public.invite_sends (owner_id, sent_at desc);
+create index invite_sends_sent_at on public.invite_sends (sent_at);
 
 alter table public.invite_sends enable row level security;
 
@@ -53,6 +55,13 @@ begin
   if (select count(*) from public.invite_sends s
        where s.owner_id = auth.uid() and s.sent_at > now() - interval '1 hour') >= 20 then
     raise exception 'You have sent 20 invites in the last hour' using errcode = '54000';
+  end if;
+  if (select count(*) from public.invite_sends s
+       where s.owner_id = auth.uid() and s.sent_at > now() - interval '1 day') >= 50 then
+    raise exception 'You have sent 50 invites today' using errcode = '54000';
+  end if;
+  if (select count(*) from public.invite_sends s where s.sent_at > now() - interval '1 day') >= 200 then
+    raise exception 'QuickQReate has sent all the invite emails it can today' using errcode = '54000';
   end if;
   insert into public.invite_sends (owner_id, invite_id) values (auth.uid(), v_invite.id);
   update public.team_invites

@@ -32,6 +32,18 @@ export const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (c) => ES
 /** Collapses line breaks and runs of spaces (names go into a mail subject). */
 const oneLine = (value: string) => value.replace(/\s+/g, " ").trim();
 
+/** A web address or domain inside a name, like "evil.example" or "https://…". */
+const LOOKS_LIKE_LINK = /:\/\/|www\.|[a-z0-9-]{2,}\.[a-z]{2,}/i;
+
+/**
+ * The name an invite shows for its sender. A display name that looks like a link is replaced by
+ * the sender's email address, so invites can't be used to send phishing links in our name.
+ */
+export function inviterName(name: string | null, email: string): string {
+  const clean = oneLine(name ?? "");
+  return clean && !LOOKS_LIKE_LINK.test(clean) ? clean : email;
+}
+
 const ROLE_LINE: Record<TeamRole, string> = {
   editor: "an Editor: you can create, change and delete codes and folders, and see their analytics",
   viewer: "a Viewer: you can see codes, scan analytics and feedback",
@@ -40,7 +52,7 @@ const ROLE_LINE: Record<TeamRole, string> = {
 /** The email that invites someone to another person's codes. */
 export function inviteEmail(input: InviteEmailInput): EmailContent {
   const e = escapeHtml;
-  const inviter = oneLine(input.inviter.name ?? "") || input.inviter.email;
+  const inviter = inviterName(input.inviter.name, input.inviter.email);
   const subject = `${inviter} invited you to their QuickQReate codes`.slice(0, 200);
   const expires = new Date(input.expiresAt).toLocaleDateString("en-US", {
     month: "long",

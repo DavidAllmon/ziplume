@@ -1,6 +1,6 @@
 "use server";
 
-import { inviteEmail } from "@/emails/invite";
+import { inviteEmail, inviterName } from "@/emails/invite";
 import { getAuthState } from "@/lib/auth/server";
 import { emailConfigured, sendEmail } from "@/lib/email/brevo";
 import { SITE_URL, SUPABASE_URL } from "@/lib/env";
@@ -73,7 +73,9 @@ async function deliver(
   if (!emailConfigured()) return { ...base, status: "link" };
   const { error } = await supabase.rpc("record_invite_send", { p_invite: invite.id });
   if (error) {
-    const limit = /invites in the last hour|emailed 5 times/.test(error.message);
+    const limit = /invites in the last hour|emailed 5 times|invites today|it can today/.test(
+      error.message,
+    );
     return {
       ...base,
       status: "link",
@@ -94,12 +96,17 @@ async function deliver(
     to: invite.email,
     ...content,
     replyTo: inviter.email
-      ? { email: inviter.email, ...(inviter.name ? { name: inviter.name } : {}) }
+      ? { email: inviter.email, name: inviterName(inviter.name, inviter.email) }
       : undefined,
   });
-  return sent.ok
-    ? { ...base, status: "sent" }
-    : { ...base, status: "failed", message: "The email couldn’t be sent. Share the link instead." };
+  if (sent.ok) return { ...base, status: "sent" };
+  // The reason (never the key) helps the operator tell a wrong key from a blocked address.
+  console.warn(`Invite email failed: ${sent.error}`);
+  return {
+    ...base,
+    status: "failed",
+    message: "The email couldn’t be sent. Share the link instead.",
+  };
 }
 
 /**
@@ -133,6 +140,9 @@ export async function sendInvites(input: {
   if (!parsed.ok) return { error: parsed.error, outcomes: [] };
 
   const outcomes: InviteOutcome[] = [];
+  // After one email fails (Brevo down, wrong key, timeout), the rest get links straight away
+  // instead of waiting on more failures and using up the sending limits.
+  let emailWorking = input.email;
   for (const email of parsed.emails) {
     const sameAddress = (pending ?? []).filter(
       (p) => p.email.toLowerCase() === email.toLowerCase(),
@@ -159,11 +169,20 @@ export async function sendInvites(input: {
       }
       invite = data;
     }
-    outcomes.push(
-      input.email
-        ? await deliver(supabase, inviter, invite)
-        : { email: invite.email, token: invite.token, status: "link" },
-    );
+    if (!emailWorking) {
+      outcomes.push({
+        email: invite.email,
+        token: invite.token,
+        status: "link",
+        ...(input.email
+          ? { message: "Email isn’t working right now. Share the link instead." }
+          : {}),
+      });
+      continue;
+    }
+    const outcome = await deliver(supabase, inviter, invite);
+    if (outcome.status === "failed") emailWorking = false;
+    outcomes.push(outcome);
   }
   return { outcomes };
 }

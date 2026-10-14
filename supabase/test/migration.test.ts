@@ -1158,4 +1158,33 @@ describe("email invites", () => {
     expect(await pending(asXena)).toBeNull();
     await expect(asAnon("select public.my_pending_invite()")).rejects.toThrow(/permission denied/);
   });
+
+  it("stop at 50 emails a day per owner and 200 a day for everyone", async () => {
+    const VERA = "15151515-1515-4515-8515-151515151515";
+    const asVera = <T>(sql: string, params?: unknown[]) =>
+      as<T>("authenticated", VERA, sql, params);
+    await db.query("insert into auth.users (id, email) values ($1, 'vera@example.com')", [VERA]);
+    const [invite] = await asUma<{ id: string }>(
+      "insert into public.team_invites (email, role) values ('yan@example.com', 'viewer') returning id",
+    );
+    // Earlier today, outside the hourly window.
+    await asService(
+      `insert into public.invite_sends (owner_id, sent_at)
+       select $1, now() - interval '3 hours' from generate_series(1, 50)`,
+      [UMA],
+    );
+    await expect(record(asUma, invite!.id)).rejects.toThrow(/50 invites today/);
+
+    await asService(
+      `insert into public.invite_sends (owner_id, sent_at)
+       select $1, now() - interval '5 hours' from generate_series(1, 150)`,
+      [TESS],
+    );
+    const [mine] = await asVera<{ id: string }>(
+      "insert into public.team_invites (email, role) values ('zoe@example.com', 'viewer') returning id",
+    );
+    await expect(record(asVera, mine!.id)).rejects.toThrow(/all the invite emails it can today/);
+    await asService("delete from public.invite_sends where sent_at < now() - interval '2 hours'");
+    await record(asVera, mine!.id);
+  });
 });

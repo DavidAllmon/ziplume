@@ -9,6 +9,10 @@ describe("validateAvatarFile", () => {
     expect(validateAvatarFile({ type: "image/webp", size: 1000 })).toBeNull();
   });
 
+  it("accepts a 12 MB photo straight from a phone", () => {
+    expect(validateAvatarFile({ type: "image/jpeg", size: 12 * 1024 * 1024 })).toBeNull();
+  });
+
   it("explains what to use instead", () => {
     expect(validateAvatarFile({ type: "image/heic", size: 1000 })).toBe(
       "Use a JPG, PNG or WebP photo.",
@@ -16,8 +20,8 @@ describe("validateAvatarFile", () => {
     expect(validateAvatarFile({ type: "image/gif", size: 1000 })).toBe(
       "Use a JPG, PNG or WebP photo.",
     );
-    expect(validateAvatarFile({ type: "image/jpeg", size: 10 * 1024 * 1024 + 1 })).toBe(
-      "That photo is over 10 MB. Try a smaller one.",
+    expect(validateAvatarFile({ type: "image/jpeg", size: 30 * 1024 * 1024 + 1 })).toBe(
+      "That photo is over 30 MB. Try a smaller one.",
     );
   });
 });

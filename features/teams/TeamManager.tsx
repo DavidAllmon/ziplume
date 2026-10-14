@@ -139,8 +139,15 @@ export function TeamManager({
   async function submit(mode: "email" | "link") {
     setSending(mode);
     setError("");
-    const result = await sendInvites({ emails: addresses, role, email: mode === "email" });
-    setSending(null);
+    let result: Awaited<ReturnType<typeof sendInvites>>;
+    try {
+      result = await sendInvites({ emails: addresses, role, email: mode === "email" });
+    } catch {
+      setError("The invites couldn’t be sent. Check your connection and try again.");
+      return;
+    } finally {
+      setSending(null);
+    }
     if (result.error) {
       setError(result.error);
       return;
@@ -159,8 +166,15 @@ export function TeamManager({
 
   async function resend(invite: Invite) {
     setResending(invite.id);
-    const result = await resendInvite(invite.id);
-    setResending(null);
+    let result: Awaited<ReturnType<typeof resendInvite>>;
+    try {
+      result = await resendInvite(invite.id);
+    } catch {
+      toast("The invite couldn’t be emailed. Check your connection and try again.", "error");
+      return;
+    } finally {
+      setResending(null);
+    }
     const outcome = result.outcomes[0];
     if (result.error || !outcome) {
       toast(result.error ?? "The invite couldn’t be emailed. Please try again.", "error");

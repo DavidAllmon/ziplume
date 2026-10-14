@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { inviteEmail, type InviteEmailInput } from "./invite";
+import { inviteEmail, inviterName, type InviteEmailInput } from "./invite";
 
 const base: InviteEmailInput = {
   inviter: { id: "u1", name: "David Allmon", email: "david@example.com", avatarUrl: null },
@@ -48,5 +48,30 @@ describe("inviteEmail", () => {
     const tracked = inviteEmail(withInviter({ avatarUrl: "https://tracker.example/p.gif" })).html;
     expect(tracked).not.toContain("tracker.example");
     expect(tracked).toContain(">DA</div>");
+  });
+});
+
+describe("inviterName", () => {
+  it("keeps ordinary names", () => {
+    expect(inviterName("Dr. Jo Smith", "jo@example.com")).toBe("Dr. Jo Smith");
+    expect(inviterName("J.R. Allmon", "jr@example.com")).toBe("J.R. Allmon");
+  });
+
+  it("uses the email address instead of names that look like links", () => {
+    for (const name of [
+      "Claim refund at evil.example",
+      "www.prize.win",
+      "https://x.co",
+      "Call me",
+    ]) {
+      const expected = name === "Call me" ? "Call me" : "david@example.com";
+      expect(inviterName(name, "david@example.com")).toBe(expected);
+    }
+    const { subject, html, text } = inviteEmail(
+      withInviter({ name: "Claim refund at evil.example" }),
+    );
+    expect(subject).toBe("david@example.com invited you to their QuickQReate codes");
+    expect(html).not.toContain("evil.example");
+    expect(text).not.toContain("evil.example");
   });
 });
