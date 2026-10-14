@@ -77,6 +77,67 @@ export async function createCode(input: NewCode): Promise<Result<QrCodeRow>> {
   return { ok: false, error: "The code couldn't be saved. Please try again." };
 }
 
+export interface CodeSettingsInput {
+  /** A password scanners must enter (4–128 characters); trackable codes only. */
+  password?: string;
+  /** ISO times; null or missing means no limit. */
+  activeFrom?: string | null;
+  activeUntil?: string | null;
+}
+
+function createError(error: { code?: string; message: string } | null, customSlug: boolean) {
+  if (error?.code === UNIQUE_VIOLATION && customSlug)
+    return "That link ending is already taken. Try another.";
+  if (error?.message.includes("qr_codes_active_window"))
+    return "The end date must be after the start date.";
+  if (error?.code === "22023") return "Passwords are 4 to 128 characters.";
+  if (error?.code === "42501") return "You can't add codes to this workspace.";
+  return "The code couldn't be saved. Please try again.";
+}
+
+/**
+ * Creates a code and its settings (password, active dates) in one step, so a failure saves
+ * nothing. Random link endings that collide are re-rolled; a chosen ending that's taken is an
+ * error.
+ */
+export async function createCodeWithSettings(
+  input: NewCode,
+  settings: CodeSettingsInput = {},
+): Promise<Result<QrCodeRow>> {
+  const supabase = getBrowserSupabase();
+  if (!supabase) return unavailable;
+  const customSlug = input.dynamic?.slug;
+  if (customSlug && !isValidSlug(customSlug)) {
+    return { ok: false, error: "Link endings use 3–40 letters, numbers or dashes." };
+  }
+  const { design } = designForStorage(input.design);
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const { data, error } = await supabase.rpc("create_code", {
+      p_code: {
+        ...(input.ownerId && { user_id: input.ownerId }),
+        ...(input.folderId && { folder_id: input.folderId }),
+        name: input.name.slice(0, 120),
+        qr_type: input.qrType,
+        content: (input.dynamic?.destination
+          ? { url: input.dynamic.destination }
+          : input.content) as Json,
+        design,
+        is_dynamic: Boolean(input.dynamic),
+        slug: input.dynamic ? (customSlug ?? generateSlug()) : null,
+        destination: input.dynamic?.destination ?? null,
+        active_from: settings.activeFrom ?? null,
+        active_until: settings.activeUntil ?? null,
+      },
+      p_password: settings.password || null,
+    });
+    if (!error && data) return { ok: true, value: data };
+    if (error?.code === UNIQUE_VIOLATION && input.dynamic && !customSlug) continue;
+    return { ok: false, error: createError(error, Boolean(customSlug)) };
+  }
+  return { ok: false, error: "The code couldn't be saved. Please try again." };
+}
+
 /**
  * Saves many codes at once (bulk creation), in batches. Random link endings that collide are
  * re-rolled. Returns the saved rows in the same order as the input.
