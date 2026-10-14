@@ -8,6 +8,7 @@ const WIDTHS = [390, 820, 1280];
 const PAGES = [
   "codes",
   "codes?folder={folder}",
+  "codes/new",
   "codes/{menu}",
   "codes/{menu}/analytics",
   "team",

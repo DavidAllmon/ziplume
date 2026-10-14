@@ -2,7 +2,7 @@ import { chromium, type FullConfig } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { mkdirSync, writeFileSync } from "node:fs";
 
-import { AUTH_DIR, OWNER, SEED_FILE, VIEWER, type Seed } from "./fixtures";
+import { AUTH_DIR, MAKER, OWNER, SEED_FILE, VIEWER, type Seed } from "./fixtures";
 
 type Person = typeof OWNER;
 
@@ -18,7 +18,7 @@ export default async function globalSetup(config: FullConfig) {
   });
 
   const { data: existing } = await admin.auth.admin.listUsers({ perPage: 1000 });
-  for (const person of [OWNER, VIEWER]) {
+  for (const person of [OWNER, VIEWER, MAKER]) {
     const old = existing?.users.find((user) => user.email === person.email);
     if (old) await admin.auth.admin.deleteUser(old.id);
   }
@@ -35,6 +35,7 @@ export default async function globalSetup(config: FullConfig) {
   }
   const ownerId = await create(OWNER);
   const viewerId = await create(VIEWER);
+  const makerId = await create(MAKER);
 
   const { data: codes, error: codesError } = await admin
     .from("qr_codes")
@@ -80,13 +81,26 @@ export default async function globalSetup(config: FullConfig) {
     .from("scan_events")
     .insert(["a", "b", "c"].map((visitor) => ({ code_id: menu.id, visitor_hash: visitor })));
   if (scanError) throw scanError;
-  const seeded: Seed = { ownerId, viewerId, menuId: menu.id, folderId: flyers.id };
+  const { data: posters, error: postersError } = await admin
+    .from("folders")
+    .insert({ user_id: makerId, name: "Posters" })
+    .select("id")
+    .single();
+  if (postersError || !posters) throw postersError ?? new Error("Couldn't create the folder");
+  const seeded: Seed = {
+    ownerId,
+    viewerId,
+    menuId: menu.id,
+    folderId: flyers.id,
+    makerId,
+    makerFolderId: posters.id,
+  };
   mkdirSync(AUTH_DIR, { recursive: true });
   writeFileSync(SEED_FILE, JSON.stringify(seeded));
 
   const baseURL = config.projects[0]!.use.baseURL!;
   const browser = await chromium.launch();
-  for (const person of [OWNER, VIEWER]) {
+  for (const person of [OWNER, VIEWER, MAKER]) {
     const page = await browser.newPage({ baseURL });
     await page.goto("login");
     await page.getByLabel("Email", { exact: true }).fill(person.email);
