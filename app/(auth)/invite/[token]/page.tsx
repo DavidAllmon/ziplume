@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { Avatar } from "@/components/ui/Avatar";
 import { buttonClasses } from "@/components/ui/Button";
 import { AuthCard } from "@/features/auth/AuthCard";
 import { AcceptInviteForm } from "@/features/teams/AcceptInviteForm";
@@ -16,6 +17,7 @@ export const metadata: Metadata = { title: "Team invite · QuickQReate", robots:
 interface InviteDetails {
   owner_email: string;
   owner_name: string | null;
+  owner_avatar_url: string | null;
   email: string;
   role: TeamRole;
   valid: boolean;
@@ -32,6 +34,24 @@ function Problem({ title, message }: { title: string; message: string }) {
   );
 }
 
+/** Who sent the invite, with their photo, and which address it is for. */
+function Inviter({ invite, owner }: { invite: InviteDetails; owner: string }) {
+  return (
+    <div className="mb-5 flex items-center gap-3">
+      <Avatar
+        id={invite.owner_email}
+        name={invite.owner_name}
+        email={invite.owner_email}
+        src={invite.owner_avatar_url}
+      />
+      <p className="min-w-0 text-sm text-fg-muted">
+        <strong className="text-fg">{owner}</strong> invited{" "}
+        <strong className="break-all text-fg">{invite.email}</strong>
+      </p>
+    </div>
+  );
+}
+
 export default async function InvitePage({ params }: PageProps<"/invite/[token]">) {
   const { token } = await params;
   const next = `/invite/${token}`;
@@ -42,30 +62,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
   }
 
   const { supabase, user, needsMfa } = await getAuthState();
-  if (!user) {
-    return (
-      <AuthCard
-        title="You’re invited to a team"
-        description="Sign in, or create a free account, with the email address the invite was sent to."
-      >
-        <div className="flex flex-col gap-3">
-          <Link
-            href={`/signup?next=${encodeURIComponent(next)}`}
-            className={buttonClasses("primary", "lg")}
-          >
-            Create free account
-          </Link>
-          <Link
-            href={`/login?next=${encodeURIComponent(next)}`}
-            className={buttonClasses("outline", "lg")}
-          >
-            Sign in
-          </Link>
-        </div>
-      </AuthCard>
-    );
-  }
-  if (needsMfa) redirect(`/login/verify?next=${encodeURIComponent(next)}`);
+  if (user && needsMfa) redirect(`/login/verify?next=${encodeURIComponent(next)}`);
 
   const { data } = await supabase.rpc("invite_details", { p_token: token });
   const invite = data as InviteDetails | null;
@@ -78,11 +75,38 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
     return (
       <Problem
         title="This invite has ended"
-        message="It has expired or was already used. Ask the person who invited you for a new link."
+        message="It has expired or was already used. Ask the person who invited you for a new one."
       />
     );
   }
   const owner = invite.owner_name?.trim() || invite.owner_email;
+
+  if (!user) {
+    return (
+      <AuthCard
+        title={`${owner} invited you to their QuickQReate codes`}
+        description={ROLE_DESCRIPTIONS[invite.role]}
+      >
+        <Inviter invite={invite} owner={owner} />
+        <div className="flex flex-col gap-3">
+          <Link
+            href={`/signup?invite=${token}&next=${encodeURIComponent(next)}`}
+            className={buttonClasses("primary", "lg")}
+          >
+            Create free account
+          </Link>
+          <Link
+            href={`/login?next=${encodeURIComponent(next)}`}
+            className={buttonClasses("outline", "lg")}
+          >
+            I already have an account
+          </Link>
+        </div>
+        <p className="mt-4 text-sm text-fg-muted">Use {invite.email} so the invite finds you.</p>
+      </AuthCard>
+    );
+  }
+
   if (invite.email.toLowerCase() !== user.email?.toLowerCase()) {
     return (
       <AuthCard title="This invite is for someone else">
@@ -103,7 +127,8 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
   }
 
   return (
-    <AuthCard title={`Join ${owner}’s workspace`} description={ROLE_DESCRIPTIONS[invite.role]}>
+    <AuthCard title={`Join ${owner}’s codes`} description={ROLE_DESCRIPTIONS[invite.role]}>
+      <Inviter invite={invite} owner={owner} />
       <AcceptInviteForm token={token} role={invite.role} />
     </AuthCard>
   );

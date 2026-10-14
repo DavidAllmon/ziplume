@@ -1,7 +1,7 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { safeNext } from "@/features/auth/redirects";
+import { confirmDestination, safeNext } from "@/features/auth/redirects";
 import { SITE_URL } from "@/lib/env";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -30,7 +30,13 @@ export async function GET(request: NextRequest) {
   if (tokenHash && type && TYPES.includes(type)) {
     const supabase = await getServerSupabase();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
-    if (!error) return NextResponse.redirect(new URL(next, SITE_URL));
+    if (!error) {
+      const signup = type === "email" || type === "signup";
+      const { data: pending } = signup ? await supabase.rpc("my_pending_invite") : { data: null };
+      return NextResponse.redirect(
+        new URL(confirmDestination(next, type, pending ?? null), SITE_URL),
+      );
+    }
   }
   return NextResponse.redirect(new URL("/login?error=link", SITE_URL));
 }

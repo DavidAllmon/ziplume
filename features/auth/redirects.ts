@@ -15,3 +15,23 @@ export function safeNext(next: string | null | undefined, fallback = "/dashboard
     return fallback;
   }
 }
+
+const INVITE_TOKEN = /^[0-9a-f]{48}$/;
+
+/**
+ * Where a confirmed email link goes. A new account with a team invite waiting for its address
+ * opens that invite instead of the default page, even when confirmed on another device.
+ */
+export function confirmDestination(
+  next: string,
+  type: string,
+  pendingInvite: string | null,
+): string {
+  const confirmsSignup = type === "email" || type === "signup";
+  return confirmsSignup &&
+    next === "/dashboard" &&
+    pendingInvite &&
+    INVITE_TOKEN.test(pendingInvite)
+    ? `/invite/${pendingInvite}`
+    : next;
+}
