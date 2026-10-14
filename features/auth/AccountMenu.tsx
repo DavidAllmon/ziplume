@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { LayoutGrid, LogOut, UserRound, Users } from "lucide-react";
+import { LayoutGrid, LogOut, Settings, Users } from "lucide-react";
 import Link from "next/link";
 
 import { Avatar } from "@/components/ui/Avatar";
@@ -33,7 +33,7 @@ export function AccountMenu() {
 
   return (
     <div className="flex items-center gap-1.5">
-      <Link href="/dashboard" className={`${buttonClasses("ghost", "sm")} max-sm:hidden`}>
+      <Link href="/codes" className={`${buttonClasses("ghost", "sm")} max-sm:hidden`}>
         <LayoutGrid aria-hidden />
         My codes
       </Link>
@@ -54,18 +54,18 @@ export function AccountMenu() {
             {name && <p className="truncate text-sm text-fg-muted">{user.email}</p>}
           </div>
           <MenuItem>
-            <Link href="/dashboard" className={itemClass}>
+            <Link href="/codes" className={itemClass}>
               <LayoutGrid aria-hidden className="size-4" /> My codes
             </Link>
           </MenuItem>
           <MenuItem>
-            <Link href="/dashboard/team" className={itemClass}>
+            <Link href="/team" className={itemClass}>
               <Users aria-hidden className="size-4" /> Team
             </Link>
           </MenuItem>
           <MenuItem>
-            <Link href="/account" className={itemClass}>
-              <UserRound aria-hidden className="size-4" /> Account
+            <Link href="/settings" className={itemClass}>
+              <Settings aria-hidden className="size-4" /> Settings
             </Link>
           </MenuItem>
           <MenuItem>

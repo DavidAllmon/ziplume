@@ -9,11 +9,9 @@ import { requireUser } from "@/lib/auth/server";
 
 export const metadata: Metadata = { title: "Analytics · QuickQReate" };
 
-export default async function AnalyticsPage({
-  params,
-}: PageProps<"/dashboard/codes/[id]/analytics">) {
+export default async function AnalyticsPage({ params }: PageProps<"/codes/[id]/analytics">) {
   const { id } = await params;
-  const { supabase } = await requireUser(`/dashboard/codes/${id}/analytics`);
+  const { supabase } = await requireUser(`/codes/${id}/analytics`);
   const { data: code } = await supabase.from("qr_codes").select("*").eq("id", id).maybeSingle();
   if (!code) notFound();
 
@@ -24,15 +22,15 @@ export default async function AnalyticsPage({
           No analytics for static codes
         </h1>
         <p className="text-fg-muted">
-          “{code.name}” encodes its content directly, so scans never pass through QuickQReate. Make
-          a new dynamic Link code to track scans and change where it points later.
+          “{code.name}” encodes its content directly, so scans never pass through QuickQReate.
+          Create a trackable Link code to see scans and change where it points later.
         </p>
         <div className="flex flex-wrap justify-center gap-2">
-          <Link href={`/dashboard/codes/${code.id}`} className={buttonClasses("outline", "md")}>
+          <Link href={`/codes/${code.id}`} className={buttonClasses("outline", "md")}>
             Back to code
           </Link>
           <Link href="/" className={buttonClasses("primary", "md")}>
-            New dynamic code
+            Create a trackable code
           </Link>
         </div>
       </Card>

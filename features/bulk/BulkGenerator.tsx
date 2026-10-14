@@ -455,7 +455,7 @@ export function BulkGenerator() {
               <p className="text-sm text-success">
                 Saved {savedCount} codes.{" "}
                 <Link
-                  href={workspace ? `/dashboard?workspace=${workspace.ownerId}` : "/dashboard"}
+                  href={workspace ? `/codes?workspace=${workspace.ownerId}` : "/codes"}
                   className="font-medium text-link underline-offset-4 hover:underline"
                 >
                   Open My codes

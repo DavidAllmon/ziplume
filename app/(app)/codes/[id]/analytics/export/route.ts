@@ -39,7 +39,7 @@ const text = (body: string, status: number) =>
 /** Downloads a code's scan events as CSV. Row-level security limits it to the owner's codes. */
 export async function GET(
   request: NextRequest,
-  { params }: RouteContext<"/dashboard/codes/[id]/analytics/export">,
+  { params }: RouteContext<"/codes/[id]/analytics/export">,
 ) {
   if (!accountsEnabled) return text("Not found", 404);
   const { id } = await params;

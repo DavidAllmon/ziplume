@@ -98,8 +98,8 @@ export function SavePanel({ generator }: { generator: Generator }) {
         </Button>
         {saved && (
           <>
-            <Link href={`/dashboard/codes/${saved.id}`} className={buttonClasses("ghost", "md")}>
-              <LayoutGrid aria-hidden /> Open in My codes
+            <Link href={`/codes/${saved.id}`} className={buttonClasses("ghost", "md")}>
+              <LayoutGrid aria-hidden /> Open code page
             </Link>
             <Button variant="ghost" onClick={generator.startNew} disabled={pending}>
               <Plus aria-hidden /> New code

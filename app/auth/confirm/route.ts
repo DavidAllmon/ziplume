@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = safeNext(
     searchParams.get("next"),
-    type === "recovery" ? "/account/update-password" : "/dashboard",
+    type === "recovery" ? "/account/update-password" : "/codes",
   );
 
   if (tokenHash && type && TYPES.includes(type)) {

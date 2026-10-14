@@ -452,7 +452,7 @@ export function TeamManager({
                   <p className="text-sm text-fg-muted">{ROLE_LABELS[workspace.role]}</p>
                 </div>
                 <Link
-                  href={`/dashboard?workspace=${workspace.owner_id}`}
+                  href={`/codes?workspace=${workspace.owner_id}`}
                   className={buttonClasses("outline", "sm")}
                 >
                   Open <ArrowRight aria-hidden />

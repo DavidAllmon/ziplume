@@ -5,7 +5,7 @@ const BASE = "http://quickqreate.invalid";
  * resolved the way a browser would, so tricks like "/\evil.com" or a tab in "/%09/evil.com"
  * can't turn it into another site.
  */
-export function safeNext(next: string | null | undefined, fallback = "/dashboard"): string {
+export function safeNext(next: string | null | undefined, fallback = "/codes"): string {
   if (!next?.startsWith("/")) return fallback;
   try {
     const url = new URL(next, BASE);
@@ -29,7 +29,7 @@ export function confirmDestination(
 ): string {
   const confirmsSignup = type === "email" || type === "signup";
   return confirmsSignup &&
-    next === "/dashboard" &&
+    (next === "/codes" || next === "/dashboard") &&
     pendingInvite &&
     INVITE_TOKEN.test(pendingInvite)
     ? `/invite/${pendingInvite}`

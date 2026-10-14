@@ -21,5 +21,5 @@ export async function acceptInvite(token: string): Promise<AcceptResult> {
           : "The invite couldn’t be accepted. Please try again.",
     };
   }
-  redirect(`/dashboard?workspace=${ownerId}`);
+  redirect(`/codes?workspace=${ownerId}`);
 }
