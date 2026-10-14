@@ -37,7 +37,7 @@ export function BuyMeACoffee({ variant = "button", className }: BuyMeACoffeeProp
       >
         <span
           aria-hidden
-          className="grid size-11 shrink-0 place-items-center rounded-full bg-accent text-accent-fg"
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-warning-soft text-warning"
         >
           <Coffee className="size-5" />
         </span>

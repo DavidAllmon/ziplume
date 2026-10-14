@@ -27,7 +27,7 @@ function Problem({ title, message }: { title: string; message: string }) {
   return (
     <AuthCard title={title}>
       <p className="text-fg-muted">{message}</p>
-      <Link href="/dashboard" className={`${buttonClasses("outline", "md")} mt-5 w-full`}>
+      <Link href="/codes" className={`${buttonClasses("outline", "md")} mt-5 w-full`}>
         Go to my codes
       </Link>
     </AuthCard>

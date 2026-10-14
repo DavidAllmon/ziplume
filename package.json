@@ -17,13 +17,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "db:start": "npx --yes supabase@2.120.0 start -x realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor",
+    "db:stop": "npx --yes supabase@2.120.0 stop",
+    "test:e2e:accounts": "node scripts/accounts-e2e.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "brand": "node scripts/build-brand-assets.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
-    "@fontsource-variable/space-grotesk": "^5.3.0",
     "@headlessui/react": "^2.2.10",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.3",

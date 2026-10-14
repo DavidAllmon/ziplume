@@ -18,13 +18,29 @@ test.describe("without accounts configured", () => {
       "/login",
       "/signup",
       "/forgot-password",
-      "/dashboard",
-      "/dashboard/team",
-      "/account",
+      "/codes",
+      "/team",
+      "/settings",
+      "/settings/security",
       `/invite/${"ab".repeat(24)}`,
     ]) {
       const response = await request.get(path, { maxRedirects: 0 });
       expect(response.status(), path).toBe(404);
+    }
+  });
+
+  test("old account addresses move to the new ones, keeping their query", async ({ request }) => {
+    for (const [from, to] of [
+      ["/dashboard", "/codes"],
+      ["/dashboard?workspace=abc", "/codes?workspace=abc"],
+      ["/dashboard/team", "/team"],
+      ["/dashboard/codes/abc", "/codes/abc"],
+      ["/dashboard/codes/abc/analytics?range=30d", "/codes/abc/analytics?range=30d"],
+      ["/account", "/settings"],
+    ] as const) {
+      const response = await request.get(from, { maxRedirects: 0 });
+      expect(response.status(), from).toBe(308);
+      expect(response.headers().location, from).toBe(to);
     }
   });
 

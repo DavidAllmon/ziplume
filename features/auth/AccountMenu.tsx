@@ -1,8 +1,9 @@
 "use client";
 
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { LayoutGrid, LogOut, UserRound, Users } from "lucide-react";
+import { LayoutGrid, LogOut, Settings, Users } from "lucide-react";
 import Link from "next/link";
+import { useId } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
 import { buttonClasses } from "@/components/ui/Button";
@@ -18,6 +19,7 @@ export function AccountMenu() {
   const { user, loading } = useSession();
   // Name and photo come from the profile, so a rename or a new photo shows straight away.
   const profile = useProfile(user?.id ?? null);
+  const signOutForm = useId();
   if (!accountsEnabled) return null;
   if (loading) return <span aria-hidden className="size-9" />;
 
@@ -33,11 +35,12 @@ export function AccountMenu() {
 
   return (
     <div className="flex items-center gap-1.5">
-      <Link href="/dashboard" className={`${buttonClasses("ghost", "sm")} max-sm:hidden`}>
+      <Link href="/codes" className={`${buttonClasses("ghost", "sm")} max-sm:hidden`}>
         <LayoutGrid aria-hidden />
         My codes
       </Link>
       <Menu as="div" className="relative">
+        <form id={signOutForm} action="/auth/signout" method="post" hidden />
         <MenuButton
           aria-label="Account menu"
           className="rounded-full data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring"
@@ -54,26 +57,27 @@ export function AccountMenu() {
             {name && <p className="truncate text-sm text-fg-muted">{user.email}</p>}
           </div>
           <MenuItem>
-            <Link href="/dashboard" className={itemClass}>
+            <Link href="/codes" className={itemClass}>
               <LayoutGrid aria-hidden className="size-4" /> My codes
             </Link>
           </MenuItem>
           <MenuItem>
-            <Link href="/dashboard/team" className={itemClass}>
+            <Link href="/team" className={itemClass}>
               <Users aria-hidden className="size-4" /> Team
             </Link>
           </MenuItem>
           <MenuItem>
-            <Link href="/account" className={itemClass}>
-              <UserRound aria-hidden className="size-4" /> Account
+            <Link href="/settings" className={itemClass}>
+              <Settings aria-hidden className="size-4" /> Settings
             </Link>
           </MenuItem>
-          <MenuItem>
-            <form action="/auth/signout" method="post">
-              <button type="submit" className={`${itemClass} w-full text-left`}>
-                <LogOut aria-hidden className="size-4" /> Sign out
-              </button>
-            </form>
+          <MenuItem
+            as="button"
+            type="submit"
+            form={signOutForm}
+            className={`${itemClass} w-full text-left`}
+          >
+            <LogOut aria-hidden className="size-4" /> Sign out
           </MenuItem>
         </MenuItems>
       </Menu>

@@ -63,6 +63,36 @@ jobs:
           path: playwright-report
           retention-days: 7
 
+  accounts:
+    name: Signed-in browser tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Start a local Supabase
+        run: npm run db:start
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Signed-in browser tests
+        run: npm run test:e2e:accounts
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-accounts-report
+          path: playwright-report
+          retention-days: 7
+
   redirect-pages:
     name: Point GitHub Pages at the new site
     # One-time cutover, run by hand once the Coolify app is live:

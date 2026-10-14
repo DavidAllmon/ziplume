@@ -87,7 +87,7 @@ export default function DevelopersPage() {
 
       <h2>Authentication</h2>
       <p>
-        Create a key under <Link href="/account#api-keys">Account → API keys</Link>. It’s shown
+        Create a key under <Link href="/settings/api-keys">Settings → API keys</Link>. It’s shown
         once, so store it somewhere safe, like your app’s secret settings. Send it with every
         request:
       </p>

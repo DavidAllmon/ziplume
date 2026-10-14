@@ -9,63 +9,65 @@
  * ------------------------------------------------------------------------- */
 :root {
   color-scheme: light;
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --border: #e2e8f0;
-  --field-border: #8492a6;
-  --fg: #0f172a;
-  --fg-muted: #475569;
-  --fg-subtle: #64748b;
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
+  --bg: #ffffff;
+  --surface: #fcfcfd;
+  --surface-2: #f2f4f7;
+  --border: #eaecf0;
+  --field-border: #848d9c;
+  --fg: #101828;
+  --fg-muted: #475467;
+  --fg-subtle: #667085;
+  --primary: #101828;
+  --primary-hover: #344054;
   --primary-fg: #ffffff;
-  --primary-soft: #eef2ff;
-  --primary-soft-fg: #3730a3;
-  --link: #4338ca;
-  --accent: #a3e635;
-  --accent-fg: #1a2e05;
-  --ring: #4f46e5;
-  --success: #15803d;
-  --success-soft: #dcfce7;
-  --warning: #b45309;
-  --warning-soft: #fef3c7;
-  --danger: #b91c1c;
-  --danger-soft: #fee2e2;
+  --primary-soft: #eff4ff;
+  --primary-soft-fg: #1d4ed8;
+  --link: #1d4ed8;
+  --ring: #1d4ed8;
+  --success: #05603a;
+  --success-soft: #dcfae6;
+  --warning: #93370d;
+  --warning-soft: #fef0c7;
+  --danger: #912018;
+  --danger-soft: #fee4e2;
+  --neutral: #344054;
+  --neutral-soft: #eaecf0;
+  --selection: #d1e0ff;
   --logo-ring: #4f46e5;
   /* Chart series, validated for color-blind separation against the surface. */
-  --chart-1: #4f46e5;
-  --shadow-color: 222 47% 11%;
+  --chart-1: #1d4ed8;
+  --shadow-color: 220 43% 11%;
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0b1020;
-  --surface: #151b2e;
-  --surface-2: #1c2440;
-  --border: #26304d;
-  --field-border: #64709a;
-  --fg: #e8ecf7;
-  --fg-muted: #9aa4bf;
-  --fg-subtle: #7c87a3;
-  --primary: #5b5bf0;
-  --primary-hover: #4f46e5;
-  --primary-fg: #ffffff;
-  --primary-soft: #1e2350;
-  --primary-soft-fg: #c7d2fe;
-  --link: #a5b4fc;
-  --accent: #a3e635;
-  --accent-fg: #1a2e05;
-  --ring: #a3e635;
-  --success: #4ade80;
-  --success-soft: #14301f;
-  --warning: #fbbf24;
-  --warning-soft: #33280b;
-  --danger: #f87171;
-  --danger-soft: #3a1717;
+  --bg: #0c0d0f;
+  --surface: #131417;
+  --surface-2: #1b1d21;
+  --border: #2a2d33;
+  --field-border: #6b7280;
+  --fg: #f5f6f7;
+  --fg-muted: #c3c7cf;
+  --fg-subtle: #9aa0aa;
+  --primary: #f5f6f7;
+  --primary-hover: #d0d5dd;
+  --primary-fg: #101828;
+  --primary-soft: #172554;
+  --primary-soft-fg: #bfdbfe;
+  --link: #60a5fa;
+  --ring: #60a5fa;
+  --success: #47cd89;
+  --success-soft: #053321;
+  --warning: #fdb022;
+  --warning-soft: #4e1d09;
+  --danger: #f97066;
+  --danger-soft: #55160c;
+  --neutral: #d0d5dd;
+  --neutral-soft: #2a2d33;
+  --selection: #1e3a8a;
   --logo-ring: #818cf8;
-  --chart-1: #7c83f5;
-  --shadow-color: 228 60% 3%;
+  --chart-1: #60a5fa;
+  --shadow-color: 228 30% 2%;
 }
 
 @theme inline {
@@ -83,8 +85,6 @@
   --color-primary-soft: var(--primary-soft);
   --color-primary-soft-fg: var(--primary-soft-fg);
   --color-link: var(--link);
-  --color-accent: var(--accent);
-  --color-accent-fg: var(--accent-fg);
   --color-ring: var(--ring);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
@@ -92,18 +92,21 @@
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-neutral: var(--neutral);
+  --color-neutral-soft: var(--neutral-soft);
   --color-chart-1: var(--chart-1);
 
+  /* Inter only (spec §5); "display" keeps working for headings. */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
-  --radius-field: 0.625rem;
-  --radius-control: 0.75rem;
-  --radius-card: 1.25rem;
+  --radius-field: 0.5rem;
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
 
-  --shadow-card:
-    0 1px 2px hsl(var(--shadow-color) / 0.06), 0 8px 24px -12px hsl(var(--shadow-color) / 0.18);
-  --shadow-pop: 0 12px 40px -12px hsl(var(--shadow-color) / 0.35);
+  /* Flat cards; only popovers lift off the page. */
+  --shadow-card: 0 0 #0000;
+  --shadow-pop: 0 12px 32px -12px hsl(var(--shadow-color) / 0.28);
 }
 
 @layer base {
@@ -122,8 +125,8 @@
   }
 
   ::selection {
-    background: var(--accent);
-    color: var(--accent-fg);
+    background: var(--selection);
+    color: var(--fg);
   }
 }
 

@@ -65,7 +65,7 @@ export function CodeCard({
     >
       <div className="flex items-start gap-4">
         <Link
-          href={`/dashboard/codes/${code.id}`}
+          href={`/codes/${code.id}`}
           className="shrink-0 rounded-lg focus-ring"
           aria-label={`Open ${code.name}`}
         >
@@ -81,7 +81,7 @@ export function CodeCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <Link
-              href={`/dashboard/codes/${code.id}`}
+              href={`/codes/${code.id}`}
               className="truncate font-display text-base font-bold text-fg underline-offset-4 hover:underline"
             >
               {code.name}
@@ -107,7 +107,7 @@ export function CodeCard({
                   className="z-50 w-48 rounded-control border border-border bg-surface p-1.5 shadow-pop transition duration-150 data-closed:opacity-0"
                 >
                   <MenuItem>
-                    <Link href={`/dashboard/codes/${code.id}`} className={itemClass}>
+                    <Link href={`/codes/${code.id}`} className={itemClass}>
                       {canEdit ? (
                         <>
                           <Pencil aria-hidden className="size-4" /> Edit
@@ -121,7 +121,7 @@ export function CodeCard({
                   </MenuItem>
                   {code.is_dynamic && (
                     <MenuItem>
-                      <Link href={`/dashboard/codes/${code.id}/analytics`} className={itemClass}>
+                      <Link href={`/codes/${code.id}/analytics`} className={itemClass}>
                         <BarChart3 aria-hidden className="size-4" /> Analytics
                       </Link>
                     </MenuItem>
@@ -219,7 +219,7 @@ export function CodeCard({
             <CopyButton text={shortLink(code.slug)} />
           </div>
           <Link
-            href={`/dashboard/codes/${code.id}/analytics`}
+            href={`/codes/${code.id}/analytics`}
             className="flex shrink-0 items-center gap-1.5 font-semibold text-link underline-offset-4 hover:underline"
           >
             <BarChart3 aria-hidden className="size-4" />

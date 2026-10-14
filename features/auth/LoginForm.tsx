@@ -52,7 +52,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
     const { error: resendError } = await supabase.auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/codes` },
     });
     if (resendError) setError(authErrorMessage(resendError));
     else {

@@ -32,6 +32,6 @@ export async function workspaceAccess(
   };
 }
 
-/** The dashboard for a workspace: your own, or a team owner's. */
-export const dashboardHref = (ownerId: string, userId: string) =>
-  ownerId === userId ? "/dashboard" : `/dashboard?workspace=${ownerId}`;
+/** The codes list for a workspace: your own, or a team owner's. */
+export const codesHref = (ownerId: string, userId: string) =>
+  ownerId === userId ? "/codes" : `/codes?workspace=${ownerId}`;
