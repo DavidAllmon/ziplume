@@ -25,7 +25,12 @@ export default function PrivacyPage() {
       <ul>
         <li>
           <strong>Sign-in details:</strong> your email address and a securely hashed password, or
-          your Google account’s email and name if you sign in with Google.
+          your Google account’s email, name and photo if you sign in with Google.
+        </li>
+        <li>
+          <strong>Profile photo:</strong> your Google photo, or a photo you upload. Uploaded photos
+          are stored as public images so your teammates and the invites you send can show them.
+          Removing your photo deletes the uploaded file.
         </li>
         <li>
           <strong>Saved codes:</strong> the content and design of codes you choose to save,
@@ -42,8 +47,9 @@ export default function PrivacyPage() {
         <li>
           <strong>Teams:</strong> people you invite can see your codes, analytics and feedback
           (viewers) or also change them (editors). An invite keeps the email address you entered
-          until it’s used, revoked or expires after 14 days. Teams you join can see your name and
-          email address.
+          until it’s used, revoked or expires after 14 days. When you invite someone by email,
+          QuickQReate sends the invite for you through Brevo; it shows your name and photo. Teams
+          you join can see your name and email address.
         </li>
         <li>
           <strong>API keys:</strong> only a one-way hash of each key is stored, with the name you
@@ -81,7 +87,9 @@ export default function PrivacyPage() {
           The database and sign-in service are self-hosted by the operator in a data center in
           Chicago, USA.
         </li>
-        <li>Brevo sends account emails such as confirmations and password resets.</li>
+        <li>
+          Brevo sends account emails such as confirmations and password resets, and team invites.
+        </li>
         <li>Google handles sign-in if you choose “Continue with Google”.</li>
         <li>Cloudflare delivers the site and provides approximate scan locations.</li>
       </ul>

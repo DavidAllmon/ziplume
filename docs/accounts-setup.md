@@ -145,6 +145,11 @@ Environment variables:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | project anon key | yes | no (client-safe) |
 | `SUPABASE_SERVICE_ROLE_KEY` | project service_role key | no | **yes** |
 | `SCAN_HASH_SECRET` | 32+ random characters | no | **yes** |
+| `BREVO_API_KEY` | Brevo API key (`quickqreate-invites`), for team invite emails | no | **yes** |
+
+`BREVO_API_KEY` is an API key, not the SMTP key the Supabase project uses: create it in Brevo
+under **Settings → SMTP & API → API keys**. If Brevo's "authorized IPs" protection is on,
+allow `152.44.42.29`. Without the key, the Team page creates invite links to share by hand.
 
 Enable automatic deployment on push to `main`.
 
