@@ -38,7 +38,7 @@ interface NavItem {
 }
 
 const sideLinkClass =
-  "flex min-h-10 items-center gap-3 rounded-control px-2.5 text-sm font-medium text-fg-muted hover:bg-surface-2 hover:text-fg aria-[current=page]:bg-surface-2 aria-[current=page]:font-semibold aria-[current=page]:text-fg focus-ring [&_svg]:size-5 [&_svg]:shrink-0";
+  "flex min-h-11 items-center gap-3 rounded-control px-2.5 text-sm font-medium text-fg-muted hover:bg-surface-2 hover:text-fg aria-[current=page]:bg-surface-2 aria-[current=page]:font-semibold aria-[current=page]:text-fg focus-ring [&_svg]:size-5 [&_svg]:shrink-0";
 
 const tabClass =
   "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[13px] font-medium text-fg-muted aria-[current=page]:text-fg focus-ring [&_svg]:size-5";
@@ -223,7 +223,7 @@ export function AppShell({
         <Link
           href={codesHref}
           aria-label="QuickQReate codes"
-          className="rounded-control focus-ring"
+          className="grid size-11 place-items-center rounded-control focus-ring"
         >
           <LogoMark className="size-7" />
         </Link>

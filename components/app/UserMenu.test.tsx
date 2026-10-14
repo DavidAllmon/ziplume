@@ -12,7 +12,7 @@ describe("UserMenu", () => {
     document.addEventListener("submit", submitted);
     render(<UserMenu user={USER} />);
     await userEvent.tab();
-    expect(screen.getByRole("button", { name: /Account menu/ })).toHaveFocus();
+    expect(screen.getByRole("button", { name: /David Allmon/ })).toHaveFocus();
     await userEvent.keyboard("{Enter}");
     await userEvent.keyboard("{ArrowDown}");
     expect(screen.getByRole("menuitem", { name: "Sign out" })).toHaveAttribute("data-focus");

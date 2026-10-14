@@ -272,8 +272,10 @@ The preview column holds the live QR, a scan-reliability check and a **Create co
 
   | Theme | bg | surface | surface-2 | border | field border |
   | --- | --- | --- | --- | --- | --- |
-  | Light | `#ffffff` | `#fcfcfd` | `#f2f4f7` | `#eaecf0` | `#98a2b3` |
-  | Dark | `#0c0d0f` | `#131417` | `#1b1d21` | `#2a2d33` | `#5a606b` |
+  | Light | `#ffffff` | `#fcfcfd` | `#f2f4f7` | `#eaecf0` | `#848d9c` |
+  | Dark | `#0c0d0f` | `#131417` | `#1b1d21` | `#2a2d33` | `#6b7280` |
+
+  Field borders are darker than first proposed so they meet the 3:1 rule below.
 
 - **Text:**
 
