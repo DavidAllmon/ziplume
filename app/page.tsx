@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { Generator } from "@/features/generator/Generator";
@@ -22,7 +23,10 @@ export default function Home() {
           .
         </p>
       </div>
-      <Generator />
+      {/* Generator reads ?edit= and ?workspace= with useSearchParams, which needs a boundary. */}
+      <Suspense fallback={<div className="min-h-[36rem]" aria-busy="true" />}>
+        <Generator />
+      </Suspense>
     </PageShell>
   );
 }

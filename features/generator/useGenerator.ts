@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { createCode, designForStorage, updateCode } from "@/features/codes/api";
 import { editableWorkspace, type Workspace } from "@/features/teams/workspace";
@@ -31,6 +32,7 @@ import {
   type QrTypeId,
 } from "@/lib/qr/types";
 
+import { editTransition } from "./editTransition";
 import { useScanVerification } from "./preview/useScanVerification";
 import { initialState } from "./state/defaults";
 import { generatorReducer } from "./state/reducer";
@@ -68,33 +70,46 @@ export function useGenerator() {
   const [wantsDynamic, setWantsDynamic] = useState(false);
   /** A team workspace new codes are saved into (/?workspace=<owner id>); null = your own. */
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit");
+  const ownerParam = searchParams.get("workspace");
+  /** The open code's id, updated before the URL changes so a save never looks like "leave". */
+  const savedIdRef = useRef<string | null>(null);
 
   // New codes always start from the defaults. Remove settings an older version remembered.
   useEffect(() => removeKey(LEGACY_SETTINGS_KEY), []);
 
-  // Opening /?edit=<id> from the dashboard loads that saved code for editing, and
-  // /?workspace=<owner id> saves new codes into a team workspace.
+  // The address bar decides what is open: /?edit=<id> edits that saved code, plain / is a new
+  // code, and /?workspace=<owner id> saves new codes into a team workspace.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("edit");
-    const owner = params.get("workspace");
+    const transition = editTransition(editId, savedIdRef.current);
+    if (transition === "reset") {
+      dispatch({ type: "reset" });
+      savedIdRef.current = null;
+      setSaved(null);
+      setWantsDynamic(false);
+      setWorkspace(null);
+    }
     const supabase = getBrowserSupabase();
     if (!supabase) return;
-    if (!id) {
-      if (owner) void editableWorkspace(owner).then(setWorkspace);
+    if (!editId) {
+      if (ownerParam) void editableWorkspace(ownerParam).then(setWorkspace);
       return;
     }
-    supabase
+    if (transition !== "load") return;
+    let cancelled = false;
+    void supabase
       .from("qr_codes")
       .select("id, user_id, name, qr_type, content, design, is_dynamic, slug, destination")
-      .eq("id", id)
+      .eq("id", editId)
       .maybeSingle()
       .then(async ({ data: code }) => {
-        if (!code || !isCodeType(code.qr_type)) return;
+        if (cancelled || !code || !isCodeType(code.qr_type)) return;
         const { data: session } = await supabase.auth.getSession();
-        if (code.user_id !== session.session?.user.id) {
-          setWorkspace(await editableWorkspace(code.user_id));
-        }
+        if (cancelled) return;
+        setWorkspace(
+          code.user_id !== session.session?.user.id ? await editableWorkspace(code.user_id) : null,
+        );
         const linkCode = code.is_dynamic && code.qr_type === "url";
         dispatch({
           type: "loadCode",
@@ -102,9 +117,13 @@ export function useGenerator() {
           content: linkCode ? { url: code.destination ?? "" } : code.content,
           design: code.design,
         });
+        savedIdRef.current = code.id;
         setSaved({ id: code.id, name: code.name, isDynamic: code.is_dynamic, slug: code.slug });
       });
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [editId, ownerParam]);
 
   const { activeType, design, exportSettings } = state;
   const pageType = isPageType(activeType) ? activeType : null;
@@ -225,6 +244,7 @@ export function useGenerator() {
       });
       if (!result.ok) return { ok: false, message: result.error };
       const code = result.value;
+      savedIdRef.current = code.id;
       setSaved({ id: code.id, name: code.name, isDynamic: code.is_dynamic, slug: code.slug });
       window.history.replaceState(null, "", `/?edit=${code.id}`);
       return { ok: true, message: `Saved “${code.name}” to your codes.${note}` };
@@ -246,6 +266,7 @@ export function useGenerator() {
   /** Leaves edit mode and starts a brand-new code with default settings. */
   const startNew = useCallback(() => {
     dispatch({ type: "reset" });
+    savedIdRef.current = null;
     setSaved(null);
     setWantsDynamic(false);
     window.history.replaceState(null, "", workspace ? `/?workspace=${workspace.ownerId}` : "/");
