@@ -11,6 +11,7 @@ const PAGES = [
   "codes/new",
   "codes/bulk",
   "codes/{menu}",
+  "codes/{menu}/edit",
   "codes/{menu}/analytics",
   "team",
   "settings",

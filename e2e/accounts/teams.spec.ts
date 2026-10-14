@@ -19,10 +19,10 @@ test.describe("a viewer", () => {
 
   test("looks at a teammate's code but edits their own", async ({ page }) => {
     await page.goto(`codes/${seed().menuId}`);
-    await expect(page.getByText(/view-only access/)).toBeVisible();
+    await expect(page.getByText(/can view this code but not change it/)).toBeVisible();
     await page.goto(`codes/${seed().viewerCodeId}`);
     await expect(page.getByRole("heading", { level: 1, name: "Victor note" })).toBeVisible();
-    await expect(page.getByText(/view-only access/)).toHaveCount(0);
+    await expect(page.getByText(/can view this code but not change it/)).toHaveCount(0);
   });
 });
 
