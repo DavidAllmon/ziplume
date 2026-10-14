@@ -2,9 +2,10 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/app/AppShell";
-import { workspaceLabel } from "@/features/teams/roles";
 import { getAuthState } from "@/lib/auth/server";
 import { accountsEnabled } from "@/lib/env";
+import { personLabel } from "@/lib/teams/access";
+import { loadTeam } from "@/lib/teams/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +15,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const { supabase, user, needsMfa } = await getAuthState();
   // Until two-step verification is done the page redirects; show nothing about the account.
   if (!user || needsMfa) return <>{children}</>;
-  const [{ data: profile }, { data: workspaces }] = await Promise.all([
+  const [{ data: profile }, team] = await Promise.all([
     supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).maybeSingle(),
-    supabase.rpc("my_workspaces"),
+    loadTeam(supabase),
   ]);
+  const me = team.find((person) => person.isMe);
   return (
     <AppShell
       user={{
@@ -26,12 +28,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         name: profile?.display_name?.trim() || null,
         avatarUrl: profile?.avatar_url ?? null,
       }}
-      teams={(workspaces ?? []).map((w) => ({
-        ownerId: w.owner_id,
-        label: workspaceLabel(w),
-        role: w.role,
-        avatarUrl: w.owner_avatar_url,
-      }))}
+      teams={team
+        .filter((person) => !person.isMe)
+        .map((person) => ({
+          ownerId: person.userId,
+          label: personLabel(person),
+          role: me?.role === "viewer" ? "viewer" : "editor",
+          avatarUrl: person.avatarUrl,
+        }))}
     >
       {children}
     </AppShell>
