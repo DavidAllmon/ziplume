@@ -81,7 +81,7 @@ grant select, insert, update, delete on public.team_members to service_role;
 create table public.team_invites (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
-  email text not null check (char_length(email) <= 254 and email ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
+  email text not null check (char_length(email) <= 254 and email ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$'),
   role text not null check (role in ('viewer', 'editor')),
   token text not null unique default encode(extensions.gen_random_bytes(24), 'hex'),
   created_at timestamptz not null default now(),
