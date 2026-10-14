@@ -48,6 +48,7 @@ export interface Database {
           active_from: string | null;
           active_until: string | null;
           has_password: boolean;
+          is_private: boolean;
         };
         Insert: {
           user_id?: string;
@@ -60,6 +61,7 @@ export interface Database {
           destination?: string | null;
           status?: QrStatus;
           folder_id?: string | null;
+          is_private?: boolean;
           active_from?: string | null;
           active_until?: string | null;
         };
@@ -72,6 +74,7 @@ export interface Database {
           destination?: string | null;
           status?: QrStatus;
           folder_id?: string | null;
+          is_private?: boolean;
           active_from?: string | null;
           active_until?: string | null;
         };
@@ -197,6 +200,21 @@ export interface Database {
       create_code: {
         Args: { p_code: Json; p_password?: string | null };
         Returns: Database["public"]["Tables"]["qr_codes"]["Row"];
+      };
+      my_team: {
+        Args: Record<string, never>;
+        Returns: {
+          user_id: string;
+          email: string;
+          name: string | null;
+          avatar_url: string | null;
+          role: "owner" | TeamRole;
+          is_me: boolean;
+        }[];
+      };
+      remove_member: {
+        Args: { p_member: string; p_keep_codes: boolean };
+        Returns: Json;
       };
       recent_scan_counts: {
         Args: { p_owner: string; p_days?: number };

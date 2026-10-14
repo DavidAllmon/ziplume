@@ -9,8 +9,9 @@ import { CodesView } from "@/features/codes/list/CodesView";
 import { FolderActions } from "@/features/codes/list/FolderActions";
 import { FolderSelect } from "@/features/codes/list/FolderSelect";
 import { formatCount } from "@/features/dashboard/format";
-import { ROLE_LABELS, workspaceLabel } from "@/features/teams/roles";
 import { requireUser } from "@/lib/auth/server";
+import { accessTo, personLabel } from "@/lib/teams/access";
+import { loadTeam } from "@/lib/teams/server";
 
 export const metadata: Metadata = { title: "Codes · QuickQReate" };
 
@@ -21,12 +22,18 @@ export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
   const { supabase, user } = await requireUser(
     requested ? `/codes?workspace=${requested}` : "/codes",
   );
-  const { data: workspaces } = await supabase.rpc("my_workspaces");
-  const membership = workspaces?.find((w) => w.owner_id === requested) ?? null;
-  // Members can read their teams' codes too, so always filter to the workspace shown.
-  const ownerId = membership?.owner_id ?? user.id;
-  const teamId = membership?.owner_id ?? null;
-  const canEdit = !membership || membership.role === "editor";
+  const team = await loadTeam(supabase);
+  // Anyone who isn't a teammate (or no one asked for) shows your own codes.
+  const access = (requested && accessTo(team, user.id, requested)) || {
+    self: true,
+    canEdit: true,
+    person: null,
+  };
+  // Teammates can read each other's codes, so always filter to the person shown.
+  const ownerId = access.person?.userId ?? user.id;
+  const teamId = access.person?.userId ?? null;
+  const canEdit = access.canEdit;
+  const label = access.person ? personLabel(access.person) : null;
 
   const { data: folders } = await supabase
     .from("folders")
@@ -50,11 +57,7 @@ export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
     (scans ?? []).map((row) => [row.code_id, Number(row.scans)]),
   );
   const totalScans = list.reduce((sum, code) => sum + (recentScans[code.id] ?? 0), 0);
-  const title = folder
-    ? folder.name
-    : membership
-      ? `${workspaceLabel(membership)}’s codes`
-      : "All codes";
+  const title = folder ? folder.name : label ? `${label}’s codes` : "All codes";
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,27 +65,32 @@ export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
         title={title}
         description={
           <>
-            {membership && <>{ROLE_LABELS[membership.role]} · </>}
+            {label && <>{canEdit ? "You can edit these" : "You can view these"} · </>}
             {formatCount(list.length)} {list.length === 1 ? "code" : "codes"} ·{" "}
             {formatCount(totalScans)} {totalScans === 1 ? "scan" : "scans"} in the last 30 days
           </>
         }
         actions={
-          canEdit && (
+          (access.self || (canEdit && folder)) && (
             <>
-              {folder && <FolderActions folder={folder} teamId={teamId} />}
-              <Link
-                href={bulkCreateHref({ folderId: folder?.id, ownerId: teamId })}
-                className={buttonClasses("outline", "md")}
-              >
-                <Rows3 aria-hidden /> Bulk create
-              </Link>
-              <Link
-                href={newCodeHref({ folderId: folder?.id, ownerId: teamId })}
-                className={buttonClasses("primary", "md")}
-              >
-                <Plus aria-hidden /> Create code
-              </Link>
+              {folder && canEdit && <FolderActions folder={folder} teamId={teamId} />}
+              {/* New codes always go in your own space, so creating only shows there. */}
+              {access.self && (
+                <>
+                  <Link
+                    href={bulkCreateHref({ folderId: folder?.id, ownerId: null })}
+                    className={buttonClasses("outline", "md")}
+                  >
+                    <Rows3 aria-hidden /> Bulk create
+                  </Link>
+                  <Link
+                    href={newCodeHref({ folderId: folder?.id, ownerId: null })}
+                    className={buttonClasses("primary", "md")}
+                  >
+                    <Plus aria-hidden /> Create code
+                  </Link>
+                </>
+              )}
             </>
           )
         }
@@ -91,8 +99,7 @@ export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
       {!canEdit && (
         <p className="flex items-center gap-2 rounded-control bg-surface-2 px-4 py-3 text-sm text-fg-muted">
           <Eye aria-hidden className="size-4 shrink-0" />
-          You can view these codes and their analytics. Ask the owner to make you an editor to
-          change them.
+          You can view {label}’s codes and their analytics. Your own codes are under My codes.
         </p>
       )}
 
@@ -101,7 +108,7 @@ export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
         current={folder?.id ?? null}
         ownerId={ownerId}
         teamId={teamId}
-        canEdit={canEdit}
+        canEdit={access.self}
       />
 
       <CodesView

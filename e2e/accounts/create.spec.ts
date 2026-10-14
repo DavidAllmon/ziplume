@@ -42,7 +42,9 @@ test.describe("creating codes", () => {
     await page.getByLabel(/Code password/).fill("draft-secret");
     await page.getByLabel("Code name").fill("Draft poster");
     // Drafts are saved half a second after the last change, without the password.
-    await expect.poll(() => storedDraft(page)).toContain("example.com/draft");
+    // Wait for the save after the last change: a slow machine can save after the link alone.
+    await expect.poll(() => storedDraft(page)).toContain("Draft poster");
+    expect(await storedDraft(page)).toContain("example.com/draft");
     expect(await storedDraft(page)).not.toContain("draft-secret");
 
     await page.goto("codes");

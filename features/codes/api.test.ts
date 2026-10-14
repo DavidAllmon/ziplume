@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_DESIGN } from "@/features/generator/state/defaults";
 
-import { createCodes, createCodeWithSettings, type NewCode } from "./api";
+import type { QrCodeRow } from "@/types/supabase";
+
+import { createCodes, createCodeWithSettings, duplicateCode, type NewCode } from "./api";
 
 const rpc = vi.fn();
 const from = vi.fn();
@@ -132,5 +134,30 @@ describe("createCodes", () => {
     expect(onProgress.mock.calls[1]![0]).toBe(150);
     expect(onProgress.mock.calls[1]![1]).toHaveLength(50);
     expect(onProgress.mock.calls[1]![1][0]).toMatchObject({ name: "Code 101" });
+  });
+});
+
+describe("duplicateCode", () => {
+  it("copies a code into your own codes, keeping its folder only when asked", async () => {
+    const insert = vi.fn((row: Record<string, unknown>) => ({
+      select: () => ({ single: async () => ({ data: { id: "copy", ...row }, error: null }) }),
+    }));
+    from.mockReturnValue({ insert });
+    const teammate = {
+      id: "c1",
+      user_id: "kim",
+      folder_id: "f-kim",
+      name: "Menu",
+      qr_type: "text",
+      content: { text: "hi" },
+      design: {},
+      is_dynamic: false,
+      destination: null,
+    } as unknown as QrCodeRow;
+    await duplicateCode(teammate, { keepFolder: false });
+    expect(insert.mock.calls[0]![0]).not.toHaveProperty("user_id");
+    expect(insert.mock.calls[0]![0]).not.toHaveProperty("folder_id");
+    await duplicateCode(teammate, { keepFolder: true });
+    expect(insert.mock.calls[1]![0]).toMatchObject({ folder_id: "f-kim" });
   });
 });

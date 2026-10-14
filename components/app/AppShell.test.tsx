@@ -38,20 +38,24 @@ beforeEach(() => {
 describe("AppShell", () => {
   it("opens bulk creation inside the app, in the folder being viewed", async () => {
     const user = userEvent.setup();
-    search = new URLSearchParams("workspace=t1&folder=f1");
+    search = new URLSearchParams("folder=f1");
     renderShell();
     await user.click(screen.getAllByRole("button", { name: "More ways to create" })[0]!);
     expect(
       await screen.findByRole("menuitem", { name: /Bulk create from a spreadsheet/ }),
-    ).toHaveAttribute("href", "/codes/bulk?folder=f1&workspace=t1");
+    ).toHaveAttribute("href", "/codes/bulk?folder=f1");
   });
 
   it("creates in the folder being viewed", () => {
+    search = new URLSearchParams("folder=f1");
+    renderShell();
+    expect(new Set(hrefs(/^Create( code)?$/))).toEqual(new Set(["/codes/new?folder=f1"]));
+  });
+
+  it("doesn't create in a teammate's folder", () => {
     search = new URLSearchParams("workspace=t1&folder=f1");
     renderShell();
-    expect(new Set(hrefs(/^Create( code)?$/))).toEqual(
-      new Set(["/codes/new?folder=f1&workspace=t1"]),
-    );
+    expect(new Set(hrefs(/^Create( code)?$/))).toEqual(new Set(["/codes/new"]));
   });
 
   it("ignores a folder outside the codes list", () => {
@@ -65,7 +69,8 @@ describe("AppShell", () => {
     search = new URLSearchParams("workspace=t1");
     renderShell();
     expect(new Set(hrefs("Codes"))).toEqual(new Set(["/codes?workspace=t1"]));
-    expect(new Set(hrefs(/^Create( code)?$/))).toEqual(new Set(["/codes/new?workspace=t1"]));
+    // Creating always happens in your own codes, whoever's codes you're looking at.
+    expect(new Set(hrefs(/^Create( code)?$/))).toEqual(new Set(["/codes/new"]));
     expect(new Set(hrefs("Team"))).toEqual(new Set(["/team"]));
     expect(hrefs("Settings")).toContain("/settings");
     expect(hrefs("Help & API docs")).toEqual(["/developers"]);
@@ -86,10 +91,10 @@ describe("AppShell", () => {
     }
   });
 
-  it("viewers can't create", () => {
+  it("everyone creates their own codes, even while viewing a teammate's", () => {
     search = new URLSearchParams("workspace=t2");
     renderShell();
-    expect(screen.queryAllByRole("link", { name: /^Create( code)?$/ })).toEqual([]);
+    expect(new Set(hrefs(/^Create( code)?$/))).toEqual(new Set(["/codes/new"]));
   });
 
   it("switches between your codes and your teams' codes", async () => {

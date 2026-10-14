@@ -9,14 +9,12 @@ import { cn } from "@/lib/cn";
 
 import { bulkCreateHref, menuItemClass, menuPanelClass, newCodeHref } from "./nav";
 
-/** "+ Create code", with bulk creation one click away. */
+/** "+ Create code", with bulk creation one click away. Creating always happens in your own codes. */
 export function CreateButton({
-  ownerId,
   folderId = null,
   collapsed = false,
   onNavigate,
 }: {
-  ownerId: string | null;
   /** The folder being viewed; new codes go into it. */
   folderId?: string | null;
   collapsed?: boolean;
@@ -25,7 +23,7 @@ export function CreateButton({
   return (
     <div className={cn("flex", collapsed && "max-lg:justify-center")}>
       <Link
-        href={newCodeHref({ folderId, ownerId })}
+        href={newCodeHref({ folderId, ownerId: null })}
         onClick={onNavigate}
         className={cn(
           buttonClasses("primary", "md"),
@@ -49,7 +47,7 @@ export function CreateButton({
         <MenuItems anchor={{ to: "bottom end", gap: 6 }} transition className={menuPanelClass}>
           <MenuItem>
             <Link
-              href={bulkCreateHref({ folderId, ownerId })}
+              href={bulkCreateHref({ folderId, ownerId: null })}
               onClick={onNavigate}
               className={menuItemClass}
             >

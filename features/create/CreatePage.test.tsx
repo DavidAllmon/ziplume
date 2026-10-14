@@ -43,8 +43,6 @@ function renderPage(props: Partial<CreatePageProps> = {}) {
     <ToastProvider>
       <CreatePage
         userId={USER}
-        teamId={null}
-        workspaceLabel={null}
         folders={FOLDERS}
         initialType="url"
         initialFolderId={null}
@@ -95,20 +93,6 @@ describe("CreatePage", () => {
     );
     await waitFor(() => expect(push).toHaveBeenCalledWith("/codes/c1#download"));
     expect(await screen.findByText("Code created")).toBeInTheDocument();
-  });
-
-  it("creates in the team it was opened for", async () => {
-    const user = userEvent.setup();
-    vi.mocked(createCodeWithSettings).mockResolvedValue({ ok: true, value: created });
-    renderPage({ teamId: "t1", workspaceLabel: "Cafe team" });
-    expect(screen.getByText("Saving to Cafe team’s codes")).toBeInTheDocument();
-    await user.type(screen.getByLabelText("Website address"), "https://example.com");
-    await user.click(preview().getByRole("button", { name: "Create code" }));
-    expect(createCodeWithSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ ownerId: "t1" }),
-      expect.anything(),
-    );
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/codes/c1?workspace=t1#download"));
   });
 
   it("creates only once when Create is pressed twice", async () => {

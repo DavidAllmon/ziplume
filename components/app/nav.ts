@@ -8,11 +8,12 @@ export interface ShellUser {
   avatarUrl: string | null;
 }
 
-/** A team (another person's codes) the signed-in person belongs to. */
+/** A teammate whose codes the signed-in person can open. */
 export interface ShellTeam {
   ownerId: string;
-  /** The owner's name, or their email. */
+  /** The teammate's name, or their email. */
   label: string;
+  /** What the signed-in person may do with their codes: "editor" = change, "viewer" = look. */
   role: TeamRole;
   avatarUrl: string | null;
 }

@@ -7,6 +7,10 @@ import { SITE_URL, SUPABASE_URL } from "@/lib/env";
 import type { TeamRole } from "@/types/supabase";
 
 import { parseInviteEmails } from "./inviteInput";
+import { replaceMediaPaths } from "@/lib/pages/media";
+import type { Json } from "@/types/supabase";
+
+import { copyPageMedia } from "./media";
 
 export interface InviteOutcome {
   email: string;
@@ -124,6 +128,10 @@ export async function sendInvites(input: {
   const current = await currentInviter();
   if ("error" in current) return { error: current.error, outcomes: [] };
   const { supabase, inviter } = current;
+  const { data: team } = await supabase.rpc("my_team");
+  if ((team ?? []).some((person) => person.is_me && person.role !== "owner")) {
+    return { error: "Only the team owner can invite people.", outcomes: [] };
+  }
 
   const [{ data: members }, { data: pending }] = await Promise.all([
     supabase.rpc("team_overview"),
@@ -203,4 +211,67 @@ export async function resendInvite(inviteId: string): Promise<InviteActionResult
     return { error: "Email invites aren’t set up on this server.", outcomes: [] };
   }
   return { outcomes: [await deliver(supabase, inviter, invite)] };
+}
+
+export interface RemoveResult {
+  error?: string;
+  codes?: number;
+  folders?: number;
+  /** Removed, but some pages still use images from the member's account. */
+  warning?: string;
+}
+
+/**
+ * Removes someone from your team. With keepCodes their shared codes and folders move to you,
+ * after their page images are copied: if copying fails, nobody is removed.
+ */
+export async function removeMember(memberId: string, keepCodes: boolean): Promise<RemoveResult> {
+  const { supabase, user, needsMfa } = await getAuthState();
+  if (!user) return { error: "Your session has expired. Sign in again." };
+  if (needsMfa) return { error: "Enter your two-factor code first, then try again." };
+  const { data: team } = await supabase.rpc("my_team");
+  const me = (team ?? []).find((person) => person.is_me);
+  const member = (team ?? []).find((person) => person.user_id === memberId && !person.is_me);
+  if (me?.role !== "owner" || !member) return { error: "Only the team owner can remove people." };
+  let copied: Awaited<ReturnType<typeof copyPageMedia>> | null = null;
+  if (keepCodes) {
+    copied = await copyPageMedia(memberId, user.id);
+    if (!copied.ok) return { error: copied.error };
+  }
+  const { data, error } = await supabase.rpc("remove_member", {
+    p_member: memberId,
+    p_keep_codes: keepCodes,
+  });
+  if (error) {
+    return {
+      error: /folders_user_name/.test(error.message)
+        ? "One of their folders has the same name as one of yours. Rename it and try again."
+        : "They couldn’t be removed. Please try again.",
+    };
+  }
+  const moved = (data ?? {}) as { codes?: number; folders?: number };
+  const result: RemoveResult = { codes: moved.codes ?? 0, folders: moved.folders ?? 0 };
+  if (!copied?.ok) return result;
+
+  // The codes are the owner's now: point their pages at the copied files. A page that can't be
+  // updated keeps working from the member's folder (until they delete their account).
+  const renamed = new Map(Object.entries(copied.renamed));
+  let stillTheirs = 0;
+  for (const page of copied.pages) {
+    const { error: pointError } = await supabase
+      .from("qr_codes")
+      .update({ content: replaceMediaPaths(page.content, renamed) as Json })
+      .eq("id", page.id);
+    if (pointError) stillTheirs += 1;
+  }
+  if (stillTheirs || copied.missing) {
+    const parts = [
+      stillTheirs &&
+        `${stillTheirs} ${stillTheirs === 1 ? "page still uses" : "pages still use"} images from their account`,
+      copied.missing &&
+        `${copied.missing} ${copied.missing === 1 ? "file was" : "files were"} already missing`,
+    ].filter(Boolean);
+    result.warning = `${parts.join(", and ")}. Open those pages and add the images again.`;
+  }
+  return result;
 }

@@ -14,6 +14,8 @@ interface ConfirmDialogProps {
   pending?: boolean;
   onConfirm: () => void;
   onClose: () => void;
+  /** Extra controls under the description, e.g. a choice to make before confirming. */
+  children?: ReactNode;
 }
 
 export function ConfirmDialog({
@@ -25,6 +27,7 @@ export function ConfirmDialog({
   pending,
   onConfirm,
   onClose,
+  children,
 }: ConfirmDialogProps) {
   return (
     // While the action runs the dialog stays open: closing it wouldn't stop the work.
@@ -42,6 +45,7 @@ export function ConfirmDialog({
           <Description as="div" className="mt-2 text-sm text-fg-muted">
             {description}
           </Description>
+          {children && <div className="mt-4">{children}</div>}
           <div className="mt-6 flex justify-end gap-2">
             <Button variant="ghost" onClick={onClose} disabled={pending}>
               Cancel

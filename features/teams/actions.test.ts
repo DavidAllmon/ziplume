@@ -4,10 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getAuthState } from "@/lib/auth/server";
 import { emailConfigured, sendEmail } from "@/lib/email/brevo";
 
-import { resendInvite, sendInvites } from "./actions";
+import { removeMember, resendInvite, sendInvites } from "./actions";
+import { copyPageMedia } from "./media";
 
 vi.mock("@/lib/auth/server", () => ({ getAuthState: vi.fn() }));
 vi.mock("@/lib/email/brevo", () => ({ emailConfigured: vi.fn(), sendEmail: vi.fn() }));
+vi.mock("./media", () => ({ copyPageMedia: vi.fn() }));
 
 const TOKEN = "b".repeat(48);
 const EXPIRES = "2026-10-28T12:00:00Z";
@@ -25,13 +27,21 @@ function fakeSupabase({
   members = [] as string[],
   pending = [] as FakeInvite[],
   recordError = null as { message: string } | null,
+  team = [] as unknown[],
+  removed = { codes: 0, folders: 0 },
+  removeError = null as { message: string } | null,
+  updateError = null as { message: string } | null,
 } = {}) {
   const inserted: { email: string; role: Role }[] = [];
   const deleted: string[] = [];
+  /** Every call in order, so tests can check what happened before what. */
+  const calls: string[] = [];
+  const updated: { id: string; value: unknown }[] = [];
   const recorded: string[] = [];
 
   function table(name: string) {
-    let op: "select" | "insert" | "delete" = "select";
+    let op: "select" | "insert" | "delete" | "update" = "select";
+    let change: unknown = null;
     let row: { email: string; role: Role } | null = null;
     let id: string | null = null;
     const result = () => {
@@ -43,6 +53,11 @@ function fakeSupabase({
           data: { id: `id-${row.email}`, ...row, token: TOKEN, expires_at: EXPIRES },
           error: null,
         };
+      }
+      if (op === "update") {
+        calls.push(`update ${id}`);
+        if (!updateError && id) updated.push({ id, value: change });
+        return { data: null, error: updateError };
       }
       if (op === "delete") {
         if (id) deleted.push(id);
@@ -60,6 +75,11 @@ function fakeSupabase({
       },
       delete: () => {
         op = "delete";
+        return builder;
+      },
+      update: (value: unknown) => {
+        op = "update";
+        change = value;
         return builder;
       },
       eq: (column: string, value: string) => {
@@ -84,10 +104,14 @@ function fakeSupabase({
         if (!recordError) recorded.push(args!.p_invite);
         return { data: null, error: recordError };
       }
+      if (fn === "my_team") return { data: team, error: null };
+      if (fn === "remove_member") calls.push("remove_member");
+      if (fn === "remove_member")
+        return removeError ? { data: null, error: removeError } : { data: removed, error: null };
       throw new Error(`Unexpected rpc ${fn}`);
     }),
   };
-  return { client, inserted, deleted, recorded };
+  return { client, inserted, deleted, recorded, calls, updated };
 }
 
 function signIn(fake: ReturnType<typeof fakeSupabase>) {
@@ -256,6 +280,167 @@ describe("resendInvite", () => {
     expect(await resendInvite("gone")).toEqual({
       error: "That invite has ended. Create a new one.",
       outcomes: [],
+    });
+  });
+});
+
+const OWNER_ROW = {
+  user_id: "owner-1",
+  email: "david@example.com",
+  name: "David",
+  avatar_url: null,
+  role: "owner",
+  is_me: true,
+};
+const SAM_ROW = {
+  user_id: "m1",
+  email: "sam@cafe.com",
+  name: "Sam",
+  avatar_url: null,
+  role: "editor",
+  is_me: false,
+};
+
+describe("sendInvites from a member", () => {
+  it("refuses: only the team owner can invite people", async () => {
+    const fake = fakeSupabase({
+      team: [
+        { ...OWNER_ROW, is_me: false },
+        { ...SAM_ROW, user_id: "owner-1", is_me: true },
+      ],
+    });
+    signIn(fake);
+    const result = await sendInvites({ emails: "lee@cafe.com", role: "viewer", email: true });
+    expect(result).toEqual({ error: "Only the team owner can invite people.", outcomes: [] });
+    expect(fake.inserted).toEqual([]);
+  });
+});
+
+describe("removeMember", () => {
+  beforeEach(() => vi.mocked(copyPageMedia).mockReset());
+
+  it("keeping their codes copies page images first, then moves the codes", async () => {
+    const fake = fakeSupabase({ team: [OWNER_ROW, SAM_ROW], removed: { codes: 3, folders: 1 } });
+    signIn(fake);
+    vi.mocked(copyPageMedia).mockResolvedValue({
+      ok: true,
+      pages: [],
+      renamed: {},
+      files: 2,
+      missing: 0,
+    });
+    expect(await removeMember("m1", true)).toEqual({ codes: 3, folders: 1 });
+    expect(copyPageMedia).toHaveBeenCalledWith("m1", "owner-1");
+    expect(fake.client.rpc).toHaveBeenCalledWith("remove_member", {
+      p_member: "m1",
+      p_keep_codes: true,
+    });
+  });
+
+  it("if a page image can't be copied, nobody is removed", async () => {
+    const fake = fakeSupabase({ team: [OWNER_ROW, SAM_ROW] });
+    signIn(fake);
+    vi.mocked(copyPageMedia).mockResolvedValue({
+      ok: false,
+      error: "Their page images couldn’t be copied, so nobody was removed. Please try again.",
+    });
+    expect(await removeMember("m1", true)).toEqual({
+      error: "Their page images couldn’t be copied, so nobody was removed. Please try again.",
+    });
+    expect(fake.client.rpc).not.toHaveBeenCalledWith("remove_member", expect.anything());
+  });
+
+  it("letting them take their codes copies nothing", async () => {
+    const fake = fakeSupabase({ team: [OWNER_ROW, SAM_ROW] });
+    signIn(fake);
+    expect(await removeMember("m1", false)).toEqual({ codes: 0, folders: 0 });
+    expect(copyPageMedia).not.toHaveBeenCalled();
+  });
+
+  it("explains a folder name clash, and only owners can remove people", async () => {
+    const clash = fakeSupabase({
+      team: [OWNER_ROW, SAM_ROW],
+      removeError: {
+        message: 'duplicate key value violates unique constraint "folders_user_name"',
+      },
+    });
+    signIn(clash);
+    vi.mocked(copyPageMedia).mockResolvedValue({
+      ok: true,
+      pages: [],
+      renamed: {},
+      files: 0,
+      missing: 0,
+    });
+    expect(await removeMember("m1", true)).toEqual({
+      error: "One of their folders has the same name as one of yours. Rename it and try again.",
+    });
+    const member = fakeSupabase({
+      team: [
+        { ...OWNER_ROW, is_me: false },
+        { ...SAM_ROW, is_me: true },
+      ],
+    });
+    signIn(member);
+    expect(await removeMember("owner-1", false)).toEqual({
+      error: "Only the team owner can remove people.",
+    });
+  });
+});
+
+describe("removeMember and page images", () => {
+  const M = "3a3a3a3a-3a3a-4a3a-8a3a-3a3a3a3a3a3a";
+  const O = "3b3b3b3b-3b3b-4b3b-8b3b-3b3b3b3b3b3b";
+  const PAGE = {
+    id: "p1",
+    content: { logo: { path: `${M}/a.png`, name: "a.png", type: "image/png", size: 1 } },
+  };
+  const COPIED = {
+    ok: true as const,
+    pages: [PAGE],
+    renamed: { [`${M}/a.png`]: `${O}/a.png` },
+    files: 1,
+    missing: 0,
+  };
+  beforeEach(() => vi.mocked(copyPageMedia).mockReset());
+
+  it("repoints moved pages at the copies only after the codes have moved", async () => {
+    const fake = fakeSupabase({ team: [OWNER_ROW, SAM_ROW], removed: { codes: 1, folders: 0 } });
+    signIn(fake);
+    vi.mocked(copyPageMedia).mockResolvedValue(COPIED);
+    expect(await removeMember("m1", true)).toEqual({ codes: 1, folders: 0 });
+    expect(fake.calls).toEqual(["remove_member", "update p1"]);
+    expect(fake.updated[0]!.value).toEqual({
+      content: { logo: { path: `${O}/a.png`, name: "a.png", type: "image/png", size: 1 } },
+    });
+  });
+
+  it("if the codes can't move, no page is repointed", async () => {
+    const fake = fakeSupabase({
+      team: [OWNER_ROW, SAM_ROW],
+      removeError: { message: "connection lost" },
+    });
+    signIn(fake);
+    vi.mocked(copyPageMedia).mockResolvedValue(COPIED);
+    expect((await removeMember("m1", true)).error).toBe(
+      "They couldn’t be removed. Please try again.",
+    );
+    expect(fake.updated).toEqual([]);
+  });
+
+  it("says when a page couldn't be repointed, or files were already gone", async () => {
+    const fake = fakeSupabase({
+      team: [OWNER_ROW, SAM_ROW],
+      removed: { codes: 1, folders: 0 },
+      updateError: { message: "boom" },
+    });
+    signIn(fake);
+    vi.mocked(copyPageMedia).mockResolvedValue({ ...COPIED, missing: 2 });
+    expect(await removeMember("m1", true)).toEqual({
+      codes: 1,
+      folders: 0,
+      warning:
+        "1 page still uses images from their account, and 2 files were already missing. Open those pages and add the images again.",
     });
   });
 });

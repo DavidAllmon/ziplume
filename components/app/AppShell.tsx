@@ -102,9 +102,9 @@ export function AppShell({
     : user;
   const team = teams.find((t) => t.ownerId === searchParams.get("workspace")) ?? null;
   const ownerId = team?.ownerId ?? null;
-  // Creating while a folder is open in the codes list puts the new code in that folder.
-  const folderId = pathname === "/codes" ? searchParams.get("folder") : null;
-  const canCreate = !team || team.role === "editor";
+  // Creating while one of your own folders is open puts the new code in that folder. New codes
+  // always go in your own space, so a teammate's folder doesn't count.
+  const folderId = pathname === "/codes" && !team ? searchParams.get("folder") : null;
   // The tablet rail stays open only on the page it was opened on: any navigation closes it.
   const here = `${pathname}?${searchParams.toString()}`;
   const [openedAt, setOpenedAt] = useState<string | null>(null);
@@ -191,21 +191,14 @@ export function AppShell({
         </div>
 
         <WorkspaceSwitcher user={me} teams={teams} current={team} collapsed={!expanded} />
-        {canCreate && (
-          <CreateButton
-            ownerId={ownerId}
-            folderId={folderId}
-            collapsed={!expanded}
-            onNavigate={collapse}
-          />
-        )}
+        <CreateButton folderId={folderId} collapsed={!expanded} onNavigate={collapse} />
 
         <nav aria-label="Main" className="flex flex-col gap-0.5">
           {sideLink(main[0]!)}
           <FolderNav
             ownerId={team?.ownerId ?? user.id}
             teamId={ownerId}
-            canEdit={canCreate}
+            canEdit={!team}
             expanded={expanded}
             onNavigate={collapse}
           />
@@ -250,7 +243,7 @@ export function AppShell({
         aria-label="Main"
         className={cn(
           "fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] sm:hidden",
-          canCreate ? "grid-cols-4" : "grid-cols-3",
+          "grid-cols-4",
         )}
       >
         <Link
@@ -260,14 +253,12 @@ export function AppShell({
         >
           <QrCode aria-hidden /> Codes
         </Link>
-        {canCreate && (
-          <Link href={newCodeHref({ folderId, ownerId })} className={tabClass}>
-            <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-fg [&_svg]:size-5">
-              <Plus aria-hidden />
-            </span>
-            Create
-          </Link>
-        )}
+        <Link href={newCodeHref({ folderId, ownerId: null })} className={tabClass}>
+          <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-fg [&_svg]:size-5">
+            <Plus aria-hidden />
+          </span>
+          Create
+        </Link>
         <Link
           href="/team"
           aria-current={isCurrent(pathname, "/team") ? "page" : undefined}

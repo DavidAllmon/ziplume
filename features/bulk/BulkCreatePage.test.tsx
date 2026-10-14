@@ -54,14 +54,7 @@ function savesAll() {
 function renderPage(props: Partial<BulkCreatePageProps> = {}) {
   return render(
     <ToastProvider>
-      <BulkCreatePage
-        ownerId="u1"
-        teamId={null}
-        workspaceLabel={null}
-        folders={FOLDERS}
-        initialFolderId={null}
-        {...props}
-      />
+      <BulkCreatePage ownerId="u1" folders={FOLDERS} initialFolderId={null} {...props} />
     </ToastProvider>,
   );
 }
@@ -115,20 +108,6 @@ describe("BulkCreatePage", () => {
     const inputs = vi.mocked(createCodes).mock.calls[0]![0];
     expect(inputs.map((input) => input.dynamic)).toEqual([undefined, undefined]);
     expect(inputs.map((input) => input.folderId)).toEqual([null, null]);
-  });
-
-  it("creates in the team it was opened for", async () => {
-    const user = userEvent.setup();
-    savesAll();
-    renderPage({ ownerId: "t1", teamId: "t1", workspaceLabel: "Cafe team" });
-    expect(screen.getByText("Saving to Cafe team’s codes")).toBeInTheDocument();
-    paste("name,url\nMenu,https://example.com/menu");
-    await user.click(screen.getByRole("button", { name: "Create 1 code" }));
-    expect(vi.mocked(createCodes).mock.calls[0]![0][0]).toMatchObject({ ownerId: "t1" });
-    expect(await screen.findByRole("link", { name: "Open your codes" })).toHaveAttribute(
-      "href",
-      "/codes?workspace=t1",
-    );
   });
 
   it("when saving stops partway, it creates only the rest", async () => {

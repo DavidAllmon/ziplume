@@ -189,7 +189,7 @@ The preview column holds the live QR, a scan-reliability check and a **Create co
 **Fresh state and drafts.** This is the Phase 0 fix, carried into the new page.
 
 - Every visit to `/codes/new` starts from defaults, with folder and type taken from the URL params.
-  - The default design is Classic until Phase 3. From then on, it is the user's default template if they have set one.
+  - The default design is Classic until Phase 4. From then on, it is the user's default template if they have set one.
 - Design, type and export settings are **no longer persisted** to localStorage. Only the theme (next-themes) and the Codes list/grid preference are remembered.
 - Unfinished work is saved as a **draft** under the key `quickqreate:draft:v2:<userId>`:
   - written on change, debounced 500 ms
@@ -255,6 +255,8 @@ The preview column holds the live QR, a scan-reliability check and a **Create co
 - Members: photo or initials, name, role select, Remove.
 - "Teams you're in": Open and Leave (as today).
 
+Phase 3 replaces the team model (two-way sharing, keep-or-take removal, a member view of the Team page). See `2026-10-14-quickqreate-teams-design.md`.
+
 ### 4.7 Component boundaries
 
 - `features/create/`: `CreatePage` composed of `TypeSection`, `ContentSection`, `DesignSection`, `SettingsSection`, `NameFolderSection` and `PreviewColumn`.
@@ -262,7 +264,7 @@ The preview column holds the live QR, a scan-reliability check and a **Create co
   - State comes from a `useCodeDraft` hook: a pure reducer with explicit `reset(defaults)` and `load(code)`, and no implicit persistence.
 - The 1,004-line `PageEditor.tsx` is split per hosted-page type, one editor component each, sharing field primitives.
 - `components/app/`: `AppShell`, `Sidebar`, `BottomTabs`, `WorkspaceSwitcher`, `UserMenu`, `Avatar`, `SaveBar`, `EmptyState`, `StatusPill`, `PageHeader`.
-- The old `features/generator` survives only as the engine: QR rendering, export and design state types. Its UI (`Generator.tsx`, `SavePanel`, `StyleCard`, `TypePicker`) is removed in Phase 4, once the landing page's quick generator uses the new sections.
+- The old `features/generator` survives only as the engine: QR rendering, export and design state types. Its UI (`Generator.tsx`, `SavePanel`, `StyleCard`, `TypePicker`) is removed in Phase 5, once the landing page's quick generator uses the new sections.
 
 ## 5. Visual system ("Calm & professional")
 
@@ -347,7 +349,7 @@ New function:
 public.create_code(p_code jsonb, p_password text default null) returns public.qr_codes
 ```
 
-- **Security:** `security definer`, `set search_path = ''`, `execute` granted to `authenticated`.
+- **Security:** `security invoker` (as built in Phase 2a: the caller's row rules, two-step policy and column grants apply), `set search_path = ''`, `execute` granted to `authenticated`. The password goes through `set_code_password`.
 - **Checks:**
   - `mfa_satisfied()`
   - the target owner (`p_code->>'user_id'`, or `auth.uid()`) passes `can_edit(owner)`.
@@ -408,7 +410,7 @@ public.create_code(p_code jsonb, p_password text default null) returns public.qr
 - The privacy page is updated: Brevo also sends team invites, and profile photos are stored.
 - Fix the existing invite-page copy that implies an email was sent.
 
-### 6.4 Analytics overview and templates (Phase 3)
+### 6.4 Analytics overview and templates (Phase 4)
 
 - `public.workspace_analytics(...)` (see 4.4).
 - `design_templates.is_default` with a partial unique index (see 4.5).
@@ -451,8 +453,9 @@ Each phase gets its own implementation plan, written just before that phase star
 | 0 | "New code" fix on the current UI: stop persisting design, type and export settings; `startNew` fully resets, including the name; editing never touches remembered state; bulk uses its own defaults. Also go-live wrap-up (GitHub Pages redirect, docs PR). | Small, ships first. Updates the two tests that lock the old behavior. |
 | 1 | App shell (sidebar, bottom tabs, workspace switcher), new tokens and wording, `/codes` list, `/settings` with profile photos, `/team` with email invites, redirects from old routes. | Needs `BREVO_API_KEY` in Coolify (David). Migrations from 6.2 and 6.3. |
 | 2 | `/codes/new` Create page with settings during creation and drafts; `/codes/bulk`. | Migration from 6.1. Signed-in "New code" points here. |
-| 3 | Code page with tabs and the Save bar; `/analytics` overview; `/templates` with a default template. | Migrations from 6.4. `/?edit=` redirect goes live. |
-| 4 | Public landing page and quick static generator; public `/bulk` and docs restyled; old generator UI removed. | Signed-in `/` redirects to `/codes`. |
+| 3 | Teams: two-way sharing between teammates, Owner/Editor/Viewer rules for teammates' codes, leaving and keep-or-take removal, the switch row and Everyone view, Private codes. | Added 2026-10-14. Design: `2026-10-14-quickqreate-teams-design.md`. One migration. |
+| 4 | Code page with tabs and the Save bar; `/analytics` overview; `/templates` with a default template. | Migrations from 6.4. `/?edit=` redirect goes live. |
+| 5 | Public landing page and quick static generator; public `/bulk` and docs restyled; old generator UI removed. | Signed-in `/` redirects to `/codes`. |
 
 ## 9. Success criteria
 
@@ -468,6 +471,6 @@ Each phase gets its own implementation plan, written just before that phase star
 
 - **CI time:** the accounts suite adds a local Supabase start, a few minutes per run. It is acceptable for the coverage it adds; it can run only on PRs that touch app or migration code if needed.
 - **Brevo API key:** David creates and enters it, since secrets are owner-entered. Without it, invites fall back to links (see 6.3).
-- **Mixed look between phases:** Phase 1 restyles the shell and the new pages. Not-yet-redesigned pages (Create in Phase 1, code page until Phase 3) use the new tokens immediately but keep their old layout until their phase.
+- **Mixed look between phases:** Phase 1 restyles the shell and the new pages. Not-yet-redesigned pages (Create in Phase 1, code page until Phase 4) use the new tokens immediately but keep their old layout until their phase.
 - **Hosted page editor split:** Phase 2 splits the 1,004-line `PageEditor.tsx` per type. This needs care to keep each page type's saved `content` shape unchanged.
 - **Live data migrations:** each phase's migrations go through a verified backup first and are recorded in the runbook.
