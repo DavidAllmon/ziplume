@@ -22,6 +22,23 @@ environment's secrets.
 | Pricing | Completely free, no limits. Buy Me a Coffee links: `https://buymeacoffee.com/davidallmon` |
 | Old URL | `davidallmon.github.io/QuickQReate` becomes a redirect to the new site |
 
+## Live deployment (verified 14 October 2026)
+
+| Item | Value |
+| --- | --- |
+| Supabase project | QuickQReate, TechitDave organization, UUID `db12f7ce-3e77-4461-a686-c8cd6de6f764`, slug `quickqreate-1791927515091` |
+| API URL | `https://quickqreate-1791927515091.supabase.techitdave.com` |
+| Child Studio | `https://quickqreate-1791927515091-studio.supabase.techitdave.com` (panel login required) |
+| Database | `supabase_multitenant`, PostgreSQL 17.6, GoTrue v2.196.0, Storage v1.74.0 |
+| Migrations applied | All five files, in order, through the private SQL bridge, 13 October 2026 |
+| Coolify app | TechitDave Infrastructure → production → QuickQReate (`4gko88co580xlr70qkda3jhx`), Dockerfile build, `https://qr.techitdave.com` |
+| Health check | `GET http://127.0.0.1:3000/api/health` (use `127.0.0.1`, not `localhost`: the image has busybox `wget` only, and `localhost` resolves to IPv6) |
+| DNS | Cloudflare `qr` A `152.44.42.29`, DNS only |
+| Email | Brevo SMTP relay, sender `QuickQReate <no-reply@techitdave.com>` (verified, techitdave.com DKIM/DMARC) |
+| Google sign-in | Google Cloud project `quickqreate` (External, in production, no logo), web client ID `31907044023-urs4031kmta7apq7rkkn9sa7b606sh92.apps.googleusercontent.com`, redirect `<API URL>/auth/v1/callback` |
+| Auto-deploy | GitHub webhook (push) → Coolify manual GitHub webhook |
+| Backups | Included in the host's daily backup with an off-server copy that is restored and hash-checked (first receipt: archive `20261014T003300Z`) |
+
 ## 1. Create the Supabase project (owner, in the browser)
 
 1. Sign in at <https://studio.techitdave.com>, confirm the **TechitDave** organization is selected.
@@ -44,6 +61,10 @@ those. Today that is:
 5. `20261013150000_power_tools.sql` (folders, teams, active dates, password-protected codes
    and API keys; uses the `pgcrypto` extension, which Supabase installs in the `extensions`
    schema by default)
+
+When applying through the private SQL bridge (which rejects backslashes), the email check in the
+fifth file uses `[:space:]` and `[.]` instead of `\s` and `\.`; the repository file matches what
+was applied.
 
 The fourth one needs the project's **Storage** service. If it fails because the `storage`
 schema doesn't exist, enable Storage for the project and run it again; everything else works
@@ -83,7 +104,8 @@ self-hosted compose these are the variables (GoTrue names in brackets):
 
 ```
 SITE_URL=https://qr.techitdave.com                                   [GOTRUE_SITE_URL]
-ADDITIONAL_REDIRECT_URLS=https://qr.techitdave.com/**,http://localhost:3000/**   [GOTRUE_URI_ALLOW_LIST]
+ADDITIONAL_REDIRECT_URLS=https://qr.techitdave.com/auth/callback,https://qr.techitdave.com/auth/confirm   [GOTRUE_URI_ALLOW_LIST]
+ENABLE_PHONE_SIGNUP=false                                            [GOTRUE_EXTERNAL_PHONE_ENABLED]
 ENABLE_EMAIL_SIGNUP=true                                             [GOTRUE_EXTERNAL_EMAIL_ENABLED]
 ENABLE_EMAIL_AUTOCONFIRM=false                                       [GOTRUE_MAILER_AUTOCONFIRM]
 SMTP_HOST=smtp-relay.brevo.com                                       [GOTRUE_SMTP_HOST]
@@ -120,6 +142,13 @@ Restart only this project's auth service after changing them. If the panel does 
 these settings, they need SSH to the server, which the owner (or a local Claude Code session
 with the server key) has to do.
 
+On the panel these values are set through the project's environment (`Manage` → `Configure`, or
+the panel's `POST /api/projects/<id>/env`, which merges keys). The pinned compose file does not wire
+Google sign-in or mail templates, so the project's `docker-compose.yml` adds these auth variables,
+read from `.env`: `GOTRUE_EXTERNAL_GOOGLE_ENABLED/CLIENT_ID/SECRET/REDIRECT_URI` and
+`GOTRUE_MAILER_TEMPLATES_*` / `GOTRUE_MAILER_SUBJECTS_*`. Redeploy from the panel; only the auth
+container is recreated.
+
 ## 6. DNS (owner, Cloudflare)
 
 Add `qr` → `A` → `152.44.42.29`.
@@ -134,7 +163,7 @@ SSL/TLS mode to **Full (strict)**.
 
 New resource in **TechitDave Infrastructure → production** → Application → public GitHub
 repository `https://github.com/DavidAllmon/QuickQReate`, branch `main`, build pack
-**Dockerfile**, port `3000`, domain `https://qr.techitdave.com`, health check path `/api/health`.
+**Dockerfile**, port `3000`, domain `https://qr.techitdave.com`, health check `127.0.0.1:3000/api/health` (see Live deployment).
 
 Environment variables:
 
@@ -168,13 +197,13 @@ To let the Claude Code cloud environment test the live project, edit the environ
 
 ## Verification checklist
 
-- [ ] `<API URL>/auth/v1/health` returns 200 over HTTPS
-- [ ] Sign up with email: confirmation email arrives from `no-reply@techitdave.com`, link signs you in
+- [x] `<API URL>/auth/v1/health` returns 200 over HTTPS
+- [x] Sign up with email: confirmation email arrives from `no-reply@techitdave.com`, link signs you in
 - [ ] Password reset email arrives and the new password works
-- [ ] Google sign-in creates an account and lands on the dashboard
-- [ ] Create a dynamic code, scan it with a phone: it redirects and the scan appears in analytics
+- [x] Google sign-in creates an account and lands on the dashboard
+- [x] Create a dynamic code, scan it with a phone: it redirects and the scan appears in analytics
 - [ ] A second account cannot see the first account's codes or scans
 - [ ] After turning on two-factor in **Account**, signing in asks for the authenticator code
 - [ ] Create a Link list page with a profile picture: the upload works and `/p/<slug>` shows it
 - [ ] A Feedback page accepts a rating and it appears under Responses in My codes
-- [ ] The project appears in the nightly backup receipts
+- [x] The project appears in the nightly backup receipts
