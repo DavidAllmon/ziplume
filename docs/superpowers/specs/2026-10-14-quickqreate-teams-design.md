@@ -60,7 +60,7 @@ Industry check (2026-10-14): Uniqode has Owner, Admin, Editor and Viewer roles, 
     - The member's shared codes and folders move into the owner's account.
     - Printed codes keep working exactly as before, with the same short links, scans, feedback and hosted-page media.
     - Folder names that clash with the owner's get the member's name added ("Menus (Alex)").
-    - The member's Private codes always stay with them.
+    - The member's Private codes always stay with them. Any of them filed in a folder that moves is taken out of that folder first, since a code and its folder always share an owner.
   - **Let them take their codes:** the member keeps everything, and sharing ends both ways.
 - **No members left:** removing the last member makes the owner a solo account again.
 - **Pending invites:** an owner's own pending invites stay theirs. Accepting one later starts a team again.
