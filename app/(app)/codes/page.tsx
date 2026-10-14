@@ -7,6 +7,7 @@ import { withWorkspace } from "@/components/app/nav";
 import { buttonClasses } from "@/components/ui/Button";
 import { CodesView } from "@/features/codes/list/CodesView";
 import { FolderActions } from "@/features/codes/list/FolderActions";
+import { FolderSelect } from "@/features/codes/list/FolderSelect";
 import { formatCount } from "@/features/dashboard/format";
 import { ROLE_LABELS, workspaceLabel } from "@/features/teams/roles";
 import { requireUser } from "@/lib/auth/server";
@@ -91,6 +92,14 @@ export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
           change them.
         </p>
       )}
+
+      <FolderSelect
+        folders={folders ?? []}
+        current={folder?.id ?? null}
+        ownerId={ownerId}
+        teamId={teamId}
+        canEdit={canEdit}
+      />
 
       <CodesView
         key={`${ownerId}:${folder?.id ?? "all"}`}

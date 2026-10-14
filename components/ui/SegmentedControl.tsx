@@ -18,7 +18,8 @@ interface SegmentedControlProps<T extends string> {
   options: readonly SegmentOption<T>[];
   /** Accessible name. Headless UI ignores aria-labelledby on RadioGroup, so this is required. */
   "aria-label": string;
-  size?: "sm" | "md";
+  /** "touch" is 44px tall on phones and the usual size from 640px. */
+  size?: "sm" | "md" | "touch";
   className?: string;
 }
 
@@ -47,7 +48,11 @@ export function SegmentedControl<T extends string>({
           aria-label={option.ariaLabel}
           className={cn(
             "flex cursor-pointer items-center justify-center gap-1.5 rounded-[0.55rem] font-medium text-fg-muted transition-colors select-none hover:text-fg data-checked:bg-surface data-checked:text-fg data-checked:shadow-sm data-focus:outline-2 data-focus:outline-offset-1 data-focus:outline-ring [&_svg]:size-4",
-            size === "sm" ? "h-8 px-2 text-xs" : "h-9 px-3 text-sm",
+            size === "sm"
+              ? "h-8 px-2 text-xs"
+              : size === "touch"
+                ? "h-11 px-3 text-sm sm:h-9"
+                : "h-9 px-3 text-sm",
           )}
         >
           {option.label}

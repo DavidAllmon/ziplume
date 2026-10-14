@@ -49,13 +49,16 @@ export function CodeRow({
       aria-label={code.name}
       className={`grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-border px-3 py-3 last:border-b-0 ${LIST_COLUMNS} ${selected ? "bg-primary-soft/40" : ""}`}
     >
-      <input
-        type="checkbox"
-        aria-label={`Select ${code.name}`}
-        checked={selected}
-        onChange={(e) => onSelect(code, e.target.checked)}
-        className="size-5 cursor-pointer accent-primary"
-      />
+      {/* A 44px tap area on phones that takes no extra room in the row. */}
+      <label className="-m-3 grid size-11 shrink-0 cursor-pointer place-items-center sm:m-0 sm:size-auto">
+        <input
+          type="checkbox"
+          aria-label={`Select ${code.name}`}
+          checked={selected}
+          onChange={(e) => onSelect(code, e.target.checked)}
+          className="size-5 cursor-pointer accent-primary"
+        />
+      </label>
       <Link href={href} tabIndex={-1} aria-hidden className="shrink-0 rounded-lg">
         <QrTile
           compact

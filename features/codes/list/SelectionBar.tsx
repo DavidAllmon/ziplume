@@ -22,6 +22,7 @@ const ZIP_FORMATS: { value: ExportFormat; label: string }[] = [
 export function SelectionBar({
   selected,
   canEdit,
+  busy,
   onMove,
   onSetPaused,
   onDelete,
@@ -29,6 +30,8 @@ export function SelectionBar({
 }: {
   selected: QrCodeRow[];
   canEdit: boolean;
+  /** What's running (e.g. "Pausing 40 of 200…"), or null. Actions wait until it's done. */
+  busy: string | null;
   onMove: () => void;
   onSetPaused: (paused: boolean) => void;
   onDelete: () => void;
@@ -67,6 +70,11 @@ export function SelectionBar({
       className="sticky bottom-24 z-20 flex flex-wrap items-center gap-2 rounded-card border border-border bg-surface p-3 shadow-pop sm:bottom-4"
     >
       <span className="px-1 text-sm font-semibold text-fg">{selected.length} selected</span>
+      {busy && (
+        <span role="status" className="text-sm text-fg-muted">
+          {busy}
+        </span>
+      )}
       <div className="ml-auto flex flex-wrap items-center gap-2">
         <label>
           <span className="sr-only">ZIP file format</span>
@@ -82,27 +90,36 @@ export function SelectionBar({
             ))}
           </Select>
         </label>
-        <Button onClick={downloadZip} disabled={progress !== null}>
+        <Button onClick={downloadZip} disabled={progress !== null || busy !== null}>
           <Download aria-hidden />
           {progress ?? "Download ZIP"}
         </Button>
         {canEdit && (
-          <Button variant="outline" onClick={onMove}>
+          <Button variant="outline" onClick={onMove} disabled={busy !== null}>
             <FolderInput aria-hidden /> Move
           </Button>
         )}
         {canEdit && trackable.length > 0 && (
-          <Button variant="outline" onClick={() => onSetPaused(!allPaused)}>
+          <Button
+            variant="outline"
+            onClick={() => onSetPaused(!allPaused)}
+            disabled={busy !== null}
+          >
             {allPaused ? <Play aria-hidden /> : <Pause aria-hidden />}
             {allPaused ? "Resume" : "Pause"}
           </Button>
         )}
         {canEdit && (
-          <Button variant="outline" onClick={onDelete} className="text-danger">
+          <Button
+            variant="outline"
+            onClick={onDelete}
+            disabled={busy !== null}
+            className="text-danger"
+          >
             <Trash2 aria-hidden /> Delete
           </Button>
         )}
-        <Button variant="ghost" onClick={onClear}>
+        <Button variant="ghost" onClick={onClear} disabled={busy !== null}>
           <X aria-hidden /> Clear
         </Button>
       </div>

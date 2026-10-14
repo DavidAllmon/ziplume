@@ -9,7 +9,7 @@ import { withWorkspace } from "@/components/app/nav";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
-import { deleteCode, duplicateCode, updateCode } from "@/features/codes/api";
+import { deleteCodes, duplicateCode, setCodesStatus } from "@/features/codes/api";
 import { moveCodes } from "@/features/folders/api";
 import { MoveDialog } from "@/features/folders/MoveDialog";
 import { cn } from "@/lib/cn";
@@ -30,6 +30,9 @@ import {
 import { SelectionBar } from "./SelectionBar";
 import { Toolbar } from "./Toolbar";
 import { useListView } from "./useListView";
+
+/** Bulk changes go out in batches this size (keeps each request's URL short). */
+const BATCH = 100;
 
 const QUICK_STARTS = [
   { type: "url", label: "Link", hint: "Open a website", icon: Link2 },
@@ -72,6 +75,8 @@ export function CodesView({
   const [toDelete, setToDelete] = useState<QrCodeRow[] | null>(null);
   const [toMove, setToMove] = useState<QrCodeRow[] | null>(null);
   const [working, setWorking] = useState(false);
+  /** A bulk change in progress, e.g. "Pausing 100 of 200…"; null when idle. */
+  const [busy, setBusy] = useState<string | null>(null);
 
   const visible = useMemo(
     () => sortCodes(filterCodes(codes, filters), sort, recentScans),
@@ -108,34 +113,41 @@ export function CodesView({
   }
 
   async function setPaused(list: QrCodeRow[], paused: boolean) {
-    const targets = list.filter((code) => code.is_dynamic);
-    let failed = 0;
+    const ids = list.filter((code) => code.is_dynamic).map((code) => code.id);
+    if (ids.length === 0 || busy) return;
+    const verb = paused ? "Pausing" : "Resuming";
     const updated = new Map<string, QrCodeRow>();
-    for (const code of targets) {
-      const result = await updateCode(code.id, { status: paused ? "paused" : "active" });
-      if (result.ok) updated.set(code.id, result.value);
-      else failed++;
+    let failed = 0;
+    for (let start = 0; start < ids.length; start += BATCH) {
+      const batch = ids.slice(start, start + BATCH);
+      setBusy(`${verb} ${start + batch.length} of ${ids.length}…`);
+      const result = await setCodesStatus(batch, paused ? "paused" : "active");
+      if (result.ok) for (const code of result.value) updated.set(code.id, code);
+      else failed += batch.length;
     }
+    setBusy(null);
     setCodes((current) => current.map((code) => updated.get(code.id) ?? code));
     if (failed) toast(`${failed} ${failed === 1 ? "code" : "codes"} couldn’t be changed.`, "error");
     else if (updated.size === 1) {
-      toast(paused ? `Paused “${targets[0]!.name}”` : `“${targets[0]!.name}” is active again`);
+      const name = [...updated.values()][0]!.name;
+      toast(paused ? `Paused “${name}”` : `“${name}” is active again`);
     } else toast(paused ? `Paused ${updated.size} codes` : `Resumed ${updated.size} codes`);
     changed();
   }
 
   async function confirmDelete() {
-    if (!toDelete) return;
+    if (!toDelete || working) return;
     setWorking(true);
+    const ids = toDelete.map((code) => code.id);
     const removed = new Set<string>();
-    for (const code of toDelete) {
-      const result = await deleteCode(code.id);
-      if (result.ok) removed.add(code.id);
+    for (let start = 0; start < ids.length; start += BATCH) {
+      const result = await deleteCodes(ids.slice(start, start + BATCH));
+      if (result.ok) for (const id of result.value) removed.add(id);
     }
     setWorking(false);
     setCodes((current) => current.filter((code) => !removed.has(code.id)));
     setSelectedIds((current) => new Set([...current].filter((id) => !removed.has(id))));
-    const failed = toDelete.length - removed.size;
+    const failed = ids.length - removed.size;
     if (failed) toast(`${failed} ${failed === 1 ? "code" : "codes"} couldn’t be deleted.`, "error");
     else
       toast(
@@ -330,6 +342,7 @@ export function CodesView({
         <SelectionBar
           selected={selected}
           canEdit={canEdit}
+          busy={busy}
           onMove={() => setToMove(selected)}
           onSetPaused={(paused) => void setPaused(selected, paused)}
           onDelete={() => setToDelete(selected)}

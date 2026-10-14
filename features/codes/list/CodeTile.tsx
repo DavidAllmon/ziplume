@@ -30,13 +30,16 @@ export function CodeTile({
       className={`flex min-w-0 flex-col gap-3 rounded-card border bg-surface p-4 ${selected ? "border-primary" : "border-border"}`}
     >
       <div className="flex items-center justify-between">
-        <input
-          type="checkbox"
-          aria-label={`Select ${code.name}`}
-          checked={selected}
-          onChange={(e) => onSelect(code, e.target.checked)}
-          className="size-5 cursor-pointer accent-primary"
-        />
+        {/* A 44px tap area on phones that takes no extra room in the row. */}
+        <label className="-m-3 grid size-11 shrink-0 cursor-pointer place-items-center sm:m-0 sm:size-auto">
+          <input
+            type="checkbox"
+            aria-label={`Select ${code.name}`}
+            checked={selected}
+            onChange={(e) => onSelect(code, e.target.checked)}
+            className="size-5 cursor-pointer accent-primary"
+          />
+        </label>
         <CodeActions code={code} canEdit={canEdit} teamId={teamId} {...on} />
       </div>
       <Link href={href} tabIndex={-1} aria-hidden className="mx-auto rounded-lg">

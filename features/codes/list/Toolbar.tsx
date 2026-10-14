@@ -100,6 +100,7 @@ export function Toolbar({
           value={view}
           onChange={onView}
           options={VIEWS}
+          size="touch"
           className="w-28"
         />
       </div>

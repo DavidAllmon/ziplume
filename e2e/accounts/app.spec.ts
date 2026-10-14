@@ -28,6 +28,11 @@ async function expectNoSidewaysScroll(page: Page) {
 }
 
 async function expectNoAxeViolations(page: Page) {
+  // Loading panels are dimmed (aria-busy) and fade back in; check the settled page, not the fade.
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== "running"),
+  );
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
 }
@@ -97,6 +102,19 @@ test.describe("signed in as an owner", () => {
     await expect(page.getByRole("heading", { name: "No codes match" })).toBeVisible();
     await page.getByRole("button", { name: "Clear filters" }).click();
     await expect(page.getByRole("listitem", { name: "Spring menu" })).toBeVisible();
+  });
+
+  test("phones can reach folders and tap list controls easily", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("codes");
+    const checkbox = page.getByRole("checkbox", { name: "Select Spring menu" });
+    const target = page.locator("label", { has: checkbox });
+    expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(
+      (await page.getByRole("radio", { name: "Grid view" }).boundingBox())!.height,
+    ).toBeGreaterThanOrEqual(44);
+    await page.getByLabel("Folder", { exact: true }).selectOption({ label: "Flyers" });
+    await expect(page.getByRole("heading", { level: 1, name: "Flyers" })).toBeVisible();
   });
 
   test("/codes passes axe in dark mode", async ({ page }) => {

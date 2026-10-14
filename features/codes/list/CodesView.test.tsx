@@ -1,10 +1,10 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "@/components/ui/Toast";
-import { deleteCode, updateCode } from "@/features/codes/api";
+import { deleteCodes, setCodesStatus } from "@/features/codes/api";
 import type { QrCodeRow } from "@/types/supabase";
 
 import { CodesView } from "./CodesView";
@@ -14,7 +14,16 @@ vi.mock("@/features/codes/api", () => ({
   updateCode: vi.fn(),
   deleteCode: vi.fn(),
   duplicateCode: vi.fn(),
+  setCodesStatus: vi.fn(),
+  deleteCodes: vi.fn(),
 }));
+
+/** A promise the test resolves when it wants the "network" to answer. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
 vi.mock("@/features/folders/api", () => ({ moveCodes: vi.fn() }));
 vi.mock("@/features/generator/preview/QrTile", () => ({ QrTile: () => <span /> }));
 
@@ -75,8 +84,8 @@ const rowFor = (name: string) => screen.getByRole("listitem", { name });
 
 beforeEach(() => {
   window.localStorage.clear();
-  vi.mocked(updateCode).mockReset();
-  vi.mocked(deleteCode).mockReset();
+  vi.mocked(setCodesStatus).mockReset();
+  vi.mocked(deleteCodes).mockReset();
 });
 
 describe("CodesView", () => {
@@ -110,25 +119,49 @@ describe("CodesView", () => {
     expect(screen.getByRole("list", { name: "Codes" })).toHaveAttribute("data-view", "list");
   });
 
-  it("pauses and deletes only the selected codes", async () => {
-    vi.mocked(updateCode).mockImplementation(async (id) => ({
+  it("pauses the selected trackable codes in one go, showing it's working", async () => {
+    const pending = deferred<Awaited<ReturnType<typeof setCodesStatus>>>();
+    vi.mocked(setCodesStatus).mockReturnValue(pending.promise);
+    renderView();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all shown" }));
+    const bar = screen.getByRole("region", { name: "Selected codes" });
+    expect(within(bar).getByText("3 selected")).toBeInTheDocument();
+    await userEvent.click(within(bar).getByRole("button", { name: "Pause" }));
+    expect(within(bar).getByText("Pausing 2 of 2…")).toBeInTheDocument();
+    expect(within(bar).getByRole("button", { name: "Pause" })).toBeDisabled();
+    await userEvent.click(within(bar).getByRole("button", { name: "Pause" }));
+    expect(setCodesStatus).toHaveBeenCalledTimes(1);
+    expect(setCodesStatus).toHaveBeenCalledWith(["menu", "flyer"], "paused");
+    pending.resolve({
       ok: true,
-      value: { ...MENU, id, status: "paused" },
-    }));
-    vi.mocked(deleteCode).mockResolvedValue({ ok: true, value: null });
+      value: [
+        { ...MENU, status: "paused" },
+        { ...FLYER, status: "paused" },
+      ],
+    });
+    await waitFor(() =>
+      expect(within(rowFor("Spring menu")).getAllByText("Paused").length).toBeGreaterThan(0),
+    );
+  });
+
+  it("deletes exactly the selected codes, and can't be cancelled halfway", async () => {
+    const pending = deferred<Awaited<ReturnType<typeof deleteCodes>>>();
+    vi.mocked(deleteCodes).mockReturnValue(pending.promise);
     renderView();
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Spring menu" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Front desk" }));
     const bar = screen.getByRole("region", { name: "Selected codes" });
-    expect(within(bar).getByText("1 selected")).toBeInTheDocument();
-    await userEvent.click(within(bar).getByRole("button", { name: "Pause" }));
-    expect(updateCode).toHaveBeenCalledTimes(1);
-    expect(updateCode).toHaveBeenCalledWith("menu", { status: "paused" });
     await userEvent.click(within(bar).getByRole("button", { name: "Delete" }));
-    await userEvent.click(screen.getByRole("button", { name: "Delete 1 code" }));
-    expect(deleteCode).toHaveBeenCalledTimes(1);
-    expect(deleteCode).toHaveBeenCalledWith("menu");
-    expect(screen.queryByRole("listitem", { name: "Spring menu" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Delete 2 codes" }));
+    expect(deleteCodes).toHaveBeenCalledWith(["menu", "wifi"]);
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    pending.resolve({ ok: true, value: ["menu", "wifi"] });
+    await waitFor(() => expect(screen.queryByRole("listitem", { name: "Spring menu" })).toBeNull());
+    expect(screen.queryByRole("listitem", { name: "Front desk" })).toBeNull();
     expect(rowFor("Old flyer")).toBeInTheDocument();
+    expect(deleteCodes).toHaveBeenCalledTimes(1);
   });
 
   it("viewers can open and download but not change codes", async () => {
