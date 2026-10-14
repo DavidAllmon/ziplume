@@ -126,4 +126,9 @@ describe("useGenerator: answers that arrive after you moved on", () => {
 
     expect(result.current.workspace).toBeNull();
   });
+  it("opens a new code of the type in ?type= (the Codes page's quick starts)", async () => {
+    search = new URLSearchParams("type=wifi");
+    const { result } = renderHook(() => useGenerator());
+    await waitFor(() => expect(result.current.state.activeType).toBe("wifi"));
+  });
 });
