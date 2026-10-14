@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { LogoMark } from "@/components/brand/Logo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
@@ -102,9 +102,24 @@ export function AppShell({
   const team = teams.find((t) => t.ownerId === searchParams.get("workspace")) ?? null;
   const ownerId = team?.ownerId ?? null;
   const canCreate = !team || team.role === "editor";
-  const [expanded, setExpanded] = useState(false);
+  // The tablet rail stays open only on the page it was opened on: any navigation closes it.
+  const here = `${pathname}?${searchParams.toString()}`;
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const expanded = openedAt === here;
   const [moreOpen, setMoreOpen] = useState(false);
-  const collapse = () => setExpanded(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const collapse = () => setOpenedAt(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpenedAt(null);
+      toggleRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [expanded]);
 
   const codesHref = withWorkspace("/codes", ownerId);
   const main: NavItem[] = [
@@ -161,10 +176,11 @@ export function AppShell({
             <LogoMark className="size-8" />
           </Link>
           <button
+            ref={toggleRef}
             type="button"
             aria-label={expanded ? "Collapse menu" : "Expand menu"}
             aria-expanded={expanded}
-            onClick={() => setExpanded((open) => !open)}
+            onClick={() => setOpenedAt(expanded ? null : here)}
             className="grid size-10 place-items-center rounded-control text-fg-muted focus-ring hover:bg-surface-2 hover:text-fg lg:hidden [&_svg]:size-5"
           >
             {expanded ? <PanelLeftClose aria-hidden /> : <PanelLeftOpen aria-hidden />}
@@ -182,6 +198,14 @@ export function AppShell({
 
         <div className="mt-auto flex flex-col gap-0.5 border-t border-border pt-3">
           {help.map(sideLink)}
+          <div
+            className={cn(
+              "flex min-h-11 items-center justify-between gap-2 px-2.5 text-sm font-medium text-fg-muted",
+              !expanded && "max-lg:hidden",
+            )}
+          >
+            Theme <ThemeToggle />
+          </div>
           <UserMenu user={me} collapsed={!expanded} />
         </div>
       </aside>

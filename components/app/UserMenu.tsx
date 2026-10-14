@@ -3,17 +3,20 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { LogOut, Settings } from "lucide-react";
 import Link from "next/link";
+import { useId } from "react";
 
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/cn";
 
 import { menuItemClass, menuPanelClass, type ShellUser } from "./nav";
 
-/** Your photo and name at the bottom of the sidebar, with Settings, Theme and Sign out. */
+/** Your photo and name at the bottom of the sidebar, with Settings and Sign out. */
 export function UserMenu({ user, collapsed = false }: { user: ShellUser; collapsed?: boolean }) {
+  // The form sits outside the menu so Sign out is a real submit button (keyboard Enter works).
+  const formId = useId();
   return (
     <Menu as="div" className="relative">
+      <form id={formId} action="/auth/signout" method="post" hidden />
       <MenuButton
         aria-label="Account menu"
         className={cn(
@@ -35,15 +38,8 @@ export function UserMenu({ user, collapsed = false }: { user: ShellUser; collaps
             <Settings aria-hidden /> Settings
           </Link>
         </MenuItem>
-        <div className="flex items-center justify-between gap-2 px-3 py-2 text-sm text-fg">
-          Theme <ThemeToggle />
-        </div>
-        <MenuItem>
-          <form action="/auth/signout" method="post">
-            <button type="submit" className={menuItemClass}>
-              <LogOut aria-hidden /> Sign out
-            </button>
-          </form>
+        <MenuItem as="button" type="submit" form={formId} className={menuItemClass}>
+          <LogOut aria-hidden /> Sign out
         </MenuItem>
       </MenuItems>
     </Menu>

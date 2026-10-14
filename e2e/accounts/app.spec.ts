@@ -99,6 +99,19 @@ test.describe("signed in as a viewer", () => {
   });
 });
 
+test.describe("a team code's pages", () => {
+  test.use({ storageState: VIEWER.state });
+
+  test("stay in that team, without create controls", async ({ page }) => {
+    const { menuId, ownerId } = seed();
+    for (const path of [`codes/${menuId}`, `codes/${menuId}/analytics`]) {
+      await page.goto(path);
+      await expect(page).toHaveURL(new RegExp(`/${path}\\?workspace=${ownerId}$`));
+      await expect(page.getByRole("link", { name: /Create( code)?$/ })).toHaveCount(0);
+    }
+  });
+});
+
 test.describe("signed out", () => {
   test("signed-out visitors sign in, then come back", async ({ page }) => {
     await page.goto("settings/security");

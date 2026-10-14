@@ -3,6 +3,7 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { LayoutGrid, LogOut, Settings, Users } from "lucide-react";
 import Link from "next/link";
+import { useId } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
 import { buttonClasses } from "@/components/ui/Button";
@@ -18,6 +19,7 @@ export function AccountMenu() {
   const { user, loading } = useSession();
   // Name and photo come from the profile, so a rename or a new photo shows straight away.
   const profile = useProfile(user?.id ?? null);
+  const signOutForm = useId();
   if (!accountsEnabled) return null;
   if (loading) return <span aria-hidden className="size-9" />;
 
@@ -38,6 +40,7 @@ export function AccountMenu() {
         My codes
       </Link>
       <Menu as="div" className="relative">
+        <form id={signOutForm} action="/auth/signout" method="post" hidden />
         <MenuButton
           aria-label="Account menu"
           className="rounded-full data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring"
@@ -68,12 +71,13 @@ export function AccountMenu() {
               <Settings aria-hidden className="size-4" /> Settings
             </Link>
           </MenuItem>
-          <MenuItem>
-            <form action="/auth/signout" method="post">
-              <button type="submit" className={`${itemClass} w-full text-left`}>
-                <LogOut aria-hidden className="size-4" /> Sign out
-              </button>
-            </form>
+          <MenuItem
+            as="button"
+            type="submit"
+            form={signOutForm}
+            className={`${itemClass} w-full text-left`}
+          >
+            <LogOut aria-hidden className="size-4" /> Sign out
           </MenuItem>
         </MenuItems>
       </Menu>

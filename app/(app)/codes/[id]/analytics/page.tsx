@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+
+import { withWorkspace } from "@/components/app/nav";
 
 import { buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -9,11 +11,19 @@ import { requireUser } from "@/lib/auth/server";
 
 export const metadata: Metadata = { title: "Analytics · QuickQReate" };
 
-export default async function AnalyticsPage({ params }: PageProps<"/codes/[id]/analytics">) {
+export default async function AnalyticsPage({
+  params,
+  searchParams,
+}: PageProps<"/codes/[id]/analytics">) {
   const { id } = await params;
-  const { supabase } = await requireUser(`/codes/${id}/analytics`);
+  const { workspace } = await searchParams;
+  const { supabase, user } = await requireUser(`/codes/${id}/analytics`);
   const { data: code } = await supabase.from("qr_codes").select("*").eq("id", id).maybeSingle();
   if (!code) notFound();
+  // A teammate's code opens inside that team, so the sidebar and Create stay in their codes.
+  if (code.user_id !== user.id && workspace !== code.user_id) {
+    redirect(withWorkspace(`/codes/${id}/analytics`, code.user_id));
+  }
 
   if (!code.is_dynamic) {
     return (

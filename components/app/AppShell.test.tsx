@@ -17,12 +17,14 @@ const USER = { id: "u1", email: "david@example.com", name: "David Allmon", avata
 const EDITOR: ShellTeam = { ownerId: "t1", label: "Cafe", role: "editor", avatarUrl: null };
 const VIEWER: ShellTeam = { ownerId: "t2", label: "Bakery", role: "viewer", avatarUrl: null };
 
+const shell = () => (
+  <AppShell user={USER} teams={[EDITOR, VIEWER]}>
+    <h1>Page</h1>
+  </AppShell>
+);
+
 function renderShell() {
-  return render(
-    <AppShell user={USER} teams={[EDITOR, VIEWER]}>
-      <h1>Page</h1>
-    </AppShell>,
-  );
+  return render(shell());
 }
 
 const hrefs = (name: string | RegExp) =>
@@ -88,6 +90,25 @@ describe("AppShell", () => {
       "aria-expanded",
       "true",
     );
+  });
+
+  it("collapses the tablet rail when the page changes, and on Escape", async () => {
+    const { rerender } = renderShell();
+    await userEvent.click(screen.getByRole("button", { name: "Expand menu" }));
+    pathname = "/team";
+    rerender(shell());
+    expect(screen.getByRole("button", { name: "Expand menu" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Expand menu" }));
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: "Expand menu" })).toHaveFocus();
+  });
+
+  it("lets keyboard users change the theme without opening a menu", () => {
+    renderShell();
+    expect(screen.getAllByRole("radio", { name: "Dark theme" }).length).toBeGreaterThan(0);
   });
 
   it("puts settings, help, support and sign out under More on phones", async () => {
