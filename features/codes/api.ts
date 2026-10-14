@@ -244,6 +244,72 @@ export async function setCodePassword(id: string, password: string): Promise<Res
   return { ok: true, value: null };
 }
 
+/** What the editor changed on a saved code; fields left out stay as they are. */
+export interface CodeUpdate {
+  name?: string;
+  content?: unknown;
+  design?: DesignState;
+  destination?: string | null;
+  slug?: string;
+  folderId?: string | null;
+  activeFrom?: string | null;
+  activeUntil?: string | null;
+}
+
+/** What happens to a trackable code's password when the editor saves. */
+export type PasswordChange =
+  { action: "keep" } | { action: "set"; password: string } | { action: "clear" };
+
+function updateError(error: { code?: string; message: string }): string {
+  if (error.code === UNIQUE_VIOLATION) return "That link ending is already taken. Try another.";
+  if (error.message.includes("qr_codes_active_window"))
+    return "The end date must be after the start date.";
+  if (error.code === "23503") return "That folder isn't in this code's space.";
+  if (error.code === "22023" && error.message.includes("4 to 128"))
+    return "Passwords are 4 to 128 characters.";
+  if (error.code === "42501") return "You can't change this code.";
+  return "Your changes couldn't be saved. Please try again.";
+}
+
+/**
+ * Saves the editor's changes and the password in one step (update_code), so a failure saves
+ * nothing. Only the fields in `changes` are sent; the rest of the code stays as it is.
+ */
+export async function updateCodeWithSettings(
+  id: string,
+  changes: CodeUpdate,
+  password: PasswordChange = { action: "keep" },
+): Promise<Result<QrCodeRow>> {
+  const supabase = getBrowserSupabase();
+  if (!supabase) return unavailable;
+  if (changes.slug !== undefined && !isValidSlug(changes.slug)) {
+    return { ok: false, error: "Link endings use 3–40 letters, numbers or dashes." };
+  }
+  const patch: Record<string, Json> = {
+    ...(changes.name !== undefined && { name: changes.name.slice(0, 120) }),
+    ...(changes.content !== undefined && { content: changes.content as Json }),
+    ...(changes.design !== undefined && { design: designForStorage(changes.design).design }),
+    ...(changes.destination !== undefined && { destination: changes.destination }),
+    ...(changes.slug !== undefined && { slug: changes.slug }),
+    ...(changes.folderId !== undefined && { folder_id: changes.folderId }),
+    ...(changes.activeFrom !== undefined && { active_from: changes.activeFrom }),
+    ...(changes.activeUntil !== undefined && { active_until: changes.activeUntil }),
+  };
+  const { data, error } = await supabase.rpc("update_code", {
+    p_id: id,
+    p_patch: patch,
+    p_password: password.action === "set" ? password.password : null,
+    p_password_action: password.action,
+  });
+  if (error || !data) {
+    return {
+      ok: false,
+      error: error ? updateError(error) : "Your changes couldn't be saved. Please try again.",
+    };
+  }
+  return { ok: true, value: data };
+}
+
 export async function deleteCode(id: string): Promise<Result<null>> {
   const supabase = getBrowserSupabase();
   if (!supabase) return unavailable;

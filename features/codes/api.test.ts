@@ -4,7 +4,13 @@ import { DEFAULT_DESIGN } from "@/features/generator/state/defaults";
 
 import type { QrCodeRow } from "@/types/supabase";
 
-import { createCodes, createCodeWithSettings, duplicateCode, type NewCode } from "./api";
+import {
+  createCodes,
+  createCodeWithSettings,
+  duplicateCode,
+  updateCodeWithSettings,
+  type NewCode,
+} from "./api";
 
 const rpc = vi.fn();
 const from = vi.fn();
@@ -159,5 +165,78 @@ describe("duplicateCode", () => {
     expect(insert.mock.calls[0]![0]).not.toHaveProperty("folder_id");
     await duplicateCode(teammate, { keepFolder: true });
     expect(insert.mock.calls[1]![0]).toMatchObject({ folder_id: "f-kim" });
+  });
+});
+
+describe("updateCodeWithSettings", () => {
+  it("sends only the changed fields, by column name, with the password action", async () => {
+    rpc.mockResolvedValue({ data: row, error: null });
+    const result = await updateCodeWithSettings("c1", {
+      name: "Lunch menu",
+      destination: "https://example.com/lunch",
+      content: { url: "https://example.com/lunch" },
+      folderId: null,
+      activeFrom: "2030-01-01T09:00:00.000Z",
+    });
+    expect(result).toEqual({ ok: true, value: row });
+    expect(rpc).toHaveBeenCalledWith("update_code", {
+      p_id: "c1",
+      p_patch: {
+        name: "Lunch menu",
+        destination: "https://example.com/lunch",
+        content: { url: "https://example.com/lunch" },
+        folder_id: null,
+        active_from: "2030-01-01T09:00:00.000Z",
+      },
+      p_password: null,
+      p_password_action: "keep",
+    });
+  });
+
+  it("sends a new password, or asks to clear it", async () => {
+    rpc.mockResolvedValue({ data: row, error: null });
+    await updateCodeWithSettings("c1", {}, { action: "set", password: "open sesame" });
+    expect(rpc).toHaveBeenLastCalledWith("update_code", {
+      p_id: "c1",
+      p_patch: {},
+      p_password: "open sesame",
+      p_password_action: "set",
+    });
+    await updateCodeWithSettings("c1", {}, { action: "clear" });
+    expect(rpc).toHaveBeenLastCalledWith("update_code", {
+      p_id: "c1",
+      p_patch: {},
+      p_password: null,
+      p_password_action: "clear",
+    });
+  });
+
+  it("explains what went wrong", async () => {
+    const failWith = async (code: string, message = "") => {
+      rpc.mockResolvedValueOnce({ data: null, error: { code, message } });
+      const result = await updateCodeWithSettings("c1", { name: "x" });
+      return result.ok ? null : result.error;
+    };
+    expect(await failWith("23505")).toBe("That link ending is already taken. Try another.");
+    expect(await failWith("23503")).toBe("That folder isn't in this code's space.");
+    expect(await failWith("22023", "Passwords are 4 to 128 characters")).toBe(
+      "Passwords are 4 to 128 characters.",
+    );
+    expect(await failWith("23514", 'violates check constraint "qr_codes_active_window"')).toBe(
+      "The end date must be after the start date.",
+    );
+    expect(await failWith("42501", "Not allowed")).toBe("You can't change this code.");
+    expect(await failWith("XX000", "boom")).toBe(
+      "Your changes couldn't be saved. Please try again.",
+    );
+  });
+
+  it("refuses a malformed link ending before asking the server", async () => {
+    const result = await updateCodeWithSettings("c1", { slug: "no spaces" });
+    expect(result).toEqual({
+      ok: false,
+      error: "Link endings use 3–40 letters, numbers or dashes.",
+    });
+    expect(rpc).not.toHaveBeenCalled();
   });
 });
