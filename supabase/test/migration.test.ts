@@ -640,11 +640,19 @@ describe("power tools", () => {
     ]);
     expect(row?.name).toBe("Edited by Hank");
 
-    const [created] = await asHank<{ user_id: string }>(
-      `insert into public.qr_codes (user_id, name, qr_type, folder_id) values ($1, 'Hank made this', 'text', $2) returning user_id`,
-      [GINA, folderId],
+    // Everyone creates in their own space, and teammates see it.
+    await expect(
+      asHank(
+        `insert into public.qr_codes (user_id, name, qr_type) values ($1, 'Hank made this', 'text')`,
+        [GINA],
+      ),
+    ).rejects.toThrow(/row-level security/);
+    const [hanks] = await asHank<{ id: string }>(
+      `insert into public.qr_codes (name, qr_type) values ('Hank made this', 'text') returning id`,
     );
-    expect(created?.user_id).toBe(GINA);
+    expect(await asGina("select id from public.qr_codes where id = $1", [hanks!.id])).toHaveLength(
+      1,
+    );
     await expect(
       asIvy(`insert into public.qr_codes (user_id, name, qr_type) values ($1, 'x', 'text')`, [
         GINA,
@@ -1318,12 +1326,15 @@ describe("create_code", () => {
     expect((await check("wrong"))[0]?.ok).toBe(false);
   });
 
-  it("lets editors create in the owner's workspace and refuses viewers, outsiders and anon", async () => {
+  it("lets everyone create only in their own space and refuses anon", async () => {
+    await expect(asUma(CREATE, [code({ user_id: XAVI, slug: "XAVI02" }), null])).rejects.toThrow(
+      /row-level security/,
+    );
     const [row] = await asUma<{ user_id: string; has_password: boolean }>(CREATE, [
-      code({ user_id: XAVI, slug: "XAVI02" }),
+      code({ slug: "XAVI02" }),
       null,
     ]);
-    expect(row).toMatchObject({ user_id: XAVI, has_password: false });
+    expect(row).toMatchObject({ user_id: UMA, has_password: false });
     const before = await countXavi();
     await expect(asVera(CREATE, [code({ user_id: XAVI, slug: "XAVI03" }), null])).rejects.toThrow(
       /row-level security/,
@@ -1393,5 +1404,248 @@ describe("create_code", () => {
     // A link ending that's taken (endings ignore case).
     await expect(asXavi(CREATE, [code({ slug: "xavi01" }), null])).rejects.toThrow(/duplicate key/);
     expect(await countXavi()).toBe(before);
+  });
+});
+
+describe("teams (two-way sharing)", () => {
+  const KIM = "2a2a2a2a-2a2a-4a2a-8a2a-2a2a2a2a2a2a"; // owner
+  const LEO = "2b2b2b2b-2b2b-4b2b-8b2b-2b2b2b2b2b2b"; // editor
+  const MIA = "2c2c2c2c-2c2c-4c2c-8c2c-2c2c2c2c2c2c"; // viewer
+  const NED = "2d2d2d2d-2d2d-4d2d-8d2d-2d2d2d2d2d2d"; // outsider
+  const OLA = "2e2e2e2e-2e2e-4e2e-8e2e-2e2e2e2e2e2e"; // another owner
+  const RAY = "2f2f2f2f-2f2f-4f2f-8f2f-2f2f2f2f2f2f"; // owner (leaving)
+  const SKY = "30303030-3030-4030-8030-303030303030"; // member who leaves
+  const TOM = "31313131-3131-4131-8131-313131313131"; // owner (removing)
+  const UNA = "32323232-3232-4232-8232-323232323232"; // member removed, codes kept
+  const WES = "33333333-3333-4333-8333-333333333334"; // member removed, codes taken
+  const by =
+    (id: string) =>
+    <T>(sql: string, params?: unknown[]) =>
+      as<T>("authenticated", id, sql, params);
+  const asKim = by(KIM);
+  const asLeo = by(LEO);
+  const asMia = by(MIA);
+  const asNed = by(NED);
+  const codes: Record<string, string> = {};
+  const names = async (who: ReturnType<typeof by>) =>
+    (await who<{ name: string }>("select name from public.qr_codes order by name")).map(
+      (r) => r.name,
+    );
+  const make = async (who: ReturnType<typeof by>, name: string, extra = "") =>
+    (
+      await who<{ id: string }>(
+        `insert into public.qr_codes (name, qr_type, content${extra ? ", is_private" : ""})
+         values ($1, 'text', '{"text":"hi"}'${extra ? ", true" : ""}) returning id`,
+        [name],
+      )
+    )[0]!.id;
+  const join = async (owner: string, member: string, role: "editor" | "viewer") =>
+    asService("insert into public.team_members (owner_id, member_id, role) values ($1, $2, $3)", [
+      owner,
+      member,
+      role,
+    ]);
+
+  beforeAll(async () => {
+    await db.query(
+      `insert into auth.users (id, email, raw_user_meta_data) values
+         ($1, 'kim@example.com', '{"full_name":"Kim"}'), ($2, 'leo@example.com', '{"full_name":"Leo"}'),
+         ($3, 'mia@example.com', '{"full_name":"Mia"}'), ($4, 'ned@example.com', '{}'),
+         ($5, 'ola@example.com', '{}'), ($6, 'ray@example.com', '{}'), ($7, 'sky@example.com', '{}'),
+         ($8, 'tom@example.com', '{}'), ($9, 'una@example.com', '{"full_name":"Una"}'),
+         ($10, 'wes@example.com', '{}')`,
+      [KIM, LEO, MIA, NED, OLA, RAY, SKY, TOM, UNA, WES],
+    );
+    await join(KIM, LEO, "editor");
+    await join(KIM, MIA, "viewer");
+    codes.kim = await make(asKim, "Kim code");
+    codes.leo = await make(asLeo, "Leo code");
+    codes.mia = await make(asMia, "Mia code");
+    codes.secret = await make(asMia, "Mia secret", "private");
+    codes.ned = await make(asNed, "Ned code");
+  });
+
+  it("teammates see each other's shared codes both ways; outsiders see nothing", async () => {
+    const team = ["Kim code", "Leo code", "Mia code"];
+    expect(await names(asKim)).toEqual(team);
+    expect(await names(asLeo)).toEqual(team);
+    expect(await names(asMia)).toEqual(["Kim code", "Leo code", "Mia code", "Mia secret"]);
+    expect(await names(asNed)).toEqual(["Ned code"]);
+  });
+
+  it("owner and editors change teammates' codes; viewers change only their own", async () => {
+    await asLeo("update public.qr_codes set name = 'Mia code (by Leo)' where id = $1", [codes.mia]);
+    await asKim("update public.qr_codes set name = 'Leo code (by Kim)' where id = $1", [codes.leo]);
+    await asMia("update public.qr_codes set name = 'Kim code (by Mia)' where id = $1", [codes.kim]);
+    await asMia("update public.qr_codes set name = 'Mia own edit' where id = $1", [codes.mia]);
+    expect(await names(asKim)).toEqual(["Kim code", "Leo code (by Kim)", "Mia own edit"]);
+    // A viewer can't delete a teammate's code either.
+    await asMia("delete from public.qr_codes where id = $1", [codes.kim]);
+    expect(await names(asKim)).toContain("Kim code");
+  });
+
+  it("everyone creates codes and folders only in their own space", async () => {
+    await expect(
+      asLeo("insert into public.qr_codes (user_id, name, qr_type) values ($1, 'x', 'text')", [KIM]),
+    ).rejects.toThrow(/row-level security/);
+    await expect(
+      asLeo("insert into public.folders (user_id, name) values ($1, 'Nope')", [KIM]),
+    ).rejects.toThrow(/row-level security/);
+    const [mine] = await asLeo<{ user_id: string }>(
+      "insert into public.folders (name) values ('Leo folder') returning user_id",
+    );
+    expect(mine?.user_id).toBe(LEO);
+    // Editors can still rename a teammate's folder.
+    const [kimFolder] = await asKim<{ id: string }>(
+      "insert into public.folders (name) values ('Kim folder') returning id",
+    );
+    await asLeo("update public.folders set name = 'Kim folder (by Leo)' where id = $1", [
+      kimFolder!.id,
+    ]);
+    expect(
+      (
+        await asKim<{ name: string }>("select name from public.folders where id = $1", [
+          kimFolder!.id,
+        ])
+      )[0]?.name,
+    ).toBe("Kim folder (by Leo)");
+  });
+
+  it("private codes stay private: no reads, scans, counts or changes by teammates", async () => {
+    await asService(
+      "insert into public.scan_events (code_id, visitor_hash) values ($1, 'a'), ($2, 'b')",
+      [codes.secret, codes.mia],
+    );
+    expect(
+      await asKim("select id from public.scan_events where code_id = $1", [codes.secret]),
+    ).toEqual([]);
+    const counts = await asKim<{ code_id: string }>(
+      "select code_id from public.recent_scan_counts($1)",
+      [MIA],
+    );
+    expect(counts.map((row) => row.code_id)).toEqual([codes.mia]);
+    await asLeo("update public.qr_codes set name = 'Seen it' where id = $1", [codes.secret]);
+    expect(
+      (
+        await asMia<{ name: string }>("select name from public.qr_codes where id = $1", [
+          codes.secret,
+        ])
+      )[0]?.name,
+    ).toBe("Mia secret");
+    // Only a code's maker can make it private.
+    await expect(
+      asLeo("update public.qr_codes set is_private = true where id = $1", [codes.kim]),
+    ).rejects.toThrow(/row-level security/);
+    // Not even the owner can password-protect a teammate's private trackable code.
+    const [link] = await asMia<{ id: string }>(
+      `insert into public.qr_codes (name, qr_type, is_dynamic, slug, destination, content, is_private)
+       values ('Mia link', 'url', true, 'MIA001', 'https://mia.example', '{"url":"https://mia.example"}', true)
+       returning id`,
+    );
+    await expect(
+      asKim("select public.set_code_password($1, 'secret1')", [link!.id]),
+    ).rejects.toThrow(/Not allowed/);
+    await asMia("select public.set_code_password($1, 'secret1')", [link!.id]);
+  });
+
+  it("one team per person", async () => {
+    const invite = async (owner: ReturnType<typeof by>, email: string) =>
+      (
+        await owner<{ token: string }>(
+          "insert into public.team_invites (email, role) values ($1, 'viewer') returning token",
+          [email],
+        )
+      )[0]!.token;
+    const olaToMia = await invite(by(OLA), "mia@example.com");
+    await expect(asMia("select public.accept_invite($1)", [olaToMia])).rejects.toThrow(
+      /already in another team/,
+    );
+    const olaToKim = await invite(by(OLA), "kim@example.com");
+    await expect(asKim("select public.accept_invite($1)", [olaToKim])).rejects.toThrow(
+      /your own team/,
+    );
+    await expect(
+      asLeo("insert into public.team_invites (email, role) values ('x@example.com', 'viewer')"),
+    ).rejects.toThrow(/row-level security/);
+    await expect(join(OLA, LEO, "viewer")).rejects.toThrow(/team_members_one_team/);
+  });
+
+  it("my_team lists everyone with their roles, and nothing for people on their own", async () => {
+    expect(
+      await asLeo<{ email: string; role: string; is_me: boolean }>(
+        "select email, role, is_me from public.my_team()",
+      ),
+    ).toEqual([
+      { email: "kim@example.com", role: "owner", is_me: false },
+      { email: "leo@example.com", role: "editor", is_me: true },
+      { email: "mia@example.com", role: "viewer", is_me: false },
+    ]);
+    expect(await asNed("select * from public.my_team()")).toEqual([]);
+  });
+
+  it("leaving ends sharing both ways, and the member keeps their codes", async () => {
+    await join(RAY, SKY, "editor");
+    const rayCode = await make(by(RAY), "Ray code");
+    const skyCode = await make(by(SKY), "Sky code");
+    expect(await names(by(RAY))).toEqual(["Ray code", "Sky code"]);
+    await by(SKY)("delete from public.team_members where member_id = $1", [SKY]);
+    expect(await names(by(RAY))).toEqual(["Ray code"]);
+    expect(await names(by(SKY))).toEqual(["Sky code"]);
+    expect([rayCode, skyCode]).toHaveLength(2);
+  });
+
+  it("removing with keep moves shared codes and folders to the owner; private codes stay", async () => {
+    await join(TOM, UNA, "editor");
+    await by(TOM)("insert into public.folders (name) values ('Menus')");
+    const [unaMenus] = await by(UNA)<{ id: string }>(
+      "insert into public.folders (name) values ('Menus') returning id",
+    );
+    const shared = await make(by(UNA), "Una poster");
+    const hidden = await make(by(UNA), "Una diary", "private");
+    await by(UNA)("update public.qr_codes set folder_id = $1 where id in ($2, $3)", [
+      unaMenus!.id,
+      shared,
+      hidden,
+    ]);
+    await asService("insert into public.scan_events (code_id, visitor_hash) values ($1, 'x')", [
+      shared,
+    ]);
+
+    await expect(by(UNA)("select public.remove_member($1, true)", [UNA])).rejects.toThrow(
+      /Not allowed/,
+    );
+    const [{ moved }] = (await by(TOM)<{ moved: { codes: number; folders: number } }>(
+      "select public.remove_member($1, true) as moved",
+      [UNA],
+    )) as [{ moved: { codes: number; folders: number } }];
+    expect(moved).toEqual({ codes: 1, folders: 1 });
+
+    const [poster] = await by(TOM)<{ user_id: string; folder: string }>(
+      `select c.user_id, f.name as folder from public.qr_codes c
+         join public.folders f on f.id = c.folder_id where c.id = $1`,
+      [shared],
+    );
+    expect(poster).toEqual({ user_id: TOM, folder: "Menus (Una)" });
+    expect(
+      await by(TOM)("select id from public.scan_events where code_id = $1", [shared]),
+    ).toHaveLength(1);
+    const [diary] = await by(UNA)<{ user_id: string; folder_id: string | null }>(
+      "select user_id, folder_id from public.qr_codes where id = $1",
+      [hidden],
+    );
+    expect(diary).toEqual({ user_id: UNA, folder_id: null });
+    expect(await names(by(UNA))).toEqual(["Una diary"]);
+  });
+
+  it("removing without keep moves nothing", async () => {
+    await join(TOM, WES, "viewer");
+    await make(by(WES), "Wes code");
+    const [{ moved }] = (await by(TOM)<{ moved: { codes: number; folders: number } }>(
+      "select public.remove_member($1, false) as moved",
+      [WES],
+    )) as [{ moved: { codes: number; folders: number } }];
+    expect(moved).toEqual({ codes: 0, folders: 0 });
+    expect(await names(by(WES))).toEqual(["Wes code"]);
+    expect(await names(by(TOM))).not.toContain("Wes code");
   });
 });
