@@ -47,9 +47,12 @@ test.describe("bulk creation in the app", () => {
 test.describe("team viewers", () => {
   test.use({ storageState: VIEWER.state });
 
-  test("can't open bulk creation in a team they only view", async ({ page }) => {
+  test("bulk create in their own codes from anywhere", async ({ page }) => {
     const { ownerId } = seed();
     await page.goto(`codes/bulk?workspace=${ownerId}`);
-    await expect(page).toHaveURL(new RegExp(`/codes\\?workspace=${ownerId}$`));
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Create codes in bulk" }),
+    ).toBeVisible();
+    await expect(page.getByText(/Saving to/)).toHaveCount(0);
   });
 });

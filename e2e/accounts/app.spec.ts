@@ -170,24 +170,38 @@ test.describe("signed in as an owner", () => {
 test.describe("signed in as a viewer", () => {
   test.use({ storageState: VIEWER.state });
 
-  test("sees the owner's codes with no create controls", async ({ page }) => {
+  test("sees the owner's codes; Create makes their own", async ({ page }) => {
     await page.goto(`codes?workspace=${seed().ownerId}`);
     await expect(page.getByText("Spring menu")).toBeVisible();
-    await expect(page.getByRole("link", { name: /Create( code)?$/ })).toHaveCount(0);
-    await page.goto("codes");
-    await expect(page.getByRole("link", { name: "Create code" }).first()).toBeVisible();
+    await expect(page.getByRole("main").getByRole("link", { name: /Create( code)?$/ })).toHaveCount(
+      0,
+    );
+    await expect(page.getByRole("link", { name: "Create code" }).first()).toHaveAttribute(
+      "href",
+      "/codes/new",
+    );
+  });
+
+  test("the member view of /team fits 390px and passes axe", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto("team");
+    await expect(page.getByRole("button", { name: "Leave team" })).toBeVisible();
+    await expectNoSidewaysScroll(page);
+    await expectNoAxeViolations(page);
   });
 });
 
 test.describe("a team code's pages", () => {
   test.use({ storageState: VIEWER.state });
 
-  test("stay in that team, without create controls", async ({ page }) => {
+  test("stay in that team, with no create controls in the page", async ({ page }) => {
     const { menuId, ownerId } = seed();
     for (const path of [`codes/${menuId}`, `codes/${menuId}/analytics`]) {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(`/${path}\\?workspace=${ownerId}$`));
-      await expect(page.getByRole("link", { name: /Create( code)?$/ })).toHaveCount(0);
+      await expect(
+        page.getByRole("main").getByRole("link", { name: /Create( code)?$/ }),
+      ).toHaveCount(0);
     }
   });
 });
