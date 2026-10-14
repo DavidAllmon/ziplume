@@ -991,3 +991,61 @@ describe("profile photos", () => {
     await expect(asAnon("select public.team_overview()")).rejects.toThrow(/permission denied/);
   });
 });
+
+describe("profile photo storage", () => {
+  const RITA = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+  const SAM = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+  const asRita = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", RITA, sql, params);
+  const asSam = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", SAM, sql, params);
+  const add = (who: typeof asRita, name: string) =>
+    who("insert into storage.objects (bucket_id, name) values ('avatars', $1)", [name]);
+
+  beforeAll(async () => {
+    await db.query(
+      "insert into auth.users (id, email) values ($1, 'rita@example.com'), ($2, 'sam@example.com')",
+      [RITA, SAM],
+    );
+  });
+
+  it("keeps photos in each owner's folder, in a public 2 MB bucket for images", async () => {
+    await add(asRita, `${RITA}/me.webp`);
+    await expect(add(asSam, `${RITA}/evil.webp`)).rejects.toThrow(/row-level security/);
+    await expect(
+      asAnon("insert into storage.objects (bucket_id, name) values ('avatars', 'x/y.webp')"),
+    ).rejects.toThrow(/row-level security/);
+    expect(await asSam("select name from storage.objects where bucket_id = 'avatars'")).toEqual([]);
+    await asSam("delete from storage.objects where bucket_id = 'avatars'");
+    expect(await asRita("select name from storage.objects where bucket_id = 'avatars'")).toEqual([
+      { name: `${RITA}/me.webp` },
+    ]);
+    await asRita("delete from storage.objects where name = $1", [`${RITA}/me.webp`]);
+    expect(await asRita("select name from storage.objects where bucket_id = 'avatars'")).toEqual(
+      [],
+    );
+    const [bucket] = await asService<{
+      public: boolean;
+      file_size_limit: string;
+      allowed_mime_types: string[];
+    }>(
+      "select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'avatars'",
+    );
+    expect(bucket).toMatchObject({
+      public: true,
+      allowed_mime_types: ["image/png", "image/jpeg", "image/webp"],
+    });
+    expect(Number(bucket?.file_size_limit)).toBe(2097152);
+  });
+
+  it("need a two-factor session for accounts with two-factor", async () => {
+    await db.query("insert into auth.mfa_factors (user_id, status) values ($1, 'verified')", [SAM]);
+    await expect(add(asSam, `${SAM}/me.webp`)).rejects.toThrow(/row-level security/);
+    await as(
+      "authenticated",
+      SAM,
+      "insert into storage.objects (bucket_id, name) values ('avatars', $1)",
+      [`${SAM}/me.webp`],
+      "aal2",
+    );
+    await db.query("delete from auth.mfa_factors where user_id = $1", [SAM]);
+  });
+});
