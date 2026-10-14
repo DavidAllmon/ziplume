@@ -1,19 +1,76 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export const LEAVE_MESSAGE = "Leave without saving? Your changes will be lost.";
+
+/** Marks the copy of this page that Back lands on first. */
+const COPY_KEY = "__unsavedChangesCopy";
+
+const isCopy = (state: unknown) =>
+  typeof state === "object" &&
+  state !== null &&
+  (state as Record<string, unknown>)[COPY_KEY] === true;
 
 /**
  * While `active`, asks before the page is left: in-app links, Back and Forward, closing the tab
  * and reloading. Back works by keeping one copy of this page on the history stack: Back lands on
- * the copy first, and only goes on if the person says so.
+ * the copy's original first, which asks; with nothing unsaved it just keeps going, so Back is
+ * never a dead press.
  */
 export function useUnsavedChangesGuard(active: boolean): void {
+  const activeRef = useRef(active);
+  /** Whether the history entry showing now is this page's copy. */
+  const onCopy = useRef(false);
+  /** The person chose to leave: stop asking. */
+  const leaving = useRef(false);
+
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
+
+  // Back and Forward, for as long as the page is open.
+  useEffect(() => {
+    onCopy.current = isCopy(window.history.state);
+    const page = window.location.pathname + window.location.search;
+    const onPopState = (event: PopStateEvent) => {
+      if (leaving.current) return;
+      if (isCopy(event.state)) {
+        onCopy.current = true;
+        return;
+      }
+      const leftCopy = onCopy.current;
+      onCopy.current = false;
+      if (!leftCopy || window.location.pathname + window.location.search !== page) return;
+      // Back from the copy landed on this page's own entry.
+      if (!activeRef.current) {
+        window.history.back();
+      } else if (window.confirm(LEAVE_MESSAGE)) {
+        leaving.current = true;
+        window.history.back();
+      } else {
+        window.history.forward();
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   useEffect(() => {
     if (!active) return;
 
+    // The first unsaved change adds the copy; it stays while the page is open.
+    if (!isCopy(window.history.state)) {
+      window.history.pushState(
+        { ...(window.history.state ?? {}), [COPY_KEY]: true },
+        "",
+        window.location.href,
+      );
+    }
+    onCopy.current = true;
+
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (leaving.current) return;
       event.preventDefault();
       event.returnValue = "";
     };
@@ -37,25 +94,11 @@ export function useUnsavedChangesGuard(active: boolean): void {
       if (!window.confirm(LEAVE_MESSAGE)) event.preventDefault();
     };
 
-    let leaving = false;
-    window.history.pushState(window.history.state, "", window.location.href);
-    const onPopState = () => {
-      if (leaving) return;
-      if (window.confirm(LEAVE_MESSAGE)) {
-        leaving = true;
-        window.history.back();
-      } else {
-        window.history.pushState(window.history.state, "", window.location.href);
-      }
-    };
-
     window.addEventListener("beforeunload", onBeforeUnload);
     document.addEventListener("click", onClick, true);
-    window.addEventListener("popstate", onPopState);
     return () => {
       window.removeEventListener("beforeunload", onBeforeUnload);
       document.removeEventListener("click", onClick, true);
-      window.removeEventListener("popstate", onPopState);
     };
   }, [active]);
 }

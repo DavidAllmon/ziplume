@@ -45,6 +45,28 @@ test.describe("editing a saved code", () => {
     await expect(page.getByLabel("Background", { exact: true })).toHaveValue(/^#fff7e6$/i);
   });
 
+  test("Back after saving shows the saved code, not the editor as it was", async ({ page }) => {
+    const id = await createCode(page, "Back test", "https://example.com/back");
+    await page.getByRole("link", { name: "Edit code" }).click();
+    await page.getByLabel("Code name").fill("Back test saved");
+    await preview(page).getByRole("button", { name: "Save changes" }).click();
+    await expect(page).toHaveURL(new RegExp(`/codes/${id}$`));
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`/codes/${id}/edit$`));
+    await expect(page.getByLabel("Code name")).toHaveValue("Back test saved");
+  });
+
+  test("after Discard, Back leaves in one press", async ({ page }) => {
+    const id = await createCode(page, "Discard test", "https://example.com/discard");
+    await page.getByRole("link", { name: "Edit code" }).click();
+    await expect(page).toHaveURL(new RegExp(`/codes/${id}/edit$`));
+    await page.getByLabel("Code name").fill("Discard test 2");
+    await preview(page).getByRole("button", { name: "Discard changes" }).click();
+    await expect(page.getByLabel("Code name")).toHaveValue("Discard test");
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`/codes/${id}(#download)?$`));
+  });
+
   test("the old home-page edit address forwards to the editor", async ({ page }) => {
     const id = await createCode(page, "Old link", "https://example.com/old");
     await page.goto(`/?edit=${id}`);
