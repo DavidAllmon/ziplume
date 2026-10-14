@@ -1548,6 +1548,34 @@ describe("teams (two-way sharing)", () => {
     await asMia("select public.set_code_password($1, 'secret1')", [link!.id]);
   });
 
+  it("teammates add files to pages they change, but only a folder's owner lists, replaces or deletes them", async () => {
+    const files = async (who: ReturnType<typeof by>) =>
+      (
+        await who<{ name: string }>(
+          "select name from storage.objects where name like $1 order by name",
+          [`${KIM}/%`],
+        )
+      ).map((row) => row.name);
+    await asKim(`insert into storage.objects (bucket_id, name) values ('page-media', $1)`, [
+      `${KIM}/kim.png`,
+    ]);
+    await asLeo(`insert into storage.objects (bucket_id, name) values ('page-media', $1)`, [
+      `${KIM}/from-leo.png`,
+    ]);
+    await expect(
+      asMia(`insert into storage.objects (bucket_id, name) values ('page-media', $1)`, [
+        `${KIM}/from-mia.png`,
+      ]),
+    ).rejects.toThrow(/row-level security/);
+    expect(await files(asLeo)).toEqual([]);
+    await asLeo("delete from storage.objects where name = $1", [`${KIM}/kim.png`]);
+    expect(await files(asKim)).toEqual([`${KIM}/from-leo.png`, `${KIM}/kim.png`]);
+  });
+
+  it("nobody looks up someone else's team directly", async () => {
+    await expect(asNed("select public.team_owner($1)", [KIM])).rejects.toThrow(/permission denied/);
+  });
+
   it("one team per person", async () => {
     const invite = async (owner: ReturnType<typeof by>, email: string) =>
       (

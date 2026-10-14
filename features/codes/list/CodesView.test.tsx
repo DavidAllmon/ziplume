@@ -7,6 +7,8 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { deleteCodes, duplicateCode, setCodesStatus } from "@/features/codes/api";
 import type { QrCodeRow } from "@/types/supabase";
 
+import { copyCodeMedia } from "@/features/codes/copyMedia";
+
 import { CodesView } from "./CodesView";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
@@ -25,6 +27,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 vi.mock("@/features/folders/api", () => ({ moveCodes: vi.fn() }));
+vi.mock("@/features/codes/copyMedia", () => ({ copyCodeMedia: vi.fn() }));
 vi.mock("@/features/generator/preview/QrTile", () => ({ QrTile: () => <span /> }));
 
 function code(id: string, patch: Partial<QrCodeRow> = {}): QrCodeRow {
@@ -196,6 +199,29 @@ describe("CodesView", () => {
     });
     expect(await screen.findByText("Copied “Spring menu” to your codes")).toBeInTheDocument();
     expect(screen.queryByText("Copy of Spring menu")).toBeNull();
+  });
+
+  it("a teammate's hosted page is copied with its images, into your own codes", async () => {
+    const user = userEvent.setup();
+    const page = code("links", {
+      name: "Team links",
+      qr_type: "links",
+      destination: null,
+      content: {
+        title: "Links",
+        logo: { path: "kim/a.png", name: "a.png", type: "image/png", size: 1 },
+      },
+    });
+    vi.mocked(copyCodeMedia).mockResolvedValue({ ok: true, content: { title: "Links (copied)" } });
+    vi.mocked(duplicateCode).mockResolvedValue({ ok: true, value: { ...page, id: "copy" } });
+    renderView({ teamId: "kim", codes: [page] });
+    await user.click(screen.getAllByRole("button", { name: "Actions for Team links" })[0]!);
+    await user.click(screen.getByRole("menuitem", { name: /Duplicate/ }));
+    expect(copyCodeMedia).toHaveBeenCalledWith("links");
+    expect(duplicateCode).toHaveBeenCalledWith(
+      expect.objectContaining({ content: { title: "Links (copied)" } }),
+      { keepFolder: false },
+    );
   });
 
   it("welcomes a first-time user with quick starts", () => {

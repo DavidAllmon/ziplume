@@ -262,6 +262,7 @@ export function TeamManager({
           ? `Removed ${name}. ${moved} ${moved === 1 ? "code" : "codes"} moved to your codes.`
           : `Removed ${name}`,
       );
+      if (result.warning) toast(result.warning, "error");
       setConfirm(null);
       router.refresh();
       return;

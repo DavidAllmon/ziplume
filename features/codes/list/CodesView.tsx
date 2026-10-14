@@ -10,6 +10,8 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { deleteCodes, duplicateCode, setCodesStatus } from "@/features/codes/api";
+import { copyCodeMedia } from "@/features/codes/copyMedia";
+import { isHostedPage } from "@/features/dashboard/codeRender";
 import { moveCodes } from "@/features/folders/api";
 import { MoveDialog } from "@/features/folders/MoveDialog";
 import { cn } from "@/lib/cn";
@@ -179,8 +181,15 @@ export function CodesView({
   }
 
   async function duplicate(code: QrCodeRow) {
-    // A teammate's code is copied into your own codes, so it doesn't join this list.
-    const result = await duplicateCode(code, { keepFolder: !teamId });
+    // A teammate's code is copied into your own codes, so it doesn't join this list. Their
+    // hosted page's images are copied too, so your copy never depends on their account.
+    let source = code;
+    if (teamId && isHostedPage(code)) {
+      const media = await copyCodeMedia(code.id);
+      if (!media.ok) return toast(media.error, "error");
+      source = { ...code, content: media.content as QrCodeRow["content"] };
+    }
+    const result = await duplicateCode(source, { keepFolder: !teamId });
     if (!result.ok) return toast(result.error, "error");
     if (teamId) {
       toast(`Copied “${code.name}” to your codes`);

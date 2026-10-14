@@ -7,6 +7,9 @@ import { SITE_URL, SUPABASE_URL } from "@/lib/env";
 import type { TeamRole } from "@/types/supabase";
 
 import { parseInviteEmails } from "./inviteInput";
+import { replaceMediaPaths } from "@/lib/pages/media";
+import type { Json } from "@/types/supabase";
+
 import { copyPageMedia } from "./media";
 
 export interface InviteOutcome {
@@ -214,6 +217,8 @@ export interface RemoveResult {
   error?: string;
   codes?: number;
   folders?: number;
+  /** Removed, but some pages still use images from the member's account. */
+  warning?: string;
 }
 
 /**
@@ -228,8 +233,9 @@ export async function removeMember(memberId: string, keepCodes: boolean): Promis
   const me = (team ?? []).find((person) => person.is_me);
   const member = (team ?? []).find((person) => person.user_id === memberId && !person.is_me);
   if (me?.role !== "owner" || !member) return { error: "Only the team owner can remove people." };
+  let copied: Awaited<ReturnType<typeof copyPageMedia>> | null = null;
   if (keepCodes) {
-    const copied = await copyPageMedia(memberId, user.id);
+    copied = await copyPageMedia(memberId, user.id);
     if (!copied.ok) return { error: copied.error };
   }
   const { data, error } = await supabase.rpc("remove_member", {
@@ -244,5 +250,28 @@ export async function removeMember(memberId: string, keepCodes: boolean): Promis
     };
   }
   const moved = (data ?? {}) as { codes?: number; folders?: number };
-  return { codes: moved.codes ?? 0, folders: moved.folders ?? 0 };
+  const result: RemoveResult = { codes: moved.codes ?? 0, folders: moved.folders ?? 0 };
+  if (!copied?.ok) return result;
+
+  // The codes are the owner's now: point their pages at the copied files. A page that can't be
+  // updated keeps working from the member's folder (until they delete their account).
+  const renamed = new Map(Object.entries(copied.renamed));
+  let stillTheirs = 0;
+  for (const page of copied.pages) {
+    const { error: pointError } = await supabase
+      .from("qr_codes")
+      .update({ content: replaceMediaPaths(page.content, renamed) as Json })
+      .eq("id", page.id);
+    if (pointError) stillTheirs += 1;
+  }
+  if (stillTheirs || copied.missing) {
+    const parts = [
+      stillTheirs &&
+        `${stillTheirs} ${stillTheirs === 1 ? "page still uses" : "pages still use"} images from their account`,
+      copied.missing &&
+        `${copied.missing} ${copied.missing === 1 ? "file was" : "files were"} already missing`,
+    ].filter(Boolean);
+    result.warning = `${parts.join(", and ")}. Open those pages and add the images again.`;
+  }
+  return result;
 }

@@ -43,8 +43,9 @@ as $$
   );
 $$;
 
-revoke all on function public.team_owner(uuid) from public, anon;
-grant execute on function public.team_owner(uuid) to authenticated, service_role;
+-- Only the access functions below call it: nobody looks up another person's team directly.
+revoke all on function public.team_owner(uuid) from public, anon, authenticated;
+grant execute on function public.team_owner(uuid) to service_role;
 
 -- Seeing someone's codes: your own, or a teammate's.
 create or replace function public.can_view(p_owner uuid)
@@ -186,6 +187,26 @@ begin
   update public.qr_codes set has_password = true where id = p_code;
 end;
 $$;
+
+-- Page media: anyone who may change a teammate's page can add files to its folder, but only the
+-- folder's owner lists, replaces or deletes them, so a private code's files never turn up for
+-- teammates. (Files are public by link; the app lists and removes them only on the server.)
+drop policy "Editors can see page media in the workspace folder" on storage.objects;
+drop policy "Editors can replace page media in the workspace folder" on storage.objects;
+drop policy "Editors can delete page media in the workspace folder" on storage.objects;
+
+create policy "Owners can see their page media"
+  on storage.objects for select to authenticated
+  using (bucket_id = 'page-media' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+create policy "Owners can replace their page media"
+  on storage.objects for update to authenticated
+  using (bucket_id = 'page-media' and (storage.foldername(name))[1] = (select auth.uid())::text)
+  with check (bucket_id = 'page-media' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+create policy "Owners can delete their page media"
+  on storage.objects for delete to authenticated
+  using (bucket_id = 'page-media' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 -- Members can't invite people: only someone on their own or a team's owner starts invites.
 create policy "Team members can't invite people"
