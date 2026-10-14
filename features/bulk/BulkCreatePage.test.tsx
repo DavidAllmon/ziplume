@@ -202,6 +202,56 @@ describe("BulkCreatePage", () => {
     expect(await screen.findByText("Created 1 code.")).toBeInTheDocument();
   });
 
+  it("locks the list and settings while saving", async () => {
+    const user = userEvent.setup();
+    let finish!: (value: Result<QrCodeRow[]>) => void;
+    vi.mocked(createCodes).mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    renderPage();
+    paste("name,url\nMenu,https://example.com/menu");
+    await user.click(screen.getByRole("button", { name: "Create 1 code" }));
+    expect(screen.getByLabelText("CSV")).toBeDisabled();
+    expect(screen.getByLabelText("Type of code")).toBeDisabled();
+    expect(screen.getByRole("switch", { name: /Trackable/ })).toBeDisabled();
+    expect(screen.getByLabelText("Folder")).toBeDisabled();
+    await act(async () =>
+      finish({
+        ok: true,
+        value: rowsFor([
+          { name: "Menu", qrType: "url", content: {}, design: {} as NewCode["design"] },
+        ]),
+      }),
+    );
+    expect(screen.getByLabelText("CSV")).toBeEnabled();
+  });
+
+  it("shows progress while the ZIP is made", async () => {
+    const user = userEvent.setup();
+    savesAll();
+    let finishZip!: () => void;
+    vi.mocked(downloadZip).mockReturnValue(new Promise<void>((resolve) => (finishZip = resolve)));
+    renderPage();
+    paste("name,url\nMenu,https://example.com/menu");
+    await user.click(screen.getByRole("button", { name: "Create 1 code" }));
+    await user.click(await screen.findByRole("button", { name: "Download ZIP" }));
+    expect(screen.getByRole("button", { name: /Preparing 0 of 1/ })).toBeDisabled();
+    await act(async () => finishZip());
+    expect(screen.getByRole("button", { name: "Download ZIP" })).toBeEnabled();
+  });
+
+  it("after creating, explains how to add the rows that needed fixing without duplicates", async () => {
+    const user = userEvent.setup();
+    savesAll();
+    renderPage();
+    paste(LINKS);
+    await user.click(screen.getByRole("button", { name: "Create 1 code" }));
+    expect(
+      await screen.findByText(
+        "Rows that need fixing were left out. To add them, upload a file with just those rows.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/upload it again/)).toBeNull();
+  });
+
   it("downloads the created codes as a ZIP", async () => {
     const user = userEvent.setup();
     savesAll();

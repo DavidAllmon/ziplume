@@ -8,7 +8,16 @@ import { MAX_BULK_ROWS, type BulkResult, type BulkRow } from "@/lib/bulk/rows";
 const PREVIEW_ROWS = 100;
 
 /** Step 2: which rows are ready and which need fixing (with why). */
-export function BulkCheckCard({ result, rows }: { result: BulkResult; rows: BulkRow[] }) {
+export function BulkCheckCard({
+  result,
+  rows,
+  fixHint = "Rows that need fixing are left out. Fix them in your file and upload it again.",
+}: {
+  result: BulkResult;
+  rows: BulkRow[];
+  /** What to do about rows that need fixing. */
+  fixHint?: string;
+}) {
   const ready = rows.filter((row) => !row.error).length;
   const invalid = rows.length - ready;
   return (
@@ -78,11 +87,7 @@ export function BulkCheckCard({ result, rows }: { result: BulkResult; rows: Bulk
                 Showing the first {PREVIEW_ROWS} of {rows.length} rows.
               </p>
             )}
-            {invalid > 0 && (
-              <p className="text-sm text-fg-muted">
-                Rows that need fixing are left out. Fix them in your file and upload it again.
-              </p>
-            )}
+            {invalid > 0 && <p className="text-sm text-fg-muted">{fixHint}</p>}
           </>
         )}
       </div>

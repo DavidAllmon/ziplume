@@ -16,6 +16,7 @@ import { createCodes } from "@/features/codes/api";
 import { createFolder, MAX_FOLDER_NAME } from "@/features/folders/api";
 import { DEFAULT_DESIGN } from "@/features/generator/state/defaults";
 import { parseBulk, requireWebLinks, type BulkRow } from "@/lib/bulk/rows";
+import { cn } from "@/lib/cn";
 import { codeTypeInfo } from "@/lib/qr/code-types";
 import type { ExportFormat, QrTypeId } from "@/lib/qr/types";
 import type { FolderRow, QrCodeRow } from "@/types/supabase";
@@ -54,7 +55,10 @@ export function BulkCreatePage({
   const [folderId, setFolderId] = useState(initialFolderId ?? "");
   const [newFolder, setNewFolder] = useState("");
   const [format, setFormat] = useState<ExportFormat>("png");
-  const [progress, setProgress] = useState<string | null>(null);
+  /** "Creating 100 of 300…" while saving; null when idle. */
+  const [creating, setCreating] = useState<string | null>(null);
+  /** "Preparing 12 of 300…" while the ZIP is made; null when idle. */
+  const [downloading, setDownloading] = useState<string | null>(null);
   /** Codes created from this list so far, and the folder they went into. */
   const [created, setCreated] = useState<QrCodeRow[]>([]);
   const [placedIn, setPlacedIn] = useState<string | null>(null);
@@ -113,7 +117,7 @@ export function BulkCreatePage({
     }
     const batch = toCreate;
     let reported = 0;
-    setProgress(`Creating 0 of ${batch.length}…`);
+    setCreating(`Creating 0 of ${batch.length}…`);
     const answer = await createCodes(
       batch.map((row) => ({
         ownerId: teamId ?? undefined,
@@ -127,11 +131,11 @@ export function BulkCreatePage({
       (count, saved) => {
         reported = count;
         setCreated((current) => [...current, ...saved]);
-        setProgress(`Creating ${count} of ${batch.length}…`);
+        setCreating(`Creating ${count} of ${batch.length}…`);
       },
     );
     inFlight.current = false;
-    setProgress(null);
+    setCreating(null);
     setPlacedIn(folder);
     if (answer.ok) {
       // Codes saved without a progress report (there shouldn't be any) still count.
@@ -146,17 +150,17 @@ export function BulkCreatePage({
   }
 
   async function download() {
-    if (progress) return;
-    setProgress(`Preparing 0 of ${created.length}…`);
+    if (downloading || creating) return;
+    setDownloading(`Preparing 0 of ${created.length}…`);
     try {
       await downloadZip(itemsFromCodes(created), format, `quickqreate-${type}-codes.zip`, (done) =>
-        setProgress(`Preparing ${done} of ${created.length}…`),
+        setDownloading(`Preparing ${done} of ${created.length}…`),
       );
       toast(`Downloaded ${codes(created.length)}`);
     } catch {
       toast("The ZIP file couldn’t be made. Please try again.", "error");
     } finally {
-      setProgress(null);
+      setDownloading(null);
     }
   }
 
@@ -179,15 +183,28 @@ export function BulkCreatePage({
               startOver();
             }}
             text={text}
+            disabled={creating !== null}
             onTextChange={(next) => {
               setText(next);
               startOver();
             }}
           />
-          {result && <BulkCheckCard result={result} rows={rows} />}
+          {result && (
+            <BulkCheckCard
+              result={result}
+              rows={rows}
+              // Uploading the whole fixed file again would create the other rows twice.
+              fixHint={
+                created.length > 0
+                  ? "Rows that need fixing were left out. To add them, upload a file with just those rows."
+                  : undefined
+              }
+            />
+          )}
         </div>
 
-        <aside className="lg:sticky lg:top-6">
+        {/* min-w-0: a long folder name in the Folder list mustn't widen the page on phones. */}
+        <aside className="min-w-0 lg:sticky lg:top-6">
           <Card aria-labelledby="bulk-create">
             <CardHeader id="bulk-create" step={result ? 3 : 2} title="Create" />
             <div className="flex flex-col gap-4 px-5 pt-4 pb-6 sm:px-6">
@@ -196,6 +213,7 @@ export function BulkCreatePage({
                   label="Trackable"
                   description="Change where they point after printing, and see scans."
                   checked={trackable}
+                  disabled={creating !== null}
                   onChange={(on) => {
                     setTrackable(on);
                     startOver();
@@ -212,6 +230,7 @@ export function BulkCreatePage({
                   <Select
                     {...control}
                     value={folderId}
+                    disabled={creating !== null}
                     onChange={(event) => setFolderId(event.target.value)}
                   >
                     <option value="">No folder</option>
@@ -230,6 +249,7 @@ export function BulkCreatePage({
                     <TextInput
                       {...control}
                       maxLength={MAX_FOLDER_NAME}
+                      disabled={creating !== null}
                       value={newFolder}
                       onChange={(event) => setNewFolder(event.target.value)}
                     />
@@ -248,15 +268,15 @@ export function BulkCreatePage({
               {!finished && (
                 <Button
                   size="lg"
-                  disabled={toCreate.length === 0 || progress !== null}
+                  disabled={toCreate.length === 0 || creating !== null || downloading !== null}
                   onClick={() => void create()}
                 >
-                  {progress ? (
+                  {creating ? (
                     <Loader2 aria-hidden className="animate-spin" />
                   ) : (
                     <Plus aria-hidden />
                   )}
-                  {progress ??
+                  {creating ??
                     (remaining
                       ? `Create the remaining ${remaining.length}`
                       : toCreate.length
@@ -290,16 +310,22 @@ export function BulkCreatePage({
                   </Field>
                   <Button
                     variant="outline"
-                    disabled={progress !== null}
+                    disabled={creating !== null || downloading !== null}
                     onClick={() => void download()}
                   >
-                    <Download aria-hidden /> Download ZIP
+                    {downloading ? (
+                      <Loader2 aria-hidden className="animate-spin" />
+                    ) : (
+                      <Download aria-hidden />
+                    )}
+                    {downloading ?? "Download ZIP"}
                   </Button>
                   <Link
                     href={withWorkspace(placedIn ? `/codes?folder=${placedIn}` : "/codes", teamId)}
-                    className={buttonClasses("ghost", "md")}
+                    className={cn(buttonClasses("ghost", "md"), "max-w-full")}
                   >
-                    Open {placedName ?? "your codes"}
+                    {/* A long folder name is cut short instead of pushing the page sideways. */}
+                    <span className="truncate">Open {placedName ?? "your codes"}</span>
                   </Link>
                 </div>
               )}

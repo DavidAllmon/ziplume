@@ -20,11 +20,14 @@ export function BulkListCard({
   onTypeChange,
   text,
   onTextChange,
+  disabled = false,
 }: {
   type: QrTypeId;
   onTypeChange: (type: QrTypeId) => void;
   text: string;
   onTextChange: (text: string) => void;
+  /** Locks the list while it is being saved. */
+  disabled?: boolean;
 }) {
   const fileId = useId();
   const [fileError, setFileError] = useState("");
@@ -62,6 +65,7 @@ export function BulkListCard({
               <Select
                 {...control}
                 value={type}
+                disabled={disabled}
                 onChange={(event) => onTypeChange(event.target.value as QrTypeId)}
               >
                 {QR_TYPE_IDS.map((id) => (
@@ -89,7 +93,11 @@ export function BulkListCard({
           . Only the ones you need; extra columns are ignored.
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          <label htmlFor={fileId} className={`${buttonClasses("secondary", "md")} cursor-pointer`}>
+          <label
+            htmlFor={fileId}
+            aria-disabled={disabled || undefined}
+            className={`${buttonClasses("secondary", "md")} cursor-pointer aria-disabled:pointer-events-none aria-disabled:opacity-50`}
+          >
             <FileUp aria-hidden /> Upload CSV
           </label>
           <input
@@ -97,6 +105,7 @@ export function BulkListCard({
             type="file"
             accept=".csv,.tsv,.txt,text/csv,text/plain"
             className="sr-only"
+            disabled={disabled}
             onChange={(event) => {
               void readFile(event.target.files?.[0]);
               event.target.value = "";
@@ -114,6 +123,7 @@ export function BulkListCard({
               className="font-mono text-sm"
               placeholder={templateCsv(type)}
               value={text}
+              disabled={disabled}
               onChange={(event) => onTextChange(event.target.value)}
             />
           )}

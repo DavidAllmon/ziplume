@@ -24,6 +24,24 @@ test.describe("bulk creation in the app", () => {
       await expect(row.getByText("Active").filter({ visible: true }).first()).toBeVisible();
     }
   });
+
+  test("a long folder name doesn't push the page sideways on phones", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("codes/bulk");
+    await page
+      .getByLabel("CSV", { exact: true })
+      .fill("name,url\nLong folder code,https://example.com/long");
+    await page.getByLabel("Folder", { exact: true }).selectOption({ label: "New folder…" });
+    await page
+      .getByLabel("New folder name")
+      .fill("Spring flyers for the downtown cafe, summer 2026");
+    await page.getByRole("button", { name: "Create 1 code" }).click();
+    await expect(page.getByText(/Created 1 code in Spring flyers/)).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
 });
 
 test.describe("team viewers", () => {
