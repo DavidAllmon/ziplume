@@ -1049,3 +1049,113 @@ describe("profile photo storage", () => {
     await db.query("delete from auth.mfa_factors where user_id = $1", [SAM]);
   });
 });
+
+describe("email invites", () => {
+  const TESS = "12121212-1212-4212-8212-121212121212"; // sends invites
+  const UMA = "13131313-1313-4313-8313-131313131313"; // another owner
+  const XENA = "14141414-1414-4414-8414-141414141414"; // signs up after being invited
+  const asTess = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", TESS, sql, params);
+  const asUma = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", UMA, sql, params);
+  const asXena = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", XENA, sql, params);
+  const record = (who: typeof asTess, id: string) =>
+    who("select public.record_invite_send($1)", [id]);
+
+  beforeAll(async () => {
+    await db.query(
+      "insert into auth.users (id, email) values ($1, 'tess@example.com'), ($2, 'uma@example.com')",
+      [TESS, UMA],
+    );
+  });
+
+  it("count each email and stop at 5 for one invite", async () => {
+    const [invite] = await asTess<{ id: string }>(
+      "insert into public.team_invites (email, role) values ('vic@example.com', 'viewer') returning id",
+    );
+    await expect(record(asUma, invite!.id)).rejects.toThrow(/no longer valid/);
+    for (let i = 0; i < 5; i++) await record(asTess, invite!.id);
+    await expect(record(asTess, invite!.id)).rejects.toThrow(/5 times/);
+    const [row] = await asTess<{ send_count: number; last_sent_at: string | null }>(
+      "select send_count, last_sent_at from public.team_invites where id = $1",
+      [invite!.id],
+    );
+    expect(row?.send_count).toBe(5);
+    expect(row?.last_sent_at).not.toBeNull();
+  });
+
+  it("allow 20 emails an hour per owner, even across revoked invites", async () => {
+    const invites = await asTess<{ id: string }>(
+      `insert into public.team_invites (email, role)
+       select 'p' || g || '@example.com', 'viewer' from generate_series(1, 16) g returning id`,
+    );
+    for (const invite of invites.slice(0, 15)) await record(asTess, invite.id);
+    // 5 + 15 = 20 emails this hour.
+    await expect(record(asTess, invites[15]!.id)).rejects.toThrow(/20 invites/);
+    await asTess("delete from public.team_invites");
+    const [fresh] = await asTess<{ id: string }>(
+      "insert into public.team_invites (email, role) values ('new@example.com', 'editor') returning id",
+    );
+    await expect(record(asTess, fresh!.id)).rejects.toThrow(/20 invites/);
+  });
+
+  it("keep the send log private", async () => {
+    await expect(asTess("select * from public.invite_sends")).rejects.toThrow(/permission denied/);
+    await expect(
+      asTess("insert into public.invite_sends (owner_id) values ($1)", [TESS]),
+    ).rejects.toThrow(/permission denied/);
+    await expect(asAnon("select public.record_invite_send(gen_random_uuid())")).rejects.toThrow(
+      /permission denied/,
+    );
+  });
+
+  it("refuse used or expired invites", async () => {
+    const [used] = await asUma<{ id: string; token: string }>(
+      "insert into public.team_invites (email, role) values ('tess@example.com', 'viewer') returning id, token",
+    );
+    await asTess("select public.accept_invite($1)", [used!.token]);
+    await expect(record(asUma, used!.id)).rejects.toThrow(/no longer valid/);
+    const [old] = await asUma<{ id: string }>(
+      "insert into public.team_invites (email, role) values ('old@example.com', 'viewer') returning id",
+    );
+    await asService(
+      "update public.team_invites set expires_at = now() - interval '1 minute' where id = $1",
+      [old!.id],
+    );
+    await expect(record(asUma, old!.id)).rejects.toThrow(/no longer valid/);
+  });
+
+  it("show invite details to anyone holding the link", async () => {
+    const [invite] = await asUma<{ token: string }>(
+      "insert into public.team_invites (email, role) values ('wes@example.com', 'editor') returning token",
+    );
+    const [{ details }] = (await asAnon<{ details: Record<string, unknown> }>(
+      "select public.invite_details($1) as details",
+      [invite!.token],
+    )) as [{ details: Record<string, unknown> }];
+    expect(details).toMatchObject({
+      email: "wes@example.com",
+      role: "editor",
+      valid: true,
+      owner_email: "uma@example.com",
+    });
+    const [{ details: none }] = (await asAnon<{ details: unknown }>(
+      "select public.invite_details($1) as details",
+      ["0".repeat(48)],
+    )) as [{ details: unknown }];
+    expect(none).toBeNull();
+  });
+
+  it("find the invite waiting for a new account’s address", async () => {
+    await db.query("insert into auth.users (id, email) values ($1, 'xena@example.com')", [XENA]);
+    const [invite] = await asUma<{ token: string }>(
+      "insert into public.team_invites (email, role) values ('Xena@Example.com', 'viewer') returning token",
+    );
+    const pending = async (who: typeof asTess) =>
+      (await who<{ token: string | null }>("select public.my_pending_invite() as token"))[0]
+        ?.token ?? null;
+    expect(await pending(asXena)).toBe(invite!.token);
+    expect(await pending(asTess)).toBeNull();
+    await asXena("select public.accept_invite($1)", [invite!.token]);
+    expect(await pending(asXena)).toBeNull();
+    await expect(asAnon("select public.my_pending_invite()")).rejects.toThrow(/permission denied/);
+  });
+});
