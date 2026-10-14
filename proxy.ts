@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { accountsEnabled } from "@/lib/env";
+import { editRedirect } from "@/lib/redirects";
 import { refreshSession } from "@/lib/supabase/proxy";
 
 export async function proxy(request: NextRequest) {
@@ -14,10 +15,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // Old bookmarks and links to the home page's edit mode open the code in the editor.
+  const edit = editRedirect(request.nextUrl);
+  if (edit) return NextResponse.redirect(edit, 308);
+
   if (!accountsEnabled) return NextResponse.next();
   return refreshSession(request);
 }
 
 export const config = {
-  matcher: ["/R/:path*", "/codes/:path*", "/team/:path*", "/settings/:path*", "/account/:path*"],
+  matcher: [
+    "/",
+    "/R/:path*",
+    "/codes/:path*",
+    "/team/:path*",
+    "/settings/:path*",
+    "/account/:path*",
+  ],
 };

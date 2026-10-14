@@ -39,7 +39,7 @@ export default async function AnalyticsPage({
           <Link href={`/codes/${code.id}`} className={buttonClasses("outline", "md")}>
             Back to code
           </Link>
-          <Link href="/" className={buttonClasses("primary", "md")}>
+          <Link href="/codes/new?type=url" className={buttonClasses("primary", "md")}>
             Create a trackable code
           </Link>
         </div>
