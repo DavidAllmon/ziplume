@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isCurrent, withWorkspace } from "./nav";
+import { isCurrent, newCodeHref, withWorkspace } from "./nav";
 
 describe("withWorkspace", () => {
   it("adds the team to a link, keeping its other parameters", () => {
@@ -19,5 +19,18 @@ describe("isCurrent", () => {
     expect(isCurrent("/codes/abc/analytics", "/codes")).toBe(true);
     expect(isCurrent("/codesx", "/codes")).toBe(false);
     expect(isCurrent("/settings/security", "/settings")).toBe(true);
+  });
+});
+
+describe("newCodeHref", () => {
+  it("opens the Create page with a type, a folder and the team when given", () => {
+    expect(newCodeHref({ ownerId: null })).toBe("/codes/new");
+    expect(newCodeHref({ type: "wifi", ownerId: null })).toBe("/codes/new?type=wifi");
+    expect(newCodeHref({ folderId: "f1", ownerId: "t1" })).toBe(
+      "/codes/new?folder=f1&workspace=t1",
+    );
+    expect(newCodeHref({ type: "links", folderId: "f1", ownerId: null })).toBe(
+      "/codes/new?type=links&folder=f1",
+    );
   });
 });

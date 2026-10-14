@@ -26,7 +26,7 @@ import { BUY_ME_A_COFFEE_URL } from "@/lib/env";
 
 import { CreateButton } from "./CreateButton";
 import { FolderNav } from "./FolderNav";
-import { isCurrent, withWorkspace, type ShellTeam, type ShellUser } from "./nav";
+import { isCurrent, newCodeHref, withWorkspace, type ShellTeam, type ShellUser } from "./nav";
 import { UserMenu } from "./UserMenu";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
@@ -254,7 +254,7 @@ export function AppShell({
           <QrCode aria-hidden /> Codes
         </Link>
         {canCreate && (
-          <Link href={withWorkspace("/", ownerId)} className={tabClass}>
+          <Link href={newCodeHref({ ownerId })} className={tabClass}>
             <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-fg [&_svg]:size-5">
               <Plus aria-hidden />
             </span>

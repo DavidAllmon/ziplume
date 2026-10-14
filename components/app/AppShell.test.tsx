@@ -40,7 +40,7 @@ describe("AppShell", () => {
     search = new URLSearchParams("workspace=t1");
     renderShell();
     expect(new Set(hrefs("Codes"))).toEqual(new Set(["/codes?workspace=t1"]));
-    expect(new Set(hrefs(/^Create( code)?$/))).toEqual(new Set(["/?workspace=t1"]));
+    expect(new Set(hrefs(/^Create( code)?$/))).toEqual(new Set(["/codes/new?workspace=t1"]));
     expect(new Set(hrefs("Team"))).toEqual(new Set(["/team"]));
     expect(hrefs("Settings")).toContain("/settings");
     expect(hrefs("Help & API docs")).toEqual(["/developers"]);

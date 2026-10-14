@@ -185,7 +185,10 @@ describe("CodesView", () => {
   it("welcomes a first-time user with quick starts", () => {
     renderView({ codes: [] });
     expect(screen.getByRole("heading", { name: "Create your first QR code" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Wi-Fi/ })).toHaveAttribute("href", "/?type=wifi");
+    expect(screen.getByRole("link", { name: /Wi-Fi/ })).toHaveAttribute(
+      "href",
+      "/codes/new?type=wifi",
+    );
   });
 
   it("says when a folder is empty", () => {
@@ -200,5 +203,9 @@ describe("CodesView", () => {
       },
     });
     expect(screen.getByRole("heading", { name: "This folder is empty" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create a code here" })).toHaveAttribute(
+      "href",
+      "/codes/new?folder=f1",
+    );
   });
 });
