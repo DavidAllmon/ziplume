@@ -7,6 +7,8 @@ function Page({ active }: { active: boolean }) {
   useUnsavedChangesGuard(active);
   return (
     <>
+      {/* Plain links stand in for any in-app link; the guard listens on the document. */}
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
       <a href="/codes">Codes</a>
       <a href="/codes" target="_blank">
         New tab
