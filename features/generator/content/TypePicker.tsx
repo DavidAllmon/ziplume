@@ -47,7 +47,7 @@ export function TypePicker({ value, onChange, disabled }: TypePickerProps) {
                 <Radio
                   key={id}
                   value={id}
-                  className="flex h-11 shrink-0 cursor-pointer snap-start items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-semibold whitespace-nowrap text-fg-muted transition-colors select-none hover:border-field-border hover:text-fg data-checked:border-accent data-checked:bg-accent data-checked:text-accent-fg data-disabled:cursor-not-allowed data-disabled:opacity-50 data-checked:data-disabled:opacity-100 data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring md:h-auto md:flex-col md:gap-1.5 md:rounded-control md:px-2 md:py-3 md:text-[13px]"
+                  className="flex h-11 shrink-0 cursor-pointer snap-start items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-semibold whitespace-nowrap text-fg-muted transition-colors select-none hover:border-field-border hover:text-fg data-checked:border-primary data-checked:bg-primary data-checked:text-primary-fg data-disabled:cursor-not-allowed data-disabled:opacity-50 data-checked:data-disabled:opacity-100 data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring md:h-auto md:flex-col md:gap-1.5 md:rounded-control md:px-2 md:py-3 md:text-[13px]"
                 >
                   <Icon aria-hidden className="size-4 md:size-5" />
                   {codeTypeInfo(id).label}
