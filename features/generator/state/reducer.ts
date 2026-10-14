@@ -143,18 +143,5 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
         name: "",
       };
     }
-
-    case "hydrate": {
-      const { design, exportSettings, activeType } = action.saved;
-      return {
-        ...state,
-        activeType,
-        design: sanitizeDesign(design),
-        exportSettings: {
-          ...exportSettings,
-          size: clamp(Math.round(exportSettings.size), MIN_EXPORT_SIZE, MAX_EXPORT_SIZE),
-        },
-      };
-    }
   }
 }

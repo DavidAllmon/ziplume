@@ -17,8 +17,8 @@ export default function PrivacyPage() {
       <h2>Without an account</h2>
       <p>
         Codes are generated in your browser. What you type is never sent to a server and is never
-        stored. Your design settings (colors, shapes, logo) are remembered on your own device so
-        they’re there next time. There are no ads, analytics scripts or tracking cookies.
+        stored. Only your light or dark theme choice is remembered, on your own device. There are no
+        ads, analytics scripts or tracking cookies.
       </p>
 
       <h2>With an account</h2>

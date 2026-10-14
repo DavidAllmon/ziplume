@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { createCode, designForStorage, updateCode } from "@/features/codes/api";
 import { editableWorkspace, type Workspace } from "@/features/teams/workspace";
 import { dynamicPayload } from "@/lib/dynamic/slug";
 import { normalizeUrl } from "@/lib/qr/normalize";
+import { removeKey } from "@/lib/storage";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 import { measure } from "@/lib/qr/capacity";
@@ -32,7 +33,6 @@ import {
 
 import { useScanVerification } from "./preview/useScanVerification";
 import { initialState } from "./state/defaults";
-import { loadSettings, saveSettings } from "./state/persistence";
 import { generatorReducer } from "./state/reducer";
 import type { DesignState } from "./state/types";
 
@@ -58,28 +58,19 @@ function moduleColors(design: DesignState): string[] {
 
 const isCodeType = (value: string): value is CodeTypeId => isStaticType(value) || isPageType(value);
 
+/** Versions before October 2026 remembered the last design here; it is cleared on load. */
+export const LEGACY_SETTINGS_KEY = "quickqreate:v1";
+
 export function useGenerator() {
   const [state, dispatch] = useReducer(generatorReducer, undefined, initialState);
-  const hydrated = useRef(false);
   const [saved, setSaved] = useState<SavedCode | null>(null);
   /** True when the user switched a new Link code to dynamic (before it is saved). */
   const [wantsDynamic, setWantsDynamic] = useState(false);
   /** A team workspace new codes are saved into (/?workspace=<owner id>); null = your own. */
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
 
-  // Declared before the loading effect so the defaults from the first render are never saved
-  // over the user's stored settings.
-  useEffect(() => {
-    if (hydrated.current) saveSettings(state);
-  }, [state]);
-
-  // Saved settings live in localStorage, which only exists in the browser, so they are
-  // applied after the first render to keep server and client HTML identical.
-  useEffect(() => {
-    const saved = loadSettings();
-    if (saved) dispatch({ type: "hydrate", saved });
-    hydrated.current = true;
-  }, []);
+  // New codes always start from the defaults. Remove settings an older version remembered.
+  useEffect(() => removeKey(LEGACY_SETTINGS_KEY), []);
 
   // Opening /?edit=<id> from the dashboard loads that saved code for editing, and
   // /?workspace=<owner id> saves new codes into a team workspace.

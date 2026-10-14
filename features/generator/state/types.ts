@@ -81,16 +81,8 @@ export type GeneratorAction =
   | { type: "swapColors" }
   | { type: "setExport"; patch: Partial<ExportSettings> }
   | { type: "resetDesign" }
-  | { type: "hydrate"; saved: PersistedSettings }
   | { type: "setName"; name: string }
   /** Start a brand-new code: every setting back to its default. */
   | { type: "reset" }
   /** Load a saved code (from the dashboard) into the generator for editing. */
   | { type: "loadCode"; qrType: CodeTypeId; content: unknown; design: unknown };
-
-export interface PersistedSettings {
-  version: 1;
-  activeType: CodeTypeId;
-  design: DesignState;
-  exportSettings: ExportSettings;
-}
