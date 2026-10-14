@@ -7,6 +7,7 @@ import { ProfileForm } from "@/features/auth/ProfileForm";
 import { TotpSettings } from "@/features/auth/TotpSettings";
 import { UpdatePasswordForm } from "@/features/auth/UpdatePasswordForm";
 import { ApiKeys } from "@/features/developer/ApiKeys";
+import { googlePhotoOf } from "@/features/profile/googlePhoto";
 import { requireUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +47,7 @@ export default async function AccountPage() {
   const { supabase, user } = await requireUser("/account");
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name")
+    .select("display_name, avatar_url")
     .eq("id", user.id)
     .maybeSingle();
   const { data: apiKeys } = await supabase
@@ -63,6 +64,8 @@ export default async function AccountPage() {
           userId={user.id}
           email={user.email ?? ""}
           initialName={profile?.display_name ?? ""}
+          avatarUrl={profile?.avatar_url ?? null}
+          googlePhoto={googlePhotoOf(user)}
         />
       </Panel>
       <Panel
