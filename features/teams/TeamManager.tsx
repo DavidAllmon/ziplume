@@ -1,14 +1,15 @@
 "use client";
 
-import { ArrowRight, LogOut, Trash2, UserPlus } from "lucide-react";
+import { ArrowRight, Link2, LogOut, MailCheck, Send, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 
+import { Avatar } from "@/components/ui/Avatar";
 import { Button, buttonClasses, IconButton } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Field } from "@/components/ui/Field";
-import { Select, TextInput } from "@/components/ui/inputs";
+import { Select, Textarea } from "@/components/ui/inputs";
 import { useToast } from "@/components/ui/Toast";
 import { CopyButton } from "@/features/dashboard/CopyButton";
 import { relativePhrase } from "@/features/dashboard/format";
@@ -16,12 +17,15 @@ import { SITE_URL } from "@/lib/env";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import type { TeamInviteRow, TeamRole } from "@/types/supabase";
 
+import { resendInvite, sendInvites, type InviteOutcome } from "./actions";
+import { MAX_INVITES_PER_REQUEST } from "./inviteInput";
 import { ROLE_LABELS, workspaceLabel } from "./roles";
 
 export interface Member {
   member_id: string;
   email: string;
   name: string | null;
+  avatar_url: string | null;
   role: TeamRole;
   created_at: string;
 }
@@ -30,13 +34,19 @@ export interface Membership {
   owner_id: string;
   owner_email: string;
   owner_name: string | null;
+  owner_avatar_url: string | null;
   role: TeamRole;
 }
 
-type Invite = Pick<TeamInviteRow, "id" | "email" | "role" | "token" | "created_at" | "expires_at">;
+export type Invite = Pick<
+  TeamInviteRow,
+  "id" | "email" | "role" | "token" | "created_at" | "expires_at" | "last_sent_at" | "send_count"
+>;
+
+/** Most emails one invite can get; the database enforces it too. */
+const MAX_SENDS_PER_INVITE = 5;
 
 const inviteLink = (token: string) => `${SITE_URL}/invite/${token}`;
-const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 function Section({
   title,
@@ -58,56 +68,121 @@ function Section({
   );
 }
 
+/** What happened to one address after "Send invites": emailed, or a link to share. */
+function OutcomeRow({ outcome }: { outcome: InviteOutcome }) {
+  if (outcome.status === "sent") {
+    return (
+      <li className="flex items-center gap-2 px-4 py-3 text-sm text-fg">
+        <MailCheck aria-hidden className="size-4 shrink-0 text-success" />
+        <span className="min-w-0 break-words">
+          Invite emailed to <strong>{outcome.email}</strong>
+        </span>
+      </li>
+    );
+  }
+  return (
+    <li className="flex flex-col gap-2 px-4 py-3 text-sm">
+      <p className="flex items-start gap-2 text-fg">
+        <Link2 aria-hidden className="mt-0.5 size-4 shrink-0 text-fg-muted" />
+        <span className="min-w-0 break-words">
+          {outcome.message
+            ? `${outcome.email}: ${outcome.message}`
+            : `Send this link to ${outcome.email}. It works once, for that address, for 14 days.`}
+        </span>
+      </p>
+      {outcome.token && (
+        <div className="flex items-center gap-2">
+          <code className="min-w-0 flex-1 rounded-lg bg-surface px-3 py-2 font-mono text-sm break-all text-fg">
+            {inviteLink(outcome.token)}
+          </code>
+          <CopyButton
+            text={inviteLink(outcome.token)}
+            label={`Copy invite link for ${outcome.email}`}
+          />
+        </div>
+      )}
+    </li>
+  );
+}
+
 type Pending =
   | { kind: "remove"; member: Member }
   | { kind: "leave"; workspace: Membership }
   | { kind: "revoke"; invite: Invite };
 
-/** Invite people to your workspace, manage their roles, and see the teams you're in. */
+/** Invite people to your codes, manage their roles, and see the teams you're in. */
 export function TeamManager({
   userId,
-  email,
   members,
   invites,
   workspaces,
+  emailEnabled,
 }: {
   userId: string;
-  email: string;
   members: Member[];
   invites: Invite[];
   workspaces: Membership[];
+  /** This server can email invites (BREVO_API_KEY is set). */
+  emailEnabled: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
-  const [inviteEmail, setInviteEmail] = useState("");
+  const [addresses, setAddresses] = useState("");
   const [role, setRole] = useState<TeamRole>("editor");
   const [error, setError] = useState("");
-  const [sending, setSending] = useState(false);
-  const [created, setCreated] = useState<Invite | null>(null);
+  const [sending, setSending] = useState<"email" | "link" | null>(null);
+  const [outcomes, setOutcomes] = useState<InviteOutcome[]>([]);
+  const [resending, setResending] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Pending | null>(null);
   const [working, setWorking] = useState(false);
 
-  async function invite(event: FormEvent) {
-    event.preventDefault();
-    const address = inviteEmail.trim();
-    if (!EMAIL.test(address)) return setError("Enter an email address, like sam@example.com.");
-    if (address.toLowerCase() === email.toLowerCase())
-      return setError("That’s your own address. Invite someone else.");
-    if (members.some((m) => m.email.toLowerCase() === address.toLowerCase()))
-      return setError("They’re already on your team. Change their role below instead.");
-    const supabase = getBrowserSupabase();
-    if (!supabase) return;
-    setSending(true);
+  async function submit(mode: "email" | "link") {
+    setSending(mode);
     setError("");
-    const { data, error: insertError } = await supabase
-      .from("team_invites")
-      .insert({ email: address, role })
-      .select("id, email, role, token, created_at, expires_at")
-      .single();
-    setSending(false);
-    if (insertError || !data) return setError("The invite couldn’t be created. Please try again.");
-    setCreated(data);
-    setInviteEmail("");
+    let result: Awaited<ReturnType<typeof sendInvites>>;
+    try {
+      result = await sendInvites({ emails: addresses, role, email: mode === "email" });
+    } catch {
+      setError("The invites couldn’t be sent. Check your connection and try again.");
+      return;
+    } finally {
+      setSending(null);
+    }
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setOutcomes(result.outcomes);
+    if (result.outcomes.every((o) => o.status !== "failed")) setAddresses("");
+    const sent = result.outcomes.filter((o) => o.status === "sent").length;
+    if (sent > 0) toast(sent === 1 ? "Invite sent" : `${sent} invites sent`);
+    router.refresh();
+  }
+
+  function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    void submit(emailEnabled ? "email" : "link");
+  }
+
+  async function resend(invite: Invite) {
+    setResending(invite.id);
+    let result: Awaited<ReturnType<typeof resendInvite>>;
+    try {
+      result = await resendInvite(invite.id);
+    } catch {
+      toast("The invite couldn’t be emailed. Check your connection and try again.", "error");
+      return;
+    } finally {
+      setResending(null);
+    }
+    const outcome = result.outcomes[0];
+    if (result.error || !outcome) {
+      toast(result.error ?? "The invite couldn’t be emailed. Please try again.", "error");
+      return;
+    }
+    if (outcome.status === "sent") toast(`Invite emailed to ${invite.email}`);
+    else
+      toast(outcome.message ?? "The invite couldn’t be emailed. Share the link instead.", "error");
     router.refresh();
   }
 
@@ -148,10 +223,13 @@ export function TeamManager({
       confirm.kind === "remove"
         ? "Removed from your team"
         : confirm.kind === "leave"
-          ? `You left ${workspaceLabel(confirm.workspace)}’s workspace`
+          ? `You left ${workspaceLabel(confirm.workspace)}’s team`
           : "Invite revoked",
     );
-    if (confirm.kind === "revoke" && created?.id === confirm.invite.id) setCreated(null);
+    if (confirm.kind === "revoke") {
+      const token = confirm.invite.token;
+      setOutcomes((current) => current.filter((o) => o.token !== token));
+    }
     setConfirm(null);
     router.refresh();
   }
@@ -166,7 +244,7 @@ export function TeamManager({
         }
       : confirm?.kind === "leave"
         ? {
-            title: `Leave ${workspaceLabel(confirm.workspace)}’s workspace?`,
+            title: `Leave ${workspaceLabel(confirm.workspace)}’s team?`,
             description: "You’ll need a new invite to get back in.",
             label: "Leave",
           }
@@ -176,35 +254,28 @@ export function TeamManager({
             label: "Revoke",
           };
 
+  const canSubmit = sending === null && addresses.trim() !== "";
+
   return (
     <div className="flex flex-col gap-6">
       <Section
         title="Invite people"
-        description="Share your codes with coworkers. Viewers see codes, analytics and feedback; editors can also create, change and delete codes and folders."
+        description="Viewers see your codes, analytics and feedback. Editors can also create, change and delete codes and folders."
       >
-        {created && (
-          <div className="flex flex-col gap-2 rounded-control border border-primary/40 bg-primary-soft p-4">
-            <p className="text-sm font-semibold text-fg">
-              Send this link to {created.email}. It works once, for that address, for 14 days.
-            </p>
-            <div className="flex items-center gap-2">
-              <code className="min-w-0 flex-1 rounded-lg bg-surface px-3 py-2 font-mono text-sm break-all text-fg">
-                {inviteLink(created.token)}
-              </code>
-              <CopyButton text={inviteLink(created.token)} label="Copy invite link" />
-            </div>
-          </div>
-        )}
-        <form onSubmit={invite} className="grid gap-3 sm:grid-cols-[1fr_10rem_auto] sm:items-start">
-          <Field label="Email address" error={error}>
+        <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-[1fr_10rem] sm:items-start">
+          <Field
+            label="Email addresses"
+            error={error}
+            hint={`Separate addresses with commas or new lines, up to ${MAX_INVITES_PER_REQUEST} at a time.`}
+          >
             {(control) => (
-              <TextInput
+              <Textarea
                 {...control}
-                type="email"
+                rows={2}
                 autoComplete="off"
-                placeholder="sam@example.com"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="sam@example.com, lee@example.com"
+                value={addresses}
+                onChange={(e) => setAddresses(e.target.value)}
               />
             )}
           </Field>
@@ -220,28 +291,82 @@ export function TeamManager({
               </Select>
             )}
           </Field>
-          <Button type="submit" disabled={sending} className="sm:mt-7">
-            <UserPlus aria-hidden />
-            {sending ? "Creating…" : "Create invite link"}
-          </Button>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:col-span-2">
+            <Button type="submit" disabled={!canSubmit}>
+              {emailEnabled ? <Send aria-hidden /> : <UserPlus aria-hidden />}
+              {sending === "email"
+                ? "Sending…"
+                : sending === "link"
+                  ? "Creating…"
+                  : emailEnabled
+                    ? "Send invites"
+                    : "Create invite link"}
+            </Button>
+            {emailEnabled ? (
+              <p className="text-sm text-fg-muted">
+                They get an email with a button to join.{" "}
+                <button
+                  type="button"
+                  disabled={!canSubmit}
+                  onClick={() => void submit("link")}
+                  className="inline-flex min-h-11 items-center font-medium text-link underline-offset-4 hover:underline disabled:opacity-50"
+                >
+                  Share a link instead
+                </button>
+              </p>
+            ) : (
+              <p className="text-sm text-fg-muted">
+                Email invites aren’t set up on this server, so you’ll get a link to share yourself.
+              </p>
+            )}
+          </div>
         </form>
-        <p className="text-sm text-fg-muted">
-          QuickQReate doesn’t email invites for you, so nothing is sent until you share the link.
-        </p>
+        {outcomes.length > 0 && (
+          <ul
+            aria-live="polite"
+            className="flex flex-col divide-y divide-border rounded-control border border-border bg-surface-2"
+          >
+            {outcomes.map((outcome) => (
+              <OutcomeRow key={outcome.email} outcome={outcome} />
+            ))}
+          </ul>
+        )}
       </Section>
 
       {invites.length > 0 && (
         <Section title="Pending invites">
           <ul className="divide-y divide-border rounded-control border border-border">
             {invites.map((item) => (
-              <li key={item.id} className="flex items-center gap-2 px-4 py-3">
-                <div className="min-w-0 flex-1">
+              <li key={item.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+                <Avatar id={item.email} email={item.email} size="sm" />
+                <div className="min-w-0 flex-1 basis-48">
                   <p className="truncate font-medium text-fg">{item.email}</p>
                   <p className="text-sm text-fg-muted">
-                    {ROLE_LABELS[item.role]} · expires {relativePhrase(item.expires_at)}
+                    {ROLE_LABELS[item.role]} ·{" "}
+                    {item.last_sent_at
+                      ? `emailed ${relativePhrase(item.last_sent_at)}`
+                      : "not emailed"}{" "}
+                    · expires {relativePhrase(item.expires_at)}
                   </p>
                 </div>
-                <CopyButton text={inviteLink(item.token)} label="Copy invite link" />
+                {emailEnabled && (
+                  <Button
+                    variant="outline"
+                    disabled={resending === item.id || item.send_count >= MAX_SENDS_PER_INVITE}
+                    onClick={() => void resend(item)}
+                  >
+                    <Send aria-hidden />
+                    {resending === item.id
+                      ? "Sending…"
+                      : item.last_sent_at
+                        ? "Resend"
+                        : "Email invite"}
+                  </Button>
+                )}
+                <CopyButton
+                  text={inviteLink(item.token)}
+                  label={`Copy invite link for ${item.email}`}
+                />
                 <IconButton
                   label={`Revoke invite for ${item.email}`}
                   size="icon-sm"
@@ -259,7 +384,7 @@ export function TeamManager({
         title="Your team"
         description={
           members.length
-            ? "People who can open your workspace."
+            ? "People who can open your codes."
             : "Nobody else has access to your codes yet."
         }
       >
@@ -270,6 +395,13 @@ export function TeamManager({
                 key={member.member_id}
                 className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3"
               >
+                <Avatar
+                  id={member.member_id}
+                  name={member.name}
+                  email={member.email}
+                  src={member.avatar_url}
+                  size="sm"
+                />
                 <div className="min-w-0 flex-1 basis-48">
                   <p className="truncate font-medium text-fg">{member.name || member.email}</p>
                   <p className="truncate text-sm text-fg-muted">
@@ -301,22 +433,26 @@ export function TeamManager({
       </Section>
 
       {workspaces.length > 0 && (
-        <Section
-          title="Teams you’re in"
-          description="Workspaces other people have shared with you."
-        >
+        <Section title="Teams you’re in" description="Codes other people have shared with you.">
           <ul className="divide-y divide-border rounded-control border border-border">
             {workspaces.map((workspace) => (
               <li
                 key={workspace.owner_id}
                 className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3"
               >
+                <Avatar
+                  id={workspace.owner_id}
+                  name={workspace.owner_name}
+                  email={workspace.owner_email}
+                  src={workspace.owner_avatar_url}
+                  size="sm"
+                />
                 <div className="min-w-0 flex-1 basis-48">
                   <p className="truncate font-medium text-fg">{workspaceLabel(workspace)}</p>
                   <p className="text-sm text-fg-muted">{ROLE_LABELS[workspace.role]}</p>
                 </div>
                 <Link
-                  href={`/dashboard?workspace=${workspace.owner_id}`}
+                  href={`/codes?workspace=${workspace.owner_id}`}
                   className={buttonClasses("outline", "sm")}
                 >
                   Open <ArrowRight aria-hidden />

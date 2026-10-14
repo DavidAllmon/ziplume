@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Providers } from "@/components/layout/Providers";
 import { SITE_URL } from "@/lib/env";
 
-import { inter, spaceGrotesk } from "./fonts";
+import { inter } from "./fonts";
 import "./globals.css";
 
 const title = "QuickQReate: free QR code generator";
@@ -41,19 +41,15 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F8FAFC" },
-    { media: "(prefers-color-scheme: dark)", color: "#0B1020" },
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#0C0D0F" },
   ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     // next-themes sets data-theme before hydration, so the attribute differs from the server HTML.
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${inter.variable} ${spaceGrotesk.variable}`}
-    >
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
       <body>
         <Providers>{children}</Providers>
       </body>

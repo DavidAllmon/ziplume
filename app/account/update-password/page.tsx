@@ -15,7 +15,7 @@ export default async function UpdatePasswordPage() {
       title="Choose a new password"
       description="You're signed in from your reset link. Pick a new password to finish."
     >
-      <UpdatePasswordForm redirectTo="/dashboard" />
+      <UpdatePasswordForm redirectTo="/codes" />
     </AuthCard>
   );
 }

@@ -9,7 +9,7 @@ const STATUS = {
     text: "Waiting for content",
     className: "bg-surface-2 text-fg-muted",
   },
-  ok: { icon: CheckCircle2, text: "Ready to scan", className: "bg-accent text-accent-fg" },
+  ok: { icon: CheckCircle2, text: "Ready to scan", className: "bg-success-soft text-success" },
   warn: {
     icon: AlertTriangle,
     text: "Scannable, with tips",

@@ -172,7 +172,7 @@ export function CodeEditor({
           <div className="flex flex-wrap gap-2">
             {code.is_dynamic && (
               <Link
-                href={`/dashboard/codes/${code.id}/analytics`}
+                href={`/codes/${code.id}/analytics`}
                 className={buttonClasses(isPage ? "outline" : "primary", "md")}
               >
                 <BarChart3 aria-hidden /> Analytics

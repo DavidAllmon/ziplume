@@ -16,10 +16,16 @@ import { PasswordInput } from "./PasswordInput";
 
 export const MIN_PASSWORD_LENGTH = 8;
 
-export function SignupForm({ next }: { next: string }) {
+export function SignupForm({
+  next,
+  invite,
+}: {
+  next: string;
+  invite?: { token: string; email: string };
+}) {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(invite?.email ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -86,7 +92,7 @@ export function SignupForm({ next }: { next: string }) {
             />
           )}
         </Field>
-        <Field label="Email">
+        <Field label="Email" hint={invite ? "This invite is for this address." : undefined}>
           {(control) => (
             <TextInput
               {...control}
@@ -94,6 +100,7 @@ export function SignupForm({ next }: { next: string }) {
               inputMode="email"
               autoComplete="email"
               required
+              readOnly={Boolean(invite)}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />

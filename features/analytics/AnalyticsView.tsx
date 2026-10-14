@@ -4,7 +4,6 @@ import { ArrowLeft, Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 
-import { BuyMeACoffee } from "@/components/support/BuyMeACoffee";
 import { buttonClasses } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -138,13 +137,13 @@ export function AnalyticsView({ code }: { code: QrCodeRow }) {
     null,
   );
   const topCountry = data?.countries.find((c) => c.label !== "??");
-  const exportHref = `/dashboard/codes/${code.id}/analytics/export?range=${range}&tz=${encodeURIComponent(timeZone ?? "UTC")}`;
+  const exportHref = `/codes/${code.id}/analytics/export?range=${range}&tz=${encodeURIComponent(timeZone ?? "UTC")}`;
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <Link
-          href={`/dashboard/codes/${code.id}`}
+          href={`/codes/${code.id}`}
           className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-link underline-offset-4 hover:underline"
         >
           <ArrowLeft aria-hidden className="size-4" /> {code.name}
@@ -354,7 +353,6 @@ export function AnalyticsView({ code }: { code: QrCodeRow }) {
         Scans from link previewers and bots aren’t counted. Unique visitors are counted per day
         without storing IP addresses.
       </p>
-      <BuyMeACoffee variant="card" />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { TextInput } from "@/components/ui/inputs";
-import { deleteAccount, type ActionResult } from "@/app/account/actions";
+import { deleteAccount, type ActionResult } from "@/app/(app)/settings/account/actions";
 
 import { FormAlert } from "./AuthCard";
 
