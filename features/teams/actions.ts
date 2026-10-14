@@ -7,6 +7,7 @@ import { SITE_URL, SUPABASE_URL } from "@/lib/env";
 import type { TeamRole } from "@/types/supabase";
 
 import { parseInviteEmails } from "./inviteInput";
+import { copyPageMedia } from "./media";
 
 export interface InviteOutcome {
   email: string;
@@ -124,6 +125,10 @@ export async function sendInvites(input: {
   const current = await currentInviter();
   if ("error" in current) return { error: current.error, outcomes: [] };
   const { supabase, inviter } = current;
+  const { data: team } = await supabase.rpc("my_team");
+  if ((team ?? []).some((person) => person.is_me && person.role !== "owner")) {
+    return { error: "Only the team owner can invite people.", outcomes: [] };
+  }
 
   const [{ data: members }, { data: pending }] = await Promise.all([
     supabase.rpc("team_overview"),
@@ -203,4 +208,41 @@ export async function resendInvite(inviteId: string): Promise<InviteActionResult
     return { error: "Email invites aren’t set up on this server.", outcomes: [] };
   }
   return { outcomes: [await deliver(supabase, inviter, invite)] };
+}
+
+export interface RemoveResult {
+  error?: string;
+  codes?: number;
+  folders?: number;
+}
+
+/**
+ * Removes someone from your team. With keepCodes their shared codes and folders move to you,
+ * after their page images are copied: if copying fails, nobody is removed.
+ */
+export async function removeMember(memberId: string, keepCodes: boolean): Promise<RemoveResult> {
+  const { supabase, user, needsMfa } = await getAuthState();
+  if (!user) return { error: "Your session has expired. Sign in again." };
+  if (needsMfa) return { error: "Enter your two-factor code first, then try again." };
+  const { data: team } = await supabase.rpc("my_team");
+  const me = (team ?? []).find((person) => person.is_me);
+  const member = (team ?? []).find((person) => person.user_id === memberId && !person.is_me);
+  if (me?.role !== "owner" || !member) return { error: "Only the team owner can remove people." };
+  if (keepCodes) {
+    const copied = await copyPageMedia(memberId, user.id);
+    if (!copied.ok) return { error: copied.error };
+  }
+  const { data, error } = await supabase.rpc("remove_member", {
+    p_member: memberId,
+    p_keep_codes: keepCodes,
+  });
+  if (error) {
+    return {
+      error: /folders_user_name/.test(error.message)
+        ? "One of their folders has the same name as one of yours. Rename it and try again."
+        : "They couldn’t be removed. Please try again.",
+    };
+  }
+  const moved = (data ?? {}) as { codes?: number; folders?: number };
+  return { codes: moved.codes ?? 0, folders: moved.folders ?? 0 };
 }

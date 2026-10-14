@@ -5,10 +5,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "@/components/ui/Toast";
 
-import { resendInvite, sendInvites } from "./actions";
+import { removeMember, resendInvite, sendInvites } from "./actions";
 import { TeamManager, type Invite } from "./TeamManager";
 
-vi.mock("./actions", () => ({ sendInvites: vi.fn(), resendInvite: vi.fn() }));
+vi.mock("./actions", () => ({
+  sendInvites: vi.fn(),
+  resendInvite: vi.fn(),
+  removeMember: vi.fn(),
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const TOKEN = "a".repeat(48);
@@ -17,14 +21,7 @@ const HOUR = 3_600_000;
 function renderTeam(props: Partial<ComponentProps<typeof TeamManager>> = {}) {
   return render(
     <ToastProvider>
-      <TeamManager
-        userId="owner"
-        members={[]}
-        invites={[]}
-        workspaces={[]}
-        emailEnabled
-        {...props}
-      />
+      <TeamManager userId="owner" team={[]} invites={[]} emailEnabled {...props} />
     </ToastProvider>,
   );
 }
@@ -110,5 +107,72 @@ describe("TeamManager invites", () => {
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Resend" }));
     expect(resendInvite).toHaveBeenCalledWith("i1");
+  });
+});
+
+const KIM = {
+  userId: "owner",
+  email: "kim@example.com",
+  name: "Kim",
+  avatarUrl: null,
+  role: "owner",
+  isMe: true,
+} as const;
+const SAM = {
+  userId: "sam",
+  email: "sam@cafe.com",
+  name: "Sam",
+  avatarUrl: null,
+  role: "editor",
+  isMe: false,
+} as const;
+
+describe("TeamManager team", () => {
+  it("on your own, invites people and says nobody else is here", () => {
+    renderTeam();
+    expect(screen.getByText("Nobody else is on your team yet.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email addresses")).toBeInTheDocument();
+  });
+
+  it("removing someone keeps their codes unless you choose otherwise", async () => {
+    const user = userEvent.setup();
+    vi.mocked(removeMember).mockResolvedValue({ codes: 2, folders: 1 });
+    renderTeam({ team: [KIM, SAM] });
+    await user.click(screen.getByRole("button", { name: "Remove Sam" }));
+    expect(screen.getByRole("radio", { name: /Keep their codes/ })).toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    expect(removeMember).toHaveBeenCalledWith("sam", true);
+    expect(
+      await screen.findByText("Removed Sam. 2 codes moved to your codes."),
+    ).toBeInTheDocument();
+  });
+
+  it("can let them take their codes", async () => {
+    const user = userEvent.setup();
+    vi.mocked(removeMember).mockResolvedValue({ codes: 0, folders: 0 });
+    renderTeam({ team: [KIM, SAM] });
+    await user.click(screen.getByRole("button", { name: "Remove Sam" }));
+    await user.click(screen.getByRole("radio", { name: /Let them take their codes/ }));
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    expect(removeMember).toHaveBeenCalledWith("sam", false);
+  });
+
+  it("a member sees the team, can't invite, and can leave keeping their codes", async () => {
+    const user = userEvent.setup();
+    renderTeam({
+      team: [
+        { ...KIM, userId: "kim", isMe: false },
+        { ...SAM, userId: "owner", name: "Me", role: "viewer", isMe: true },
+      ],
+    });
+    expect(screen.getByText(/You’re in Kim’s team as a viewer/)).toBeInTheDocument();
+    expect(screen.getByText("Only the team owner can invite people.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Email addresses")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Leave team" }));
+    expect(
+      screen.getByText(
+        "You’ll keep your codes. You and Kim’s team will stop seeing each other’s codes.",
+      ),
+    ).toBeInTheDocument();
   });
 });

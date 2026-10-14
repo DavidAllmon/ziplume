@@ -127,7 +127,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
   }
 
   return (
-    <AuthCard title={`Join ${owner}’s codes`} description={ROLE_DESCRIPTIONS[invite.role]}>
+    <AuthCard title={`Join ${owner}’s team`} description={ROLE_DESCRIPTIONS[invite.role]}>
       <Inviter invite={invite} owner={owner} />
       <AcceptInviteForm token={token} role={invite.role} />
     </AuthCard>
