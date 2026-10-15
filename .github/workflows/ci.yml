@@ -58,6 +58,18 @@ jobs:
           path: playwright-report
           retention-days: 7
 
+  image:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # The same build Coolify runs on deploy: catches files the image leaves out (.dockerignore)
+      # that the rest of the build still needs.
+      - name: Build the image's app stage
+        run: docker build --target build --build-arg NEXT_PUBLIC_SITE_URL=https://ziplume.com .
+
   accounts:
     name: Signed-in browser tests
     runs-on: ubuntu-latest

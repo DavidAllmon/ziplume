@@ -8,6 +8,8 @@ playwright-report
 test-results
 docs/screenshots
 e2e
+# Test-only; they import from e2e/, which isn't in the image.
+playwright*.config.ts
 *.md
 !README.md
 .env*
