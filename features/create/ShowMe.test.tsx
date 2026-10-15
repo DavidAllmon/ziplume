@@ -15,6 +15,12 @@ vi.mock("@/lib/env", async (original) => ({
 vi.mock("@/features/auth/useSession", () => ({
   useSession: () => ({ user: { id: "user-1" }, loading: false }),
 }));
+// Signed in, the QR code tab lists saved templates; there's no database here.
+vi.mock("@/features/templates/api", () => ({
+  listTemplates: vi.fn().mockResolvedValue({ ok: true, value: [] }),
+  saveTemplate: vi.fn(),
+  deleteTemplate: vi.fn(),
+}));
 vi.mock("@/features/generator/preview/useScanVerification", () => ({
   useScanVerification: () => null,
 }));
