@@ -4,7 +4,15 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = process.cwd();
 /** Everything people can see comes from these folders. */
-const FOLDERS = ["app", "components", "features", "lib", "pages-redirect"];
+const FOLDERS = [
+  "app",
+  "components",
+  "features",
+  "lib",
+  "emails",
+  "public/email-templates",
+  "pages-redirect",
+];
 const TEXT = new Set([".ts", ".tsx", ".html", ".css", ".txt", ".mjs"]);
 const OLD_NAME = /quick\s?q\s?r?eate/i;
 /** Internal names that keep the old spelling on purpose (spec 4.7 and 5.7). */

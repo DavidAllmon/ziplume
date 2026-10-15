@@ -149,7 +149,7 @@ describe("sendInvites", () => {
     expect(fake.recorded).toEqual(["id-Sam@cafe.com", "id-lee@cafe.com"]);
     expect(vi.mocked(sendEmail).mock.calls[0]![0]).toMatchObject({
       to: "Sam@cafe.com",
-      subject: "David invited you to their QuickQReate codes",
+      subject: "David invited you to their Ziplume codes",
       replyTo: { email: "david@example.com", name: "David" },
     });
   });
