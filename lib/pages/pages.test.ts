@@ -12,6 +12,11 @@ const UID = "11111111-1111-4111-8111-111111111111";
 const media = (name = "a.png") => ({ path: `${UID}/${name}`, name, type: "image/png", size: 10 });
 
 describe("sanitizePage", () => {
+  it("keeps a saved page's color", () => {
+    const page = sanitizePage("links", { color: "#4F46E5", title: "Cafe" });
+    expect(page.color).toBe("#4F46E5");
+  });
+
   it("returns the defaults for garbage", () => {
     for (const type of PAGE_TYPE_IDS) {
       expect(sanitizePage(type, null), type).toEqual(PAGE_DEFAULTS[type]());
@@ -33,7 +38,7 @@ describe("sanitizePage", () => {
     });
     expect(page.title).toHaveLength(120);
     expect(page).not.toHaveProperty("evil");
-    expect(page.color).toBe("#4F46E5");
+    expect(page.color).toBe("#0A1330");
     expect(page.links).toHaveLength(30);
     expect(page.links[0]).toEqual({ label: "L0", url: "https://e.com" });
     expect(page.socials[0]?.network).toBe("instagram");

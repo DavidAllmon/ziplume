@@ -225,7 +225,7 @@ export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 const day = (open: boolean): DayHours => ({ open, from: "09:00", to: "17:00" });
 
-export const DEFAULT_PAGE_COLOR = "#4F46E5";
+export const DEFAULT_PAGE_COLOR = "#0A1330";
 
 export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
   links: () => ({

@@ -259,7 +259,7 @@ export default function DevelopersPage() {
   "content": {
     "title": "Dave’s Diner",
     "bio": "Breakfast all day",
-    "color": "#4F46E5",
+    "color": "#0A1330",
     "links": [{ "label": "Order online", "url": "https://example.com/order" }],
     "socials": [{ "network": "instagram", "url": "https://instagram.com/example" }]
   }
