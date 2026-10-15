@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Providers } from "@/components/layout/Providers";
 import { SITE_URL } from "@/lib/env";
 
-import { archivo, plexMono, plexSans } from "./fonts";
+import { archivo, bricolage, nunito, playfair, plexMono, plexSans } from "./fonts";
 import "./globals.css";
 
 const title = "Ziplume: Make it. Link it. Share it.";
@@ -51,7 +51,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${plexSans.variable} ${archivo.variable} ${plexMono.variable}`}
+      className={[plexSans, archivo, plexMono, playfair, nunito, bricolage]
+        .map((font) => font.variable)
+        .join(" ")}
     >
       <body>
         <Providers>{children}</Providers>
