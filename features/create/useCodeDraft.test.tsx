@@ -68,6 +68,36 @@ describe("useCodeDraft", () => {
     expect(result.current.trackable).toBe(false);
   });
 
+  it("says where the first problem is: the tab, and the field to show", () => {
+    const { result } = setup("links");
+    expect(result.current.problem).toEqual({
+      message: "Add a title",
+      tab: "content",
+      field: "title",
+    });
+    expect(result.current.blocker).toBe("Add a title");
+  });
+
+  it("points settings problems at the Settings tab", () => {
+    const { result } = setup();
+    act(() => result.current.setField("url", "url", "example.com"));
+    act(() => result.current.dispatch({ type: "settings", patch: { slug: "no spaces" } }));
+    expect(result.current.problem).toEqual({
+      message: "Link endings use 3–40 letters, numbers or dashes",
+      tab: "settings",
+      field: "settings.slug",
+    });
+  });
+
+  it("sends an empty static code to the Content tab's first field", () => {
+    const { result } = setup();
+    expect(result.current.problem).toEqual({
+      message: "Add a link to start",
+      tab: "content",
+      field: null,
+    });
+  });
+
   it("names the file after the content", () => {
     const { result } = setup();
     act(() => result.current.setField("url", "url", "example.com"));
