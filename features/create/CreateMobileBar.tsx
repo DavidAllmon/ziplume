@@ -82,7 +82,7 @@ export function CreateMobileBar({
           </Button>
         </div>
       </div>
-      <Sheet open={open} onClose={() => setOpen(false)} title="Preview">
+      <Sheet fullScreen open={open} onClose={() => setOpen(false)} title="Preview">
         <div className="pt-2">
           <PreviewColumn
             draft={draft}
@@ -91,8 +91,9 @@ export function CreateMobileBar({
             device={device}
             onDeviceChange={onDeviceChange}
             liveHref={liveHref}
-            // Leaves room to see the sheet's other controls, and to scroll it past the frame.
-            frameHeight="min(560px, 55dvh)"
+            // Full screen: the frame takes what's left under the switches, keeping the live-page
+            // link and the scan badge in view.
+            frameHeight="clamp(240px, 100dvh - 17rem, 760px)"
             mode={mode}
           />
         </div>

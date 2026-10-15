@@ -150,6 +150,26 @@ test.describe("signed in", () => {
       .toBeGreaterThanOrEqual(tabs.y + tabs.height);
   });
 
+  test("Preview opens full screen, with the whole device in view", async ({ page }) => {
+    await page.goto("codes/new?type=links");
+    await settled(page);
+    await page
+      .locator('[data-actionbar="create"]')
+      .getByRole("button", { name: /Preview/ })
+      .click();
+    const sheet = page.getByRole("dialog", { name: "Preview" });
+    await expect(sheet.getByRole("radio", { name: "Phone" })).toBeVisible();
+    await settled(page);
+    const { height } = page.viewportSize()!;
+    const title = (await sheet.getByRole("heading", { name: "Preview" }).boundingBox())!;
+    expect(title.y).toBeLessThan(64);
+    const frame = (await sheet
+      .getByRole("region", { name: "Page preview" })
+      .locator("..")
+      .boundingBox())!;
+    expect(frame.y + frame.height).toBeLessThanOrEqual(height);
+  });
+
   test("the editor's back arrow returns to the gallery, where the app's bars are back", async ({
     page,
   }) => {
