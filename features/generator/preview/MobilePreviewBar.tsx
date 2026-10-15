@@ -38,7 +38,10 @@ export function MobilePreviewBar({
 
   return (
     <>
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-pop backdrop-blur-md md:hidden">
+      <div
+        data-actionbar="generator"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-pop backdrop-blur-md md:hidden"
+      >
         <div className="mx-auto flex max-w-xl items-center gap-3 px-4 py-3">
           <button
             type="button"

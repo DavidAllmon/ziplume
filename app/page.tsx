@@ -6,7 +6,7 @@ import { Generator } from "@/features/generator/Generator";
 
 export default function Home() {
   return (
-    <PageShell className="pb-32 md:pb-16">
+    <PageShell>
       <div className="mb-6 max-w-2xl lg:mb-8">
         <h1 className="font-display text-[1.75rem] leading-tight font-bold tracking-tight text-balance text-fg sm:text-4xl">
           Make it. Link it. Share it.

@@ -11,7 +11,7 @@ const linkClass = "font-medium text-link underline-offset-4 hover:underline";
 
 export function Footer() {
   return (
-    <footer className="border-t border-border">
+    <footer className="border-t border-border pb-(--actionbar-h)">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-fg-muted sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="flex items-center gap-2">

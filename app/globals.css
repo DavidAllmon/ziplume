@@ -114,6 +114,13 @@
   }
 }
 
+/* The home page's preview bar: a 3.5rem code, 0.75rem above and below, and the safe area. */
+@media (width < 48rem) {
+  :root:has([data-actionbar="generator"]) {
+    --actionbar-h: calc(5rem + 1px + env(safe-area-inset-bottom));
+  }
+}
+
 /* The navy sidebar: everything inside it reads these instead of the page's palette, so its
    links, switcher, Create button and menus need no colors of their own. */
 [data-surface="sidebar"] {
