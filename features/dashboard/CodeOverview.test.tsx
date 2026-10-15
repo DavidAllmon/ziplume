@@ -102,4 +102,35 @@ describe("activeWindow", () => {
       "2030-01-01 to 2030-02-01",
     );
   });
+
+  it("shows a hosted page's page in a small phone, with Edit page for editors", () => {
+    renderOverview(
+      savedRow({
+        qr_type: "links",
+        is_dynamic: true,
+        slug: "MENU12",
+        content: { title: "Lunch links", links: [] },
+      }),
+      true,
+    );
+    expect(screen.getByRole("region", { name: "Page preview" })).toHaveTextContent("Lunch links");
+    expect(screen.getByRole("link", { name: "Edit page" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/edit"),
+    );
+  });
+
+  it("leaves Edit page out for people who can only view", () => {
+    renderOverview(
+      savedRow({
+        qr_type: "links",
+        is_dynamic: true,
+        slug: "MENU12",
+        content: { title: "Lunch links", links: [] },
+      }),
+      false,
+    );
+    expect(screen.getByRole("region", { name: "Page preview" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Edit page" })).toBeNull();
+  });
 });
