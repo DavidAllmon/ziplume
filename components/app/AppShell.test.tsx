@@ -158,4 +158,21 @@ describe("AppShell", () => {
     }
     expect(within(sheet).getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });
+
+  it("gives the editor the whole phone screen: no top bar or bottom tabs", () => {
+    pathname = "/codes/new";
+    search = new URLSearchParams("type=links");
+    const { container } = renderShell();
+    expect(container.querySelector("[data-tabbar]")).toBeNull();
+    expect(container.querySelector("header")).toBeNull();
+    expect(container.querySelector("[data-app-shell]")).toHaveAttribute("data-editor");
+  });
+
+  it("keeps the phone bars on the type gallery and on every other page", () => {
+    pathname = "/codes/new";
+    const { container } = renderShell();
+    expect(container.querySelector("[data-tabbar]")).not.toBeNull();
+    expect(container.querySelector("header")).not.toBeNull();
+    expect(container.querySelector("[data-app-shell]")).not.toHaveAttribute("data-editor");
+  });
 });

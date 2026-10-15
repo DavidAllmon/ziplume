@@ -1,3 +1,4 @@
+import { isPageType, isStaticType } from "@/lib/qr/types";
 import type { TeamRole } from "@/types/supabase";
 
 /** The signed-in person, as the shell shows them. */
@@ -69,3 +70,13 @@ export const menuItemClass =
 
 export const menuPanelClass =
   "z-50 w-64 rounded-control border border-border bg-surface p-1.5 shadow-pop transition duration-150 data-closed:-translate-y-1 data-closed:opacity-0";
+
+/**
+ * The code editor: a new code of a known type, or a saved code's edit page. On phones it takes
+ * the whole screen, and on tablets the sidebar stays a rail beside it.
+ */
+export function isEditorPage(pathname: string, params: URLSearchParams): boolean {
+  if (/^\/codes\/[^/]+\/edit$/.test(pathname)) return true;
+  const type = params.get("type") ?? "";
+  return pathname === "/codes/new" && (isStaticType(type) || isPageType(type));
+}

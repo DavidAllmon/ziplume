@@ -3,6 +3,21 @@
 /* Dark mode follows the data-theme attribute set by next-themes (system, light or dark). */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* "phone:": the app's phone layout (top bar and bottom tabs, no sidebar): below 640px, or below
+   768px in the code editor, which then takes the whole screen. */
+@custom-variant phone {
+  [data-app-shell]:not([data-editor]) & {
+    @media (width < 40rem) {
+      @slot;
+    }
+  }
+  [data-app-shell][data-editor] & {
+    @media (width < 48rem) {
+      @slot;
+    }
+  }
+}
+
 /* ---------------------------------------------------------------------------
  * Design tokens. Every text pair used in the UI is checked for WCAG AA contrast
  * by app/theme.test.ts, so update that test when adding new pairs.
@@ -82,7 +97,7 @@
  * --tabbar-h: the app's phone tab bar. --actionbar-h: a preview bar (Create/Edit,
  * or the home page's). --page-end: room left after the content. Each bar's height
  * is its content's: tabs are 3.5rem, the Create bar 4.25rem, the home bar 5rem,
- * plus a 1px top border. --app-end is computed on :root from :root's own values,
+ * plus a 1px top border and, on the bottom edge, the safe area. --app-end is computed on :root from :root's own values,
  * so every override below must also target :root.
  * ------------------------------------------------------------------------- */
 :root {
@@ -102,23 +117,20 @@
   :root:has([data-tabbar]) {
     --tabbar-h: calc(3.5rem + 1px + env(safe-area-inset-bottom));
   }
-  /* Phones: the Create bar sits on the tab bar, which already covers the safe area. */
-  :root:has([data-actionbar="create"]) {
-    --actionbar-h: calc(4.25rem + 1px);
-  }
 }
 
-@media (40rem <= width < 48rem) {
+/* The editor's Create bar sits on the bottom edge (editor pages have no tab bar). */
+@media (width < 48rem) {
   :root:has([data-actionbar="create"]) {
     --actionbar-h: calc(4.25rem + 1px + env(safe-area-inset-bottom));
   }
 }
 
-/* The editor: keyboard focus scrolls fields clear of the sticky top bar (768px up; its height is
- * measured into --editor-bar-h) or of the phone header (below 640px). */
-@media (width < 40rem) {
+/* The editor: keyboard focus scrolls fields clear of the pinned top bar (its height is measured
+ * into --editor-bar-h), and on phones of the tabs pinned under it. */
+@media (width < 48rem) {
   :root:has([data-editor-bar]) {
-    scroll-padding-top: 4.5rem;
+    scroll-padding-top: calc(var(--editor-bar-h, 3.5rem) + 3.25rem);
   }
 }
 

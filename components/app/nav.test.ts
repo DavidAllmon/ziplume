@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bulkCreateHref, isCurrent, newCodeHref, withWorkspace } from "./nav";
+import { bulkCreateHref, isCurrent, isEditorPage, newCodeHref, withWorkspace } from "./nav";
 
 describe("withWorkspace", () => {
   it("adds the team to a link, keeping its other parameters", () => {
@@ -41,5 +41,22 @@ describe("bulkCreateHref", () => {
     expect(bulkCreateHref({ folderId: "f1", ownerId: "t1" })).toBe(
       "/codes/bulk?folder=f1&workspace=t1",
     );
+  });
+});
+
+describe("isEditorPage", () => {
+  const params = (query = "") => new URLSearchParams(query);
+
+  it("is a new code of a real type, or a saved code's edit page", () => {
+    expect(isEditorPage("/codes/new", params("type=links"))).toBe(true);
+    expect(isEditorPage("/codes/new", params("type=url&folder=f1"))).toBe(true);
+    expect(isEditorPage("/codes/abc/edit", params("workspace=t1"))).toBe(true);
+  });
+
+  it("isn't the type gallery, an unknown type, or any other page", () => {
+    expect(isEditorPage("/codes/new", params())).toBe(false);
+    expect(isEditorPage("/codes/new", params("type=nope"))).toBe(false);
+    expect(isEditorPage("/codes/abc", params())).toBe(false);
+    expect(isEditorPage("/codes", params("type=links"))).toBe(false);
   });
 });

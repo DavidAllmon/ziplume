@@ -85,6 +85,8 @@ test.describe("signed in", () => {
     await page.goto("codes/new?type=url");
     await settled(page);
     await expect(page.locator("[data-actionbar]")).toBeVisible();
+    // The editor is the phone editor up to 768px: no sidebar beside it.
+    await expect(page.getByRole("complementary", { name: "Sidebar" })).toBeHidden();
     await expectFitsPhone(page, "#main", 40);
   });
 
@@ -120,15 +122,42 @@ test.describe("signed in", () => {
     }
   });
 
-  test("the editor's top bar scrolls away on phones, leaving room for the form", async ({
+  test("the editor takes the whole phone screen, with its bar and tabs pinned at the top", async ({
     page,
   }) => {
     await page.goto("codes/new?type=links");
     await settled(page);
-    const position = await page
-      .getByRole("region", { name: "Code" })
-      .evaluate((el) => getComputedStyle(el).position);
-    expect(position).toBe("static");
+    await expect(page.locator("[data-tabbar]")).toHaveCount(0);
+    await expect(page.getByRole("banner")).toHaveCount(0);
+    await expect(page.getByRole("complementary", { name: "Sidebar" })).toBeHidden();
+    const { height } = page.viewportSize()!;
+    const barBottom = await page
+      .locator('[data-actionbar="create"]')
+      .evaluate((el) => el.getBoundingClientRect().bottom);
+    expect(Math.round(barBottom)).toBe(height);
+
+    // Scrolled down, the top bar and the tabs stay at the top.
+    await page.evaluate(() => window.scrollTo(0, 400));
+    const top = (await page.getByRole("region", { name: "Code" }).boundingBox())!;
+    const tabs = (await page.getByRole("tablist", { name: "Editor sections" }).boundingBox())!;
+    expect(Math.round(top.y)).toBe(0);
+    expect(Math.abs(tabs.y - (top.y + top.height))).toBeLessThanOrEqual(1);
+
+    // A field the keyboard moves to isn't hidden under them (WebKit needs a frame for it).
+    await page.getByLabel("Title").focus();
+    await expect
+      .poll(async () => (await page.getByLabel("Title").boundingBox())!.y)
+      .toBeGreaterThanOrEqual(tabs.y + tabs.height);
+  });
+
+  test("the editor's back arrow returns to the gallery, where the app's bars are back", async ({
+    page,
+  }) => {
+    await page.goto("codes/new?type=links");
+    await settled(page);
+    await page.getByRole("link", { name: "Change type" }).click();
+    await expect(page.getByRole("heading", { name: "What do you want to make?" })).toBeVisible();
+    await expect(page.locator("[data-tabbar]")).toBeVisible();
   });
 
   test("toasts appear above the Create bar and the tab bar", async ({ page }) => {

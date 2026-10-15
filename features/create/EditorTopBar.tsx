@@ -68,14 +68,13 @@ export function EditorTopBar({
     };
   }, []);
   return (
-    // Sticky from 768px up; on phones it scrolls away so the form has the room (release 2d
-    // redoes the phone editor).
+    // Pinned to the top: on phones it's the screen's only top bar, with the tabs under it.
     <div
       ref={bar}
       role="region"
       aria-label="Code"
       data-editor-bar
-      className="z-20 flex flex-col gap-2 border-b border-border bg-bg/95 py-3 backdrop-blur-md md:sticky md:top-0"
+      className="sticky top-0 z-20 flex flex-col gap-2 border-b border-border bg-bg/95 py-1.5 backdrop-blur-md max-sm:-mx-4 max-sm:px-4 sm:max-md:-mx-6 sm:max-md:px-6 md:py-3"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <Link
@@ -87,8 +86,9 @@ export function EditorTopBar({
         </Link>
         <h1 className="flex shrink-0 items-center gap-2 font-display text-lg font-bold tracking-tight text-fg">
           <Icon aria-hidden className="size-5 shrink-0" />
-          <span>
-            {/* The space sits outside the hidden word so the name reads "New Link list". */}
+          {/* Phones show only the icon; the name is still read out. The space sits outside the
+              hidden word so the name reads "New Link list". */}
+          <span className="max-md:sr-only">
             <span className="sr-only">{editing ? "Edit" : "New"}</span> {galleryLabel(type)}
           </span>
         </h1>
@@ -98,13 +98,14 @@ export function EditorTopBar({
           maxLength={MAX_CODE_NAME}
           value={name}
           onChange={(event) => onName(event.target.value)}
-          className="min-w-0 flex-1 basis-48"
+          className="min-w-0 flex-1 basis-0 md:basis-48"
         />
         {editing && dirty && !submitting && onDiscard && (
           <span className="flex items-center gap-2">
-            <span className="text-sm text-fg-muted">Unsaved changes</span>
-            <Button variant="ghost" onClick={onDiscard}>
-              Discard changes
+            <span className="text-sm text-fg-muted max-md:sr-only">Unsaved changes</span>
+            <Button variant="ghost" onClick={onDiscard} aria-label="Discard changes">
+              <span className="md:hidden">Discard</span>
+              <span className="max-md:hidden">Discard changes</span>
             </Button>
           </span>
         )}
@@ -147,7 +148,8 @@ export function EditorTopBar({
         </p>
       )}
       {error && (
-        <p role="alert" className="text-sm text-danger md:text-right">
+        // Phones show it in the bottom bar; it's still announced here.
+        <p role="alert" className="text-sm text-danger max-md:sr-only md:text-right">
           {error}
         </p>
       )}
