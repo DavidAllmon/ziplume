@@ -22,3 +22,8 @@ export function shortLink(slug: string): string {
 export function shortLinkLabel(slug: string): string {
   return shortLink(slug).replace(/^https?:\/\//, "");
 }
+
+/** A public Storage file at the site's own address, which passes it on to Supabase. */
+export function publicFileUrl(bucket: string, path: string): string {
+  return `${SITE_URL}/storage/v1/object/public/${bucket}/${path.split("/").map(encodeURIComponent).join("/")}`;
+}

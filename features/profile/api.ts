@@ -1,6 +1,7 @@
 "use client";
 
 import { AVATAR_BUCKET } from "@/lib/avatar";
+import { publicFileUrl } from "@/lib/env";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 import { prepareAvatar, validateAvatarFile } from "./avatarImage";
@@ -46,7 +47,7 @@ export async function uploadAvatar(userId: string, file: File): Promise<PhotoRes
     upsert: false,
   });
   if (error) return { ok: false, error: "The photo couldn’t be uploaded. Please try again." };
-  const url = bucket.getPublicUrl(path).data.publicUrl;
+  const url = publicFileUrl(AVATAR_BUCKET, path);
   if (!(await savePhoto(userId, url))) {
     await bucket.remove([path]);
     return { ok: false, error: "The photo couldn’t be saved. Please try again." };

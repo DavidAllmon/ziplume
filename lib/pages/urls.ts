@@ -1,4 +1,4 @@
-import { SUPABASE_URL } from "@/lib/env";
+import { publicFileUrl } from "@/lib/env";
 import { normalizeUrl } from "@/lib/qr/normalize";
 import { isValidUrl } from "@/lib/qr/validators";
 
@@ -8,7 +8,7 @@ export const MEDIA_BUCKET = "page-media";
 
 /** Public URL of a file in the page-media bucket. */
 export function mediaUrl(path: string): string {
-  return `${SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/${path.split("/").map(encodeURIComponent).join("/")}`;
+  return publicFileUrl(MEDIA_BUCKET, path);
 }
 
 /**

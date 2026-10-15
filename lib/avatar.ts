@@ -1,4 +1,4 @@
-import { SUPABASE_URL } from "@/lib/env";
+import { SITE_URL, SUPABASE_URL } from "@/lib/env";
 
 /** Storage bucket for uploaded profile photos (see the avatar storage migration). */
 export const AVATAR_BUCKET = "avatars";
@@ -6,13 +6,14 @@ export const AVATAR_BUCKET = "avatars";
 const GOOGLE_PHOTO_HOST = /(^|\.)googleusercontent\.com$/;
 
 /**
- * A profile photo URL that is safe to show: an upload in this project's avatars bucket, or a
- * Google account photo. Anything else (another host, http, a broken value) gives null, so a
- * teammate can't make your browser or inbox load an image from a server they control.
+ * A profile photo URL that is safe to show: an upload in this project's avatars bucket (at the
+ * Supabase address or the site's own), or a Google account photo. Anything else (another host,
+ * http, a broken value) gives null, so a teammate can't make your browser or inbox load an image
+ * from a server they control.
  */
 export function trustedAvatarUrl(
   url: string | null | undefined,
-  supabaseUrl: string = SUPABASE_URL,
+  origins: readonly (string | undefined)[] = [SUPABASE_URL, SITE_URL],
 ): string | null {
   if (!url) return null;
   let parsed: URL;
@@ -23,16 +24,16 @@ export function trustedAvatarUrl(
   }
   if (parsed.protocol !== "https:") return null;
   if (GOOGLE_PHOTO_HOST.test(parsed.hostname)) return parsed.href;
-  if (!supabaseUrl) return null;
-  try {
-    const storage = new URL(supabaseUrl);
-    const uploaded =
-      parsed.host === storage.host &&
-      parsed.pathname.startsWith(`/storage/v1/object/public/${AVATAR_BUCKET}/`);
-    return uploaded ? parsed.href : null;
-  } catch {
-    return null;
-  }
+  if (!parsed.pathname.startsWith(`/storage/v1/object/public/${AVATAR_BUCKET}/`)) return null;
+  const ours = origins.some((origin) => {
+    if (!origin) return false;
+    try {
+      return new URL(origin).host === parsed.host;
+    } catch {
+      return false;
+    }
+  });
+  return ours ? parsed.href : null;
 }
 
 /** Up to two initials: "David Allmon" → "DA", "sam@cafe.com" → "S", "jo.rivera@x.com" → "JR". */

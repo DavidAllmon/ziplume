@@ -12,8 +12,8 @@ export interface InviteEmailInput {
   acceptUrl: string;
   /** ISO time the invite stops working. */
   expiresAt: string;
-  /** The project's Supabase URL, so uploaded photos count as trusted. */
-  supabaseUrl?: string;
+  /** Where uploaded photos may come from: the Supabase project and the site. */
+  photoOrigins?: readonly string[];
 }
 
 export interface EmailContent {
@@ -64,7 +64,7 @@ export function inviteEmail(input: InviteEmailInput): EmailContent {
     timeZone: "UTC",
   });
   const role = ROLE_LINE[input.role];
-  const photo = trustedAvatarUrl(input.inviter.avatarUrl, input.supabaseUrl);
+  const photo = trustedAvatarUrl(input.inviter.avatarUrl, input.photoOrigins);
   const colors = avatarColors(input.inviter.id);
   const badge = photo
     ? `<img src="${e(photo)}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border-radius:20px;" />`
