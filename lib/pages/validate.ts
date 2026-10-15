@@ -1,7 +1,7 @@
 import type { PageTypeId } from "@/lib/qr/types";
 import { isTimeZone, zonedTimeToUtc } from "@/lib/time/zone";
 
-import type { PageContentMap, SocialItem } from "./types";
+import type { LinkItem, PageContentMap, SocialItem } from "./types";
 import { mailHref, safeHref, socialHref, telHref, videoEmbed } from "./urls";
 
 /** Problems keyed by field path, e.g. "title" or "links.2.url". Empty = ready to save. */
@@ -27,11 +27,15 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
   links: (p) => {
     const errors: PageErrors = {};
     if (!p.title.trim()) errors.title = "Add a title";
-    const filled = p.links.filter((l) => l.label.trim() || l.url.trim());
-    if (!filled.length && !p.socials.some((s) => s.url.trim())) {
-      errors["links.0.url"] = "Add at least one link";
+    const filled = (l: LinkItem) => Boolean(l.label.trim() || l.url.trim());
+    // A link that's off is parked: it isn't checked and doesn't count.
+    if (!p.links.some((l) => l.on && filled(l)) && !p.socials.some((s) => s.url.trim())) {
+      errors["links.0.url"] = p.links.some(filled)
+        ? "Turn on at least one link"
+        : "Add at least one link";
     }
     p.links.forEach((l, i) => {
+      if (!l.on) return;
       if (l.label.trim() && !l.url.trim())
         errors[`links.${i}.url`] = `Add the link for “${l.label.trim()}”`;
       checkUrl(errors, `links.${i}.url`, l.url);
@@ -63,6 +67,7 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     if (p.email.trim() && !mailHref(p.email)) errors.email = "Enter a valid email";
     checkUrl(errors, "website", p.website);
     p.buttons.forEach((b, i) => {
+      if (!b.on) return;
       if (b.label.trim() && !b.url.trim())
         errors[`buttons.${i}.url`] = `Add the link for “${b.label.trim()}”`;
       checkUrl(errors, `buttons.${i}.url`, b.url);

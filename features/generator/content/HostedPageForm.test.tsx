@@ -34,4 +34,9 @@ describe("HostedPageForm", () => {
     render(<HostedPageForm generator={editor({ pageColorInLook: true })} type="links" />);
     expect(screen.queryByText("Page color")).toBeNull();
   });
+
+  it("shows the page's parts as cards in the editor", () => {
+    render(<HostedPageForm generator={editor({ pageCards: true })} type="links" />);
+    expect(screen.getByRole("heading", { level: 2, name: "Header" })).toBeInTheDocument();
+  });
 });

@@ -86,6 +86,7 @@ export function EditorLayout({
     workspace: mediaOwner ? { ownerId: mediaOwner } : null,
     revealErrors,
     pageColorInLook: true,
+    pageCards: true,
   };
   const page = pageType ? state.code.pages[pageType] : null;
   const liveHref =

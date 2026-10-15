@@ -70,6 +70,7 @@ interface ViewProps<T> {
 
 function LinksView({ page, preview }: ViewProps<LinksPage>) {
   const links = page.links
+    .filter((link) => link.on)
     .map((link) => ({ ...link, href: safeHref(link.url) }))
     .filter((link) => link.href && (link.label.trim() || link.url.trim()));
   return (
@@ -272,7 +273,7 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
         </div>
       </PageCard>
       {page.buttons
-        .filter((b) => safeHref(b.url))
+        .filter((b) => b.on && safeHref(b.url))
         .map((b, i) => (
           <PageLink
             key={i}

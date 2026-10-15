@@ -86,6 +86,7 @@ describe("EditorLayout", () => {
   it("hands the code owner's space to the content editor", () => {
     renderLayout({ mode: "edit" });
     expect(seen.editor?.workspace).toEqual({ ownerId: "owner-1" });
+    expect(seen.editor?.pageCards).toBe(true);
   });
 
   it("gives hosted pages a Look tab, and other codes none", () => {

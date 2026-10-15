@@ -19,7 +19,7 @@ async function createCode(page: Page, name: string, address: string) {
 async function createLongPage(page: Page, name: string) {
   await page.goto("codes/new?type=links");
   await page.getByLabel("Title").fill("A long list");
-  const addLink = page.getByRole("button", { name: "Add link" });
+  const addLink = page.getByRole("button", { name: "Add link", exact: true });
   while ((await page.getByLabel("Button text").count()) < 12) await addLink.click();
   for (let i = 0; i < 12; i++) {
     await page

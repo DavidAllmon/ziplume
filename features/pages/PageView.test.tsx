@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { PAGE_DEFAULTS } from "@/lib/pages/types";
@@ -61,5 +61,32 @@ describe("PageView", () => {
 
     // The live page still plays them.
     expect(view("video", video, false).container.querySelector("iframe")).not.toBeNull();
+  });
+
+  it("leaves switched-off links and buttons off the live page", () => {
+    const links = {
+      ...PAGE_DEFAULTS.links(),
+      title: "Me",
+      links: [
+        { label: "Shown", url: "a.com", on: true },
+        { label: "Hidden", url: "b.com", on: false },
+      ],
+    };
+    const first = view("links", links, false);
+    expect(screen.getByRole("link", { name: "Shown" })).toBeInTheDocument();
+    expect(screen.queryByText("Hidden")).toBeNull();
+    first.unmount();
+
+    const business = {
+      ...PAGE_DEFAULTS.business(),
+      name: "Cafe",
+      buttons: [
+        { label: "Order", url: "o.com", on: false },
+        { label: "Call us", url: "c.com", on: true },
+      ],
+    };
+    view("business", business, false);
+    expect(screen.queryByText("Order")).toBeNull();
+    expect(screen.getByRole("link", { name: "Call us" })).toBeInTheDocument();
   });
 });

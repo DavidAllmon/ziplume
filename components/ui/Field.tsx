@@ -17,6 +17,8 @@ interface FieldProps {
   optional?: boolean;
   /** Extra element rendered next to the label, e.g. an InfoTip. */
   labelAction?: ReactNode;
+  /** The card's heading already says it; screen readers still hear the label. */
+  hideLabel?: boolean;
   className?: string;
   children: (control: FieldControlProps) => ReactNode;
 }
@@ -28,6 +30,7 @@ export function Field({
   error,
   optional,
   labelAction,
+  hideLabel = false,
   className,
   children,
 }: FieldProps) {
@@ -38,7 +41,7 @@ export function Field({
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <div className="flex items-center gap-1.5">
+      <div className={cn("flex items-center gap-1.5", hideLabel && "sr-only")}>
         <label htmlFor={id} className="text-sm font-medium text-fg">
           {label}
           {optional && <span className="font-normal text-fg-muted"> (optional)</span>}

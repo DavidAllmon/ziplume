@@ -25,7 +25,7 @@ test.describe("creating codes", () => {
     await page.getByLabel("Website address").fill("https://example.com/launch");
     await openTab(page, "Settings");
     await page.getByLabel(/Code password/).fill("launch-2026");
-    await page.getByLabel("Starts").fill(localDateTime(1));
+    await page.getByLabel("Starts (optional)").fill(localDateTime(1));
     await page.getByLabel("Ends").fill(localDateTime(30));
     await page.getByLabel("Code name").fill("Launch poster");
     await createButton(page).click();
@@ -151,7 +151,7 @@ test.describe("creating codes", () => {
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("codes/new?type=links");
-    const addLink = page.getByRole("button", { name: "Add link" });
+    const addLink = page.getByRole("button", { name: "Add link", exact: true });
     while ((await page.getByLabel("Button text").count()) < 12) await addLink.click();
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const preview = page.getByRole("complementary", { name: "Preview" });
@@ -165,6 +165,147 @@ test.describe("creating codes", () => {
         }, `${device} frame bottom`)
         .toBeLessThanOrEqual(800);
     }
+  });
+
+  test("drags links into order by keyboard and by mouse, and Escape puts one back", async ({
+    page,
+  }) => {
+    // Tall enough that the rows stay clear of the window's top and bottom fifths, where
+    // dragging scrolls it.
+    await page.setViewportSize({ width: 1280, height: 1800 });
+    await page.goto("codes/new?type=links");
+    const addLink = page.getByRole("button", { name: "Add link", exact: true });
+    while ((await page.getByLabel("Button text").count()) < 3) await addLink.click();
+    for (const [i, name] of ["A", "B", "C"].entries()) {
+      await page.getByLabel("Button text").nth(i).fill(name);
+      await page
+        .getByLabel("Link", { exact: true })
+        .nth(i)
+        .fill(`${name.toLowerCase()}.example.com`);
+    }
+    const order = () =>
+      page
+        .getByLabel("Button text")
+        .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value));
+    expect(await order()).toEqual(["A", "B", "C"]);
+
+    // Keyboard: focus the handle, Space, arrow keys, Space. Each step is announced; wait for it
+    // as a person would, since the list scrolls smoothly between moves.
+    const said = page.locator('[id^="DndLiveRegion"]');
+    // A drag starts listening for arrow keys on the page's next timer tick.
+    const listening = () => page.evaluate(() => new Promise((done) => setTimeout(done, 0)));
+    await page.getByRole("button", { name: "Drag link “A”" }).focus();
+    await page.keyboard.press("Space");
+    await expect(said).toHaveText(/link “A” is at position 1 of 3/);
+    await listening();
+    await page.keyboard.press("ArrowDown");
+    await expect(said).toHaveText(/position 2 of 3/);
+    await page.keyboard.press("ArrowDown");
+    await expect(said).toHaveText(/position 3 of 3/);
+    await page.keyboard.press("Space");
+    await expect(said).toHaveText(/Dropped link “A” at position 3 of 3/);
+    await expect.poll(order).toEqual(["B", "C", "A"]);
+
+    // Escape cancels a move.
+    await page.getByRole("button", { name: "Drag link “C”" }).focus();
+    await page.keyboard.press("Space");
+    await expect(said).toHaveText(/link “C” is at position 2 of 3/);
+    await listening();
+    await page.keyboard.press("ArrowUp");
+    await expect(said).toHaveText(/position 1 of 3/);
+    await page.keyboard.press("Escape");
+    await expect(said).toHaveText(/Cancelled/);
+    await expect.poll(order).toEqual(["B", "C", "A"]);
+
+    // Mouse: drag A's handle onto B, from a still page once the rows have settled back from
+    // the cancelled move.
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await page.waitForFunction(() =>
+      document.getAnimations().every((animation) => animation.playState !== "running"),
+    );
+    const from = (await page.getByRole("button", { name: "Drag link “A”" }).boundingBox())!;
+    const to = (await page.getByRole("button", { name: "Drag link “B”" }).boundingBox())!;
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + 10, { steps: 12 });
+    // Let go once the row has moved into place, as a person would.
+    await expect(said).toHaveText(/link “A” is at position 1 of 3/);
+    await page.mouse.up();
+    await expect.poll(order).toEqual(["A", "B", "C"]);
+
+    // The preview follows.
+    const links = page
+      .getByRole("complementary", { name: "Preview" })
+      .getByRole("navigation", { name: "Links" });
+    await expect(links.getByText(/^[ABC]$/)).toHaveText(["A", "B", "C"]);
+  });
+
+  /** From the code page, the address of its live page. */
+  async function livePage(page: Page) {
+    await expect(page).toHaveURL(/\/codes\/[0-9a-f-]+#download$/);
+    return (await page.getByRole("link", { name: /View page/ }).getAttribute("href"))!;
+  }
+
+  test("makes a Link list from the gallery; a link switched off stays off the page", async ({
+    page,
+  }) => {
+    await page.goto("codes/new");
+    await page.getByRole("link", { name: /^Link list/ }).click();
+    await expect(page.getByRole("heading", { level: 2, name: "Header" })).toBeVisible();
+    await page.getByLabel("Title").fill("Gallery links");
+    await page.getByLabel("Button text").first().fill("Old offer");
+    await page.getByLabel("Link", { exact: true }).first().fill("example.com/old");
+    await page.getByRole("button", { name: "Add link", exact: true }).click();
+    // The new link goes on top, with the cursor in it.
+    await expect(page.getByLabel("Button text").first()).toBeFocused();
+    await page.keyboard.type("Shop");
+    await page.getByLabel("Link", { exact: true }).first().fill("example.com/shop");
+    await page.getByRole("switch", { name: "Show link “Old offer” on the page" }).click();
+    await expect(page.getByText("Hidden from your page")).toBeVisible();
+    await page.getByLabel("Code name").fill("Gallery links");
+    await createButton(page).click();
+
+    await page.goto(await livePage(page));
+    await expect(page.getByRole("link", { name: "Shop" })).toBeVisible();
+    await expect(page.getByText("Old offer")).toHaveCount(0);
+  });
+
+  test("makes a Business page from the gallery on a phone, with a button switched off", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("codes/new");
+    await page.getByRole("link", { name: /^Business/ }).click();
+    await page.getByLabel("Business name").fill("Corner Cafe");
+    await page.getByRole("button", { name: "Add button" }).click();
+    await page.keyboard.type("Order");
+    await page.getByLabel("Link", { exact: true }).first().fill("example.com/order");
+    await page.getByRole("button", { name: "Add button" }).click();
+    await page.keyboard.type("Catering");
+    await page.getByLabel("Link", { exact: true }).first().fill("example.com/catering");
+    await page.getByRole("switch", { name: "Show button “Catering” on the page" }).click();
+    await page.locator('[data-actionbar="create"]').getByRole("button", { name: "Create" }).click();
+
+    await page.goto(await livePage(page));
+    await expect(page.getByRole("link", { name: "Order" })).toBeVisible();
+    await expect(page.getByText("Catering")).toHaveCount(0);
+  });
+
+  test("makes an Event from the gallery, card by card", async ({ page }) => {
+    await page.goto("codes/new");
+    await page.getByRole("link", { name: /^Event/ }).click();
+    for (const name of ["Header", "When", "Where", "Details", "Tickets"]) {
+      await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
+    }
+    await page.getByLabel("Event name").fill("Spring fair");
+    await page.getByLabel("Starts", { exact: true }).fill(localDateTime(10));
+    await page.getByLabel("Location").fill("Town hall");
+    await page.getByLabel("Code name").fill("Spring fair");
+    await createButton(page).click();
+
+    await page.goto(await livePage(page));
+    await expect(page.getByRole("heading", { level: 1, name: "Spring fair" })).toBeVisible();
+    await expect(page.getByText("Town hall")).toBeVisible();
   });
 
   test("the preview's menu chips don't change the editor's address", async ({ page }) => {

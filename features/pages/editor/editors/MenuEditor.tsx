@@ -2,13 +2,22 @@
 
 import { LIMITS, type MenuPage } from "@/lib/pages/types";
 
-import { AreaField, ListField, MediaField, TextField } from "../fields";
+import { AreaField, MediaField, rowName, TextField } from "../fields";
+import { FormCard } from "../FormCard";
+import { SortableList } from "../sortable/SortableList";
 import type { EditorProps } from "./shared";
 
 export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-[1fr_6rem]">
+      <FormCard title="Header" note="At the top of your page">
+        <MediaField
+          label="Logo"
+          kind="image"
+          maxSide={512}
+          value={page.logo}
+          onChange={(logo) => set({ logo })}
+        />
         <TextField
           label="Restaurant name"
           value={page.name}
@@ -16,97 +25,106 @@ export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
           path="name"
           errors={errors}
         />
-        <TextField
-          label="Currency"
-          value={page.currency}
-          onChange={(currency) => set({ currency })}
-          maxLength={4}
-          placeholder="$"
+        <AreaField
+          label="Description"
+          value={page.description}
+          onChange={(description) => set({ description })}
         />
-      </div>
-      <AreaField
-        label="Description"
-        value={page.description}
-        onChange={(description) => set({ description })}
-      />
-      <MediaField
-        label="Logo"
-        kind="image"
-        maxSide={512}
-        value={page.logo}
-        onChange={(logo) => set({ logo })}
-      />
-      <ListField
-        label="Sections"
-        items={page.sections}
-        onChange={(sections) => set({ sections })}
-        max={LIMITS.sections}
-        addLabel="Add section"
-        itemName="section"
-        newItem={() => ({ name: "", items: [{ name: "", description: "", price: "", tags: "" }] })}
-        render={(section, update, s) => (
-          <>
-            <TextField
-              label="Section name"
-              value={section.name}
-              onChange={(name) => update({ name })}
-              placeholder="Mains"
-              maxLength={80}
-            />
-            <ListField
-              label="Dishes and drinks"
-              items={section.items}
-              onChange={(items) => update({ items })}
-              max={LIMITS.items}
-              addLabel="Add item"
-              itemName="item"
-              newItem={() => ({ name: "", description: "", price: "", tags: "" })}
-              render={(item, updateItem, i) => (
-                <>
-                  <div className="grid gap-3 sm:grid-cols-[1fr_6rem]">
+      </FormCard>
+      <FormCard title="Sections and dishes">
+        <SortableList
+          label="Sections"
+          showLabel={false}
+          items={page.sections}
+          onChange={(sections) => set({ sections })}
+          max={LIMITS.sections}
+          addLabel="Add section"
+          addAt="end"
+          path="sections"
+          errors={errors}
+          itemLabel={(section, s) => rowName("section", section.name, s)}
+          newItem={() => ({
+            name: "",
+            items: [{ name: "", description: "", price: "", tags: "" }],
+          })}
+          render={(section, update, s) => (
+            <>
+              <TextField
+                label="Section name"
+                value={section.name}
+                onChange={(name) => update({ name })}
+                placeholder="Mains"
+                maxLength={80}
+              />
+              <SortableList
+                label="Dishes and drinks"
+                items={section.items}
+                onChange={(items) => update({ items })}
+                max={LIMITS.items}
+                addLabel="Add item"
+                addAt="end"
+                path={`sections.${s}.items`}
+                errors={errors}
+                itemLabel={(item, i) => rowName("item", item.name, i)}
+                newItem={() => ({ name: "", description: "", price: "", tags: "" })}
+                render={(item, updateItem, i) => (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-[1fr_6rem]">
+                      <TextField
+                        label="Name"
+                        value={item.name}
+                        onChange={(name) => updateItem({ name })}
+                        path={`sections.${s}.items.${i}.name`}
+                        errors={errors}
+                      />
+                      <TextField
+                        label="Price"
+                        value={item.price}
+                        onChange={(price) => updateItem({ price })}
+                        inputMode="decimal"
+                        maxLength={20}
+                        placeholder="12"
+                      />
+                    </div>
                     <TextField
-                      label="Name"
-                      value={item.name}
-                      onChange={(name) => updateItem({ name })}
-                      path={`sections.${s}.items.${i}.name`}
-                      errors={errors}
+                      label="Description"
+                      optional
+                      value={item.description}
+                      onChange={(description) => updateItem({ description })}
+                      maxLength={300}
                     />
                     <TextField
-                      label="Price"
-                      value={item.price}
-                      onChange={(price) => updateItem({ price })}
-                      inputMode="decimal"
-                      maxLength={20}
-                      placeholder="12"
+                      label="Tags"
+                      optional
+                      hint="Comma separated, e.g. vegan, gluten-free"
+                      value={item.tags}
+                      onChange={(tags) => updateItem({ tags })}
+                      maxLength={80}
                     />
-                  </div>
-                  <TextField
-                    label="Description"
-                    optional
-                    value={item.description}
-                    onChange={(description) => updateItem({ description })}
-                    maxLength={300}
-                  />
-                  <TextField
-                    label="Tags"
-                    optional
-                    hint="Comma separated, e.g. vegan, gluten-free"
-                    value={item.tags}
-                    onChange={(tags) => updateItem({ tags })}
-                    maxLength={80}
-                  />
-                </>
-              )}
-            />
-          </>
-        )}
-      />
-      <AreaField
-        label="Note"
-        value={page.note}
-        onChange={(note) => set({ note })}
-        placeholder="Prices include tax. Ask us about allergens."
-      />
+                  </>
+                )}
+              />
+            </>
+          )}
+        />
+      </FormCard>
+      <FormCard title="Currency and note">
+        <div className="max-w-32">
+          <TextField
+            label="Currency"
+            value={page.currency}
+            onChange={(currency) => set({ currency })}
+            maxLength={4}
+            placeholder="$"
+          />
+        </div>
+        <AreaField
+          label="Note"
+          value={page.note}
+          onChange={(note) => set({ note })}
+          placeholder="Prices include tax. Ask us about allergens."
+        />
+      </FormCard>
     </>
   );
 }

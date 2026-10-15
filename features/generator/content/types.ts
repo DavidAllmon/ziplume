@@ -20,4 +20,6 @@ export interface ContentEditor {
   revealErrors?: boolean;
   /** The editor has a Look tab for the page color; elsewhere it sits under the form. */
   pageColorInLook?: boolean;
+  /** Each part of a hosted page's form is its own card (the Create editor's Content tab). */
+  pageCards?: boolean;
 }

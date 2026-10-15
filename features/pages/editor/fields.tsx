@@ -1,36 +1,42 @@
 "use client";
 
+import { arrayMove, useSortable } from "@dnd-kit/sortable";
+import { Switch } from "@headlessui/react";
 import {
-  ArrowDown,
-  ArrowUp,
   FileAudio,
   FileText,
   FileVideo,
+  GripVertical,
   Loader2,
   Plus,
   Trash2,
   Upload,
 } from "lucide-react";
-import { useContext, useId, useState, type ReactNode } from "react";
+import { useContext, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
-import { Button, IconButton } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import { ColorField } from "@/components/ui/ColorField";
 import { Field } from "@/components/ui/Field";
 import { Select, Textarea, TextInput } from "@/components/ui/inputs";
 import { Toggle } from "@/components/ui/Toggle";
 import { cn } from "@/lib/cn";
-import type { DayHours, LinkItem, Media, SocialItem, SocialNetwork } from "@/lib/pages/types";
+import type { DayHours, LinkItem, Media, SocialItem } from "@/lib/pages/types";
 import { SOCIAL_NETWORKS } from "@/lib/pages/types";
 import { mediaUrl } from "@/lib/pages/urls";
 
-import { fileSize, socialLabel } from "../parts";
+import { fileSize, SocialIcon, socialLabel } from "../parts";
 import { MediaOwnerContext } from "./MediaOwner";
+import { RowMenu } from "./sortable/RowMenu";
+import { SortableArea } from "./sortable/SortableArea";
+import { SortableList } from "./sortable/SortableList";
 import { ACCEPT, uploadMedia, type MediaKind } from "./upload";
 
 /** Shows a field's error once it has been left (or after a save attempt). */
 export interface ErrorsApi {
   error: (path: string) => string | undefined;
   touch: (path: string) => void;
+  /** A list under `prefix` changed order: `order[newIndex]` is each row's old index (-1: new). */
+  reorder?: (prefix: string, order: number[]) => void;
 }
 
 interface TextFieldProps {
@@ -46,6 +52,8 @@ interface TextFieldProps {
   type?: "text" | "url" | "email" | "tel" | "date" | "datetime-local" | "time";
   inputMode?: "text" | "url" | "email" | "tel" | "decimal";
   autoComplete?: string;
+  /** See Field. */
+  hideLabel?: boolean;
 }
 
 export function TextField({
@@ -61,12 +69,14 @@ export function TextField({
   type = "text",
   inputMode,
   autoComplete,
+  hideLabel,
 }: TextFieldProps) {
   return (
     <Field
       label={label}
       hint={hint}
       optional={optional}
+      hideLabel={hideLabel}
       error={path ? errors?.error(path) : undefined}
     >
       {(control) => (
@@ -98,9 +108,10 @@ export function AreaField({
   placeholder,
   maxLength = 300,
   rows = 3,
+  hideLabel,
 }: Omit<TextFieldProps, "type" | "path" | "errors"> & { rows?: number }) {
   return (
-    <Field label={label} hint={hint} optional={optional}>
+    <Field label={label} hint={hint} optional={optional} hideLabel={hideLabel}>
       {(control) => (
         <Textarea
           {...control}
@@ -335,42 +346,28 @@ export function ImagesField({
     }
   }
 
+  const ids = value.map((media) => media.path);
+  const names = value.map((_, i) => `image ${i + 1}`);
+  const grid = useRef<HTMLUListElement>(null);
+  // After a move or remove from a ⋯ menu, focus goes to that place's ⋯ (or, once the last
+  // image is gone, to Add images) instead of falling back to the top of the page.
+  const focusAt = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const at = focusAt.current;
+    if (at === null) return;
+    focusAt.current = null;
+    const menus = grid.current?.querySelectorAll<HTMLElement>("[data-row-menu]");
+    const target = menus?.length
+      ? menus[Math.min(at, menus.length - 1)]
+      : document.getElementById(inputId);
+    target?.focus();
+  });
+  const moveImage = (from: number, to: number) => {
+    if (to >= 0 && to < value.length) onChange(arrayMove(value, from, to));
+  };
+
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-sm font-medium text-fg">Images</span>
-      {value.length > 0 && (
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {value.map((image, i) => (
-            <li key={image.path} className="group relative">
-              {/* eslint-disable-next-line @next/next/no-img-element -- uploaded file preview */}
-              <img
-                src={mediaUrl(image.path)}
-                alt={`Image ${i + 1}`}
-                className="aspect-square w-full rounded-lg object-cover"
-              />
-              <div className="absolute inset-x-1 bottom-1 flex justify-between">
-                <IconButton
-                  label={`Move image ${i + 1} earlier`}
-                  size="icon-sm"
-                  variant="secondary"
-                  disabled={i === 0}
-                  onClick={() => onChange(move(value, i, -1))}
-                >
-                  <ArrowUp aria-hidden className="-rotate-90" />
-                </IconButton>
-                <IconButton
-                  label={`Remove image ${i + 1}`}
-                  size="icon-sm"
-                  variant="secondary"
-                  onClick={() => onChange(value.filter((_, j) => j !== i))}
-                >
-                  <Trash2 aria-hidden />
-                </IconButton>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="flex flex-col gap-3">
       {value.length < max && (
         <label
           htmlFor={inputId}
@@ -402,6 +399,35 @@ export function ImagesField({
           />
         </label>
       )}
+      {value.length > 0 && (
+        <SortableArea ids={ids} names={names} grid onMove={moveImage}>
+          <ul ref={grid} aria-label="Images" className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {value.map((media, i) => (
+              <ImageTile
+                key={media.path}
+                id={media.path}
+                name={names[i]!}
+                src={mediaUrl(media.path)}
+              >
+                <RowMenu
+                  layout="grid"
+                  name={names[i]!}
+                  first={i === 0}
+                  last={i === value.length - 1}
+                  onMove={(by) => {
+                    focusAt.current = i + by;
+                    moveImage(i, i + by);
+                  }}
+                  onRemove={() => {
+                    focusAt.current = i;
+                    onChange(value.filter((_, j) => j !== i));
+                  }}
+                />
+              </ImageTile>
+            ))}
+          </ul>
+        </SortableArea>
+      )}
       {(problem || error) && (
         <p role="alert" className="text-sm text-danger">
           {problem ?? error}
@@ -411,86 +437,87 @@ export function ImagesField({
   );
 }
 
-export function move<T>(list: T[], index: number, by: number): T[] {
-  const target = index + by;
-  if (target < 0 || target >= list.length) return list;
-  const next = [...list];
-  [next[index], next[target]] = [next[target]!, next[index]!];
-  return next;
-}
-
-interface ListFieldProps<T> {
-  label: string;
-  items: T[];
-  onChange: (items: T[]) => void;
-  newItem: () => T;
-  max: number;
-  addLabel: string;
-  itemName: string;
-  render: (item: T, update: (patch: Partial<T>) => void, index: number) => ReactNode;
-}
-
-/** A reorderable list of small forms (links, phone numbers, menu items…). */
-export function ListField<T>({
-  label,
-  items,
-  onChange,
-  newItem,
-  max,
-  addLabel,
-  itemName,
-  render,
-}: ListFieldProps<T>) {
+/** One uploaded image in the grid: a drag handle on top, its ⋯ menu below. */
+function ImageTile({
+  id,
+  name,
+  src,
+  children,
+}: {
+  id: string;
+  name: string;
+  src: string;
+  children: ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
   return (
-    <fieldset className="flex flex-col gap-3">
-      <legend className="mb-2 text-sm font-medium text-fg">{label}</legend>
-      {items.map((item, i) => (
-        <div key={i} className="flex gap-2 rounded-control border border-border p-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-3">
-            {render(
-              item,
-              (patch) => onChange(items.map((it, j) => (j === i ? { ...it, ...patch } : it))),
-              i,
-            )}
-          </div>
-          <div className="flex shrink-0 flex-col gap-1">
-            <IconButton
-              label={`Move ${itemName} ${i + 1} up`}
-              size="icon-sm"
-              disabled={i === 0}
-              onClick={() => onChange(move(items, i, -1))}
-            >
-              <ArrowUp aria-hidden />
-            </IconButton>
-            <IconButton
-              label={`Move ${itemName} ${i + 1} down`}
-              size="icon-sm"
-              disabled={i === items.length - 1}
-              onClick={() => onChange(move(items, i, 1))}
-            >
-              <ArrowDown aria-hidden />
-            </IconButton>
-            <IconButton
-              label={`Remove ${itemName} ${i + 1}`}
-              size="icon-sm"
-              onClick={() => onChange(items.filter((_, j) => j !== i))}
-            >
-              <Trash2 aria-hidden />
-            </IconButton>
-          </div>
-        </div>
-      ))}
-      {items.length < max && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="self-start"
-          onClick={() => onChange([...items, newItem()])}
-        >
-          <Plus aria-hidden /> {addLabel}
-        </Button>
-      )}
-    </fieldset>
+    <li
+      ref={setNodeRef}
+      style={{
+        transform: transform
+          ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
+          : undefined,
+        transition,
+      }}
+      className={cn("relative", isDragging && "z-10")}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- uploaded file preview */}
+      <img
+        src={src}
+        alt={name.replace(/^i/, "I")}
+        className="aspect-square w-full rounded-lg object-cover"
+      />
+      <button
+        type="button"
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        aria-label={`Drag ${name}`}
+        className="absolute top-1 left-1 grid size-9 cursor-grab touch-none place-items-center rounded-control bg-surface/90 text-fg shadow-sm focus-ring active:cursor-grabbing"
+      >
+        <GripVertical aria-hidden className="size-4" />
+      </button>
+      <div className="absolute right-1 bottom-1 rounded-control bg-surface/90 shadow-sm">
+        {children}
+      </div>
+    </li>
+  );
+}
+
+/** How a row is named in its controls: link “Shop”, or link 2 while it has no text. */
+export const rowName = (kind: string, text: string, index: number) =>
+  text.trim() ? `${kind} “${text.trim()}”` : `${kind} ${index + 1}`;
+
+/** Shows or hides one link or button on the page; off keeps it in the editor. */
+export function ShowSwitch({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (on: boolean) => void;
+  label: string;
+}) {
+  return (
+    <Switch
+      checked={checked}
+      onChange={onChange}
+      aria-label={label}
+      className="group relative mt-1.5 inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border border-field-border bg-surface-2 transition-colors data-checked:border-primary data-checked:bg-primary data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring"
+    >
+      <span
+        aria-hidden
+        className="ml-0.5 size-5.5 rounded-full bg-white shadow-sm ring-1 ring-black/10 transition-transform group-data-checked:translate-x-5"
+      />
+    </Switch>
   );
 }
 
@@ -501,6 +528,7 @@ export function LinksField({
   max,
   errors,
   prefix = "links",
+  itemName = "link",
 }: {
   label?: string;
   items: LinkItem[];
@@ -508,16 +536,30 @@ export function LinksField({
   max: number;
   errors: ErrorsApi;
   prefix?: string;
+  /** "link", or "button" on a Business page. */
+  itemName?: string;
 }) {
+  const name = (item: LinkItem, i: number) => rowName(itemName, item.label, i);
   return (
-    <ListField
+    <SortableList
       label={label}
+      showLabel={false}
       items={items}
       onChange={onChange}
       max={max}
-      addLabel="Add link"
-      itemName="link"
-      newItem={() => ({ label: "", url: "" })}
+      addLabel={`Add ${itemName}`}
+      path={prefix}
+      errors={errors}
+      itemLabel={name}
+      newItem={() => ({ label: "", url: "", on: true })}
+      off={(item) => !item.on}
+      rowActions={(item, update, i) => (
+        <ShowSwitch
+          checked={item.on}
+          onChange={(on) => update({ on })}
+          label={`Show ${name(item, i)} on the page`}
+        />
+      )}
       render={(item, update, i) => (
         <>
           <TextField
@@ -544,6 +586,7 @@ export function LinksField({
   );
 }
 
+/** Social profiles: pick a network's icon to add its address; drag to reorder. */
 export function SocialsField({
   items,
   onChange,
@@ -556,40 +599,65 @@ export function SocialsField({
   errors: ErrorsApi;
 }) {
   return (
-    <ListField
-      label="Social profiles"
+    <SortableList
+      label="Social icons"
+      showLabel={false}
       items={items}
       onChange={onChange}
       max={max}
       addLabel="Add profile"
-      itemName="profile"
+      addAt="end"
+      path="socials"
+      errors={errors}
+      itemLabel={(item) => socialLabel(item.network)}
       newItem={(): SocialItem => ({ network: "instagram", url: "" })}
+      adder={({ add, focus }) => (
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(2.75rem,1fr))] gap-2">
+            {SOCIAL_NETWORKS.map((network) => {
+              const at = items.findIndex((item) => item.network === network);
+              const name = socialLabel(network);
+              return (
+                <button
+                  key={network}
+                  type="button"
+                  title={name}
+                  aria-label={at === -1 ? `Add ${name}` : `Edit ${name}`}
+                  disabled={at === -1 && items.length >= max}
+                  onClick={() => (at === -1 ? add({ network, url: "" }) : focus(at))}
+                  className={cn(
+                    "grid size-11 place-items-center rounded-control border focus-ring disabled:cursor-not-allowed disabled:opacity-40",
+                    at === -1
+                      ? "border-border text-fg hover:bg-surface-2"
+                      : "border-primary bg-primary-soft text-primary-soft-fg",
+                  )}
+                >
+                  <SocialIcon network={network} className="size-5" />
+                </button>
+              );
+            })}
+          </div>
+          {items.length >= max && (
+            <p className="text-sm text-fg-muted">
+              You can add up to {max} {max === 1 ? "profile" : "profiles"}.
+            </p>
+          )}
+        </div>
+      )}
       render={(item, update, i) => (
-        <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
-          <Field label="Network">
-            {(control) => (
-              <Select
-                {...control}
-                value={item.network}
-                onChange={(event) => update({ network: event.target.value as SocialNetwork })}
-              >
-                {SOCIAL_NETWORKS.map((network) => (
-                  <option key={network} value={network}>
-                    {socialLabel(network)}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </Field>
-          <TextField
-            label="Profile link or @handle"
-            value={item.url}
-            onChange={(url) => update({ url })}
-            path={`socials.${i}.url`}
-            errors={errors}
-            placeholder="@yourname"
-            maxLength={2048}
-          />
+        <div className="flex items-start gap-3">
+          <SocialIcon network={item.network} className="mt-9 size-5 shrink-0 text-fg-muted" />
+          <div className="min-w-0 flex-1">
+            <TextField
+              label={socialLabel(item.network)}
+              value={item.url}
+              onChange={(url) => update({ url })}
+              path={`socials.${i}.url`}
+              errors={errors}
+              placeholder={item.network === "website" ? "example.com" : "Profile link or @handle"}
+              maxLength={2048}
+            />
+          </div>
         </div>
       )}
     />
@@ -611,7 +679,7 @@ export function HoursField({
     onChange(hours.map((h, j) => (j === i ? { ...h, ...patch } : h)));
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="mb-1 text-sm font-medium text-fg">Opening hours</legend>
+      <legend className="sr-only">Opening hours</legend>
       {hours.map((h, i) => (
         <div key={DAY_NAMES[i]} className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
