@@ -185,6 +185,13 @@ test.describe("hosted pages", () => {
     await expectNoScroll(page);
   });
 
+  test("the public page still switches layout at 640px of its own width", async ({ page }) => {
+    await page.setViewportSize({ width: 700, height: 900 });
+    await page.goto(`p/${PHONE_PAGES[0]!.slug}`);
+    const band = page.locator(".h-36").first();
+    expect(await band.evaluate((el) => (el as HTMLElement).offsetHeight)).toBe(176);
+  });
+
   test("hosted pages keep pull-to-refresh", async ({ page }) => {
     await page.goto(`p/${PHONE_PAGES[0]!.slug}`);
     await expect(page.locator("h1").first()).toBeVisible();

@@ -130,4 +130,32 @@ test.describe("creating codes", () => {
     await page.goto(`codes?folder=${makerFolderId}`);
     await expect(page.getByRole("listitem", { name: "Door note" })).toBeVisible();
   });
+
+  test("the page preview lays out at each device's real width", async ({ page }) => {
+    await page.goto("codes/new?type=links");
+    const preview = page.getByRole("complementary", { name: "Preview" });
+    const band = preview.getByRole("region", { name: "Page preview" }).locator(".h-36").first();
+    // offsetHeight ignores the frame's scale: it's the page's own layout.
+    const height = () => band.evaluate((el) => (el as HTMLElement).offsetHeight);
+    expect(await height()).toBe(144);
+    await preview.getByRole("radio", { name: "Tablet" }).click();
+    expect(await height()).toBe(176);
+    await preview.getByRole("radio", { name: "Desktop" }).click();
+    expect(await height()).toBe(176);
+    await preview.getByRole("radio", { name: "Phone" }).click();
+    expect(await height()).toBe(144);
+  });
+
+  test("the preview's menu chips don't change the editor's address", async ({ page }) => {
+    await page.goto("codes/new?type=menu#content");
+    await page.getByLabel("Restaurant name").fill("Diner");
+    await page.getByLabel("Section name").first().fill("Starters");
+    await page.getByLabel("Name", { exact: true }).first().fill("Soup");
+    await page.getByRole("button", { name: /Add section/ }).click();
+    await page.getByLabel("Section name").nth(1).fill("Mains");
+    await page.getByLabel("Name", { exact: true }).nth(1).fill("Pie");
+    const preview = page.getByRole("complementary", { name: "Preview" });
+    await preview.getByText("Mains", { exact: true }).first().click();
+    await expect(page).toHaveURL(/#content$/);
+  });
 });
