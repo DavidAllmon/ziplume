@@ -1,7 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { expectFitsPhone, expectNoSidewaysScroll, overscrollY } from "../phone-fit";
-import { OWNER, seed } from "./fixtures";
+import {
+  expectEndsWith,
+  expectFitsPhone,
+  expectNoScroll,
+  expectNoSidewaysScroll,
+  overscrollY,
+} from "../phone-fit";
+import { OWNER, PAUSED_PAGE_SLUG, PHONE_PAGES, seed } from "./fixtures";
 
 // Phone layout with accounts on: the signed-out site (its header has a Sign in button), the
 // signed-in app and hosted pages, on every phone profile in e2e/phones.ts.
@@ -136,5 +142,32 @@ test.describe("signed in", () => {
       .evaluate((el) => el.getBoundingClientRect().bottom);
     const card = await page.locator("#download").evaluate((el) => el.getBoundingClientRect().top);
     expect(card).toBeGreaterThanOrEqual(header);
+  });
+});
+
+test.describe("hosted pages", () => {
+  for (const { type, slug } of PHONE_PAGES) {
+    test(`a ${type} page ends with its footer`, async ({ page }) => {
+      await page.goto(`p/${slug}`);
+      // Not every type has a main heading yet (Feedback gets one in release 3), so wait for the
+      // page's footer.
+      const footer = page.getByRole("link", { name: /Made with Ziplume/ });
+      await expect(footer).toBeVisible();
+      await expectNoSidewaysScroll(page);
+      // The footer has 2rem below it; nothing else may add space after it.
+      await expectEndsWith(page, footer, 40);
+    });
+  }
+
+  test("a paused page's notice fits on the screen", async ({ page }) => {
+    await page.goto(`p/${PAUSED_PAGE_SLUG}`);
+    await expect(page.getByRole("heading", { name: "This page is paused" })).toBeVisible();
+    await expectNoScroll(page);
+  });
+
+  test("hosted pages keep pull-to-refresh", async ({ page }) => {
+    await page.goto(`p/${PHONE_PAGES[0]!.slug}`);
+    await expect(page.locator("h1").first()).toBeVisible();
+    expect(await overscrollY(page)).toBe("auto");
   });
 });

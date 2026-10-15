@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: PageProps<"/p/[slug]">): Prom
 
 function Notice({ title, message }: { title: string; message: string }) {
   return (
-    <main className="grid min-h-dvh place-items-center bg-bg px-4">
+    <main className="grid flex-1 place-items-center px-4 py-10">
       <div className="max-w-sm rounded-[1.5rem] border border-border bg-surface p-8 text-center shadow-card">
         <h1 className="font-display text-xl font-bold text-fg">{title}</h1>
         <p className="mt-2 text-fg-muted">{message}</p>
