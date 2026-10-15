@@ -9,6 +9,7 @@ import type { ContentEditor } from "@/features/generator/content/types";
 import type { DeviceId } from "@/features/pages/preview/devices";
 import type { FolderRow } from "@/types/supabase";
 
+import { useKeepFocusClear } from "./keepFocusClear";
 import { CreateMobileBar } from "./CreateMobileBar";
 import { EditorTopBar } from "./EditorTopBar";
 import { focusField } from "./focusField";
@@ -63,6 +64,7 @@ export function EditorLayout({
   /** After "Show me", page errors show without waiting for each field to be left. */
   const [revealErrors, setRevealErrors] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  useKeepFocusClear(root);
 
   function changeTab(next: EditorTab) {
     selectTab(next);
@@ -154,7 +156,8 @@ export function EditorLayout({
       />
       <TabList
         aria-label="Editor sections"
-        className="flex gap-1 overflow-x-auto border-b border-border"
+        // Phones: pinned under the top bar, full width, and scrollable sideways.
+        className="z-10 scrollbar-none flex gap-1 overflow-x-auto border-b border-border bg-bg/95 backdrop-blur-md max-md:sticky max-md:top-[var(--editor-bar-h,3.5rem)] max-sm:-mx-4 max-sm:px-4 sm:max-md:-mx-6 sm:max-md:px-6"
       >
         {tabs.map((id) => (
           <Tab

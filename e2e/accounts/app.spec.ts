@@ -125,7 +125,7 @@ test.describe("signed in as an owner", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Flyers" })).toBeVisible();
   });
 
-  for (const path of ["codes", "codes/new", "codes/new?type=links", "team"]) {
+  for (const path of ["codes", "codes/new", "team"]) {
     test(`/${path} passes axe in dark mode`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: "dark" });
       await page.goto(path);
@@ -133,6 +133,67 @@ test.describe("signed in as an owner", () => {
       await expectNoAxeViolations(page);
     });
   }
+
+  // The editor in dark mode at a phone, tablet and desktop width (spec 7).
+  for (const path of [
+    "codes/new?type=links",
+    "codes/new?type=business",
+    "codes/new?type=event",
+    "codes/{menu}/edit",
+  ]) {
+    for (const width of WIDTHS) {
+      test(`/${path} passes axe in dark mode at ${width}px`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await page.emulateMedia({ colorScheme: "dark" });
+        await page.goto(resolve(path));
+        await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+        await expect(page.locator("main h1").first()).toBeVisible();
+        await expectNoSidewaysScroll(page);
+        await expectNoAxeViolations(page);
+      });
+    }
+  }
+
+  test("clicking a card's heading or blank space in the editor keeps the page where it is", async ({
+    page,
+  }) => {
+    await page.goto("codes/new?type=links");
+    const addLink = page.getByRole("button", { name: "Add link", exact: true });
+    while ((await page.getByLabel("Button text").count()) < 6) await addLink.click();
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const before = await page.evaluate(() => Math.round(window.scrollY));
+    expect(before).toBeGreaterThan(100);
+    await page.getByRole("heading", { level: 2, name: "Social icons" }).click();
+    await page.evaluate(
+      () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+    );
+    expect(await page.evaluate(() => Math.round(window.scrollY))).toBe(before);
+  });
+
+  test("the editor keeps the sidebar a rail up to 1280px, so the form keeps its room", async ({
+    page,
+  }) => {
+    const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+    const width = async () => Math.round((await sidebar.boundingBox())!.width);
+    await page.setViewportSize({ width: 1100, height: 900 });
+    await page.goto("codes");
+    expect(await width()).toBe(256);
+
+    await page.goto("codes/new?type=links");
+    const bar = page.getByRole("region", { name: "Code" });
+    await expect(bar).toBeVisible();
+    expect(await width()).toBe(64);
+    // Opened, it lays over the editor instead of pushing it aside.
+    const left = (await bar.boundingBox())!.x;
+    await page.getByRole("button", { name: "Expand menu" }).click();
+    expect(await width()).toBe(256);
+    expect((await bar.boundingBox())!.x).toBe(left);
+    await page.keyboard.press("Escape");
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    expect(await width()).toBe(256);
+    await expect(page.getByRole("button", { name: "Expand menu" })).toBeHidden();
+  });
 
   test("the editor's top bar never covers the preview or a focused field", async ({ page }) => {
     await page.goto("codes/new?type=links");

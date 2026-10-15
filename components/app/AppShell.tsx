@@ -26,7 +26,14 @@ import { BUY_ME_A_COFFEE_URL } from "@/lib/env";
 
 import { CreateButton } from "./CreateButton";
 import { FolderNav } from "./FolderNav";
-import { isCurrent, newCodeHref, withWorkspace, type ShellTeam, type ShellUser } from "./nav";
+import {
+  isCurrent,
+  isEditorPage,
+  newCodeHref,
+  withWorkspace,
+  type ShellTeam,
+  type ShellUser,
+} from "./nav";
 import { UserMenu } from "./UserMenu";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
@@ -56,11 +63,11 @@ function SideLink({
   onNavigate: () => void;
 }) {
   const Icon = item.icon;
-  const className = cn(sideLinkClass, !expanded && "max-lg:justify-center max-lg:px-0");
+  const className = cn(sideLinkClass, !expanded && "rail:justify-center rail:px-0");
   const content = (
     <>
       <Icon aria-hidden />
-      <span className={cn("truncate", !expanded && "max-lg:sr-only")}>{item.label}</span>
+      <span className={cn("truncate", !expanded && "rail:sr-only")}>{item.label}</span>
     </>
   );
   return item.external ? (
@@ -101,6 +108,8 @@ export function AppShell({
     ? { ...user, name: profile.display_name?.trim() || null, avatarUrl: profile.avatar_url }
     : user;
   const team = teams.find((t) => t.ownerId === searchParams.get("workspace")) ?? null;
+  // The code editor brings its own bars on phones and keeps the sidebar a rail on tablets.
+  const editor = isEditorPage(pathname, searchParams);
   const ownerId = team?.ownerId ?? null;
   // Creating while one of your own folders is open puts the new code in that folder. New codes
   // always go in your own space, so a teammate's folder doesn't count.
@@ -146,7 +155,7 @@ export function AppShell({
   );
 
   return (
-    <div data-app-shell className="bg-bg text-sm text-fg">
+    <div data-app-shell data-editor={editor || undefined} className="bg-bg text-sm text-fg">
       <a
         href="#main"
         className="sr-only z-50 rounded-control bg-primary px-4 py-2 font-semibold text-primary-fg focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
@@ -158,7 +167,7 @@ export function AppShell({
         <div
           aria-hidden
           onClick={collapse}
-          className="fixed inset-0 z-30 hidden bg-black/30 sm:block lg:hidden"
+          className="fixed inset-0 z-30 hidden bg-black/30 rail:block"
         />
       )}
 
@@ -166,11 +175,11 @@ export function AppShell({
         aria-label="Sidebar"
         data-surface="sidebar"
         className={cn(
-          "fixed inset-y-0 left-0 z-40 hidden flex-col gap-3 overflow-y-auto border-r border-border bg-surface px-3 py-4 sm:flex",
-          expanded ? "w-64 shadow-pop" : "w-16 lg:w-64",
+          "fixed inset-y-0 left-0 z-40 flex flex-col gap-3 overflow-y-auto border-r border-border bg-surface px-3 py-4 phone:hidden",
+          expanded ? "w-64 shadow-pop" : "w-64 rail:w-16",
         )}
       >
-        <div className={cn("flex items-center gap-2 px-1", !expanded && "max-lg:flex-col")}>
+        <div className={cn("flex items-center gap-2 px-1", !expanded && "rail:flex-col")}>
           <Link
             href={codesHref}
             aria-label="Ziplume codes"
@@ -178,7 +187,7 @@ export function AppShell({
             className="flex items-center gap-2.5 rounded-control focus-ring"
           >
             <LogoMark className="size-8" />
-            <Wordmark className={cn("text-[15px]", !expanded && "max-lg:hidden")} />
+            <Wordmark className={cn("text-[15px]", !expanded && "rail:hidden")} />
           </Link>
           <button
             ref={toggleRef}
@@ -186,7 +195,7 @@ export function AppShell({
             aria-label={expanded ? "Collapse menu" : "Expand menu"}
             aria-expanded={expanded}
             onClick={() => setOpenedAt(expanded ? null : here)}
-            className="grid size-10 place-items-center rounded-control text-fg-muted focus-ring hover:bg-surface-2 hover:text-fg lg:hidden [&_svg]:size-5"
+            className="hidden size-10 place-items-center rounded-control text-fg-muted focus-ring hover:bg-surface-2 hover:text-fg rail:grid [&_svg]:size-5"
           >
             {expanded ? <PanelLeftClose aria-hidden /> : <PanelLeftOpen aria-hidden />}
           </button>
@@ -212,7 +221,7 @@ export function AppShell({
           <div
             className={cn(
               "flex min-h-11 items-center justify-between gap-2 px-2.5 text-sm font-medium text-fg-muted",
-              !expanded && "max-lg:hidden",
+              !expanded && "rail:hidden",
             )}
           >
             Theme <ThemeToggle />
@@ -221,58 +230,66 @@ export function AppShell({
         </div>
       </aside>
 
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-surface px-4 sm:hidden">
-        <Link
-          href={codesHref}
-          aria-label="Ziplume codes"
-          className="grid size-11 place-items-center rounded-control focus-ring"
-        >
-          <LogoMark className="size-7" />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <WorkspaceSwitcher user={me} teams={teams} current={team} />
-        </div>
-      </header>
+      {!editor && (
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-surface px-4 sm:hidden">
+          <Link
+            href={codesHref}
+            aria-label="Ziplume codes"
+            className="grid size-11 place-items-center rounded-control focus-ring"
+          >
+            <LogoMark className="size-7" />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <WorkspaceSwitcher user={me} teams={teams} current={team} />
+          </div>
+        </header>
+      )}
 
       <main
         id="main"
-        className="px-4 pt-5 pb-(--app-end) sm:ml-16 sm:px-6 lg:ml-64 lg:px-10 lg:pt-8"
+        className={cn(
+          "ml-64 px-4 pt-5 pb-(--app-end) sm:px-6 lg:px-10 lg:pt-8 rail:ml-16 phone:ml-0",
+          // The editor's own top bar is the first thing on a phone's screen.
+          editor && "max-md:pt-0",
+        )}
       >
         <div className="mx-auto w-full max-w-6xl">{children}</div>
       </main>
 
-      <nav
-        aria-label="Main"
-        data-tabbar
-        className={cn(
-          "fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] sm:hidden",
-          "grid-cols-4",
-        )}
-      >
-        <Link
-          href={codesHref}
-          aria-current={isCurrent(pathname, codesHref) ? "page" : undefined}
-          className={tabClass}
+      {!editor && (
+        <nav
+          aria-label="Main"
+          data-tabbar
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] sm:hidden",
+            "grid-cols-4",
+          )}
         >
-          <QrCode aria-hidden /> Codes
-        </Link>
-        <Link href={newCodeHref({ folderId, ownerId: null })} className={tabClass}>
-          <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-fg [&_svg]:size-5">
-            <Plus aria-hidden />
-          </span>
-          Create
-        </Link>
-        <Link
-          href="/team"
-          aria-current={isCurrent(pathname, "/team") ? "page" : undefined}
-          className={tabClass}
-        >
-          <Users aria-hidden /> Team
-        </Link>
-        <button type="button" onClick={() => setMoreOpen(true)} className={tabClass}>
-          <MoreHorizontal aria-hidden /> More
-        </button>
-      </nav>
+          <Link
+            href={codesHref}
+            aria-current={isCurrent(pathname, codesHref) ? "page" : undefined}
+            className={tabClass}
+          >
+            <QrCode aria-hidden /> Codes
+          </Link>
+          <Link href={newCodeHref({ folderId, ownerId: null })} className={tabClass}>
+            <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-fg [&_svg]:size-5">
+              <Plus aria-hidden />
+            </span>
+            Create
+          </Link>
+          <Link
+            href="/team"
+            aria-current={isCurrent(pathname, "/team") ? "page" : undefined}
+            className={tabClass}
+          >
+            <Users aria-hidden /> Team
+          </Link>
+          <button type="button" onClick={() => setMoreOpen(true)} className={tabClass}>
+            <MoreHorizontal aria-hidden /> More
+          </button>
+        </nav>
+      )}
 
       <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="More">
         <ul className="flex flex-col gap-1 pb-2">

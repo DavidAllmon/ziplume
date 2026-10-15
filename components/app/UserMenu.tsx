@@ -20,11 +20,11 @@ export function UserMenu({ user, collapsed = false }: { user: ShellUser; collaps
       <MenuButton
         className={cn(
           "flex min-h-11 w-full items-center gap-2.5 rounded-control p-2 text-left hover:bg-surface-2 data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring",
-          collapsed && "max-lg:justify-center max-lg:p-1",
+          collapsed && "rail:justify-center rail:p-1",
         )}
       >
         <Avatar id={user.id} name={user.name} email={user.email} src={user.avatarUrl} size="sm" />
-        <span className={cn("min-w-0 flex-1", collapsed && "max-lg:sr-only")}>
+        <span className={cn("min-w-0 flex-1", collapsed && "rail:sr-only")}>
           <span className="block truncate text-sm font-medium text-fg">
             {user.name ?? user.email}
           </span>

@@ -37,7 +37,7 @@ export function CreateMobileBar({
     <>
       <div
         data-actionbar="create"
-        className="fixed inset-x-0 bottom-(--tabbar-h) z-20 border-t border-border bg-surface/95 shadow-pop backdrop-blur-md sm:pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-pop backdrop-blur-md md:hidden"
       >
         <div className="mx-auto flex max-w-xl items-center gap-3 px-4 py-2.5">
           <button
@@ -57,9 +57,12 @@ export function CreateMobileBar({
               <span className="flex items-center gap-1 text-sm font-semibold text-fg">
                 Preview <ChevronUp aria-hidden className="size-4 text-fg-muted" />
               </span>
+              {/* A save error gets two lines: it's what the person needs to read. */}
               <span
                 className={
-                  error ? "truncate text-[13px] text-danger" : "truncate text-[13px] text-fg-muted"
+                  error
+                    ? "line-clamp-2 text-[13px] text-danger"
+                    : "truncate text-[13px] text-fg-muted"
                 }
               >
                 {error ?? blocker ?? summary}
@@ -82,7 +85,7 @@ export function CreateMobileBar({
           </Button>
         </div>
       </div>
-      <Sheet open={open} onClose={() => setOpen(false)} title="Preview">
+      <Sheet fullScreen open={open} onClose={() => setOpen(false)} title="Preview">
         <div className="pt-2">
           <PreviewColumn
             draft={draft}
@@ -91,8 +94,9 @@ export function CreateMobileBar({
             device={device}
             onDeviceChange={onDeviceChange}
             liveHref={liveHref}
-            // Leaves room to see the sheet's other controls, and to scroll it past the frame.
-            frameHeight="min(560px, 55dvh)"
+            // Full screen: the frame takes what's left under the switches, keeping the live-page
+            // link and the scan badge in view.
+            frameHeight="clamp(240px, 100dvh - 17rem, 760px)"
             mode={mode}
           />
         </div>

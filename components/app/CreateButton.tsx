@@ -21,20 +21,20 @@ export function CreateButton({
   onNavigate?: () => void;
 }) {
   return (
-    <div className={cn("flex", collapsed && "max-lg:justify-center")}>
+    <div className={cn("flex", collapsed && "rail:justify-center")}>
       <Link
         href={newCodeHref({ folderId, ownerId: null })}
         onClick={onNavigate}
         className={cn(
           buttonClasses("primary", "md"),
           "flex-1 rounded-r-none",
-          collapsed && "max-lg:w-11 max-lg:flex-none max-lg:rounded-control max-lg:px-0",
+          collapsed && "rail:w-11 rail:flex-none rail:rounded-control rail:px-0",
         )}
       >
         <Plus aria-hidden />
-        <span className={cn(collapsed && "max-lg:sr-only")}>Create code</span>
+        <span className={cn(collapsed && "rail:sr-only")}>Create code</span>
       </Link>
-      <Menu as="div" className={cn("relative", collapsed && "max-lg:hidden")}>
+      <Menu as="div" className={cn("relative", collapsed && "rail:hidden")}>
         <MenuButton
           aria-label="More ways to create"
           className={cn(

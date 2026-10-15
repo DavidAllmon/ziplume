@@ -38,7 +38,7 @@ export function WorkspaceSwitcher({
         aria-label={`Switch team (showing ${label})`}
         className={cn(
           "flex min-h-11 w-full items-center gap-2 rounded-control border border-border bg-surface px-2 text-left text-sm font-medium text-fg hover:bg-surface-2 data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring",
-          collapsed && "max-lg:justify-center max-lg:border-transparent max-lg:px-0",
+          collapsed && "rail:justify-center rail:border-transparent rail:px-0",
         )}
       >
         <Avatar
@@ -48,12 +48,10 @@ export function WorkspaceSwitcher({
           src={current ? current.avatarUrl : user.avatarUrl}
           size="sm"
         />
-        <span className={cn("min-w-0 flex-1 truncate", collapsed && "max-lg:sr-only")}>
-          {label}
-        </span>
+        <span className={cn("min-w-0 flex-1 truncate", collapsed && "rail:sr-only")}>{label}</span>
         <ChevronsUpDown
           aria-hidden
-          className={cn("size-4 shrink-0 text-fg-muted", collapsed && "max-lg:hidden")}
+          className={cn("size-4 shrink-0 text-fg-muted", collapsed && "rail:hidden")}
         />
       </MenuButton>
       <MenuItems anchor={{ to: "bottom start", gap: 6 }} transition className={menuPanelClass}>
