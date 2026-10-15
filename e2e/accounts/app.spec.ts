@@ -130,6 +130,23 @@ test.describe("signed in as an owner", () => {
     });
   }
 
+  test("the editor's top bar never covers the preview or a focused field", async ({ page }) => {
+    await page.goto("codes/new?type=links");
+    const bar = page.getByRole("region", { name: "Code" });
+    await expect(bar).toBeVisible();
+    // The bar is stuck to the top of the screen; what sticks below it must start lower down.
+    const barHeight = await bar.evaluate((el) => el.getBoundingClientRect().height);
+    const previewTop = await page
+      .getByRole("complementary", { name: "Preview" })
+      .evaluate((el) => parseFloat(getComputedStyle(el).top));
+    expect(previewTop).toBeGreaterThanOrEqual(barHeight);
+    // Keyboard focus scrolls fields clear of the bar.
+    const padding = await page.evaluate(() =>
+      parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop),
+    );
+    expect(padding).toBeGreaterThanOrEqual(barHeight);
+  });
+
   test("old addresses land on the new pages", async ({ page }) => {
     await page.goto("dashboard");
     await expect(page).toHaveURL(/\/codes$/);

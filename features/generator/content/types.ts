@@ -18,4 +18,6 @@ export interface ContentEditor {
   workspace: { ownerId: string } | null;
   /** Show every page error now, not only once a field has been left (after "Show me"). */
   revealErrors?: boolean;
+  /** The editor has a Look tab for the page color; elsewhere it sits under the form. */
+  pageColorInLook?: boolean;
 }

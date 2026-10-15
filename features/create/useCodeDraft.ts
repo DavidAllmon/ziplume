@@ -133,8 +133,7 @@ export function useCodeDraft(
         ? {
             message: (firstErrorPath && errors[firstErrorPath]) || info.emptyHint,
             tab: "content",
-            // Page fields carry their path; a static form's first field is the one to fix.
-            field: pageType ? firstErrorPath : null,
+            field: firstErrorPath,
           }
         : trackable && activeType === "url" && !WEB_ADDRESS.test(normalizeUrl(code.content.url.url))
           ? {

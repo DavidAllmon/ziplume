@@ -77,6 +77,7 @@ export function EditorLayout({
     pageErrors: draft.pageErrors,
     workspace: mediaOwner ? { ownerId: mediaOwner } : null,
     revealErrors,
+    pageColorInLook: true,
   };
   const page = pageType ? state.code.pages[pageType] : null;
 
@@ -162,7 +163,10 @@ export function EditorLayout({
             </TabPanel>
           ))}
         </TabPanels>
-        <aside aria-labelledby="preview-heading" className="hidden md:sticky md:top-28 md:block">
+        <aside
+          aria-labelledby="preview-heading"
+          className="hidden md:sticky md:top-[calc(var(--editor-bar-h,8rem)+1rem)] md:block"
+        >
           <Card>
             <CardHeader id="preview-heading" title="Preview" />
             <div className="px-5 pt-4 pb-6">

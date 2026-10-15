@@ -68,6 +68,7 @@ describe("DesignSection", () => {
       patch: {
         fgColor: "#BE123C",
         frameColor: "#BE123C",
+        bgColor: "#FFFFFF",
         gradientType: "none",
         cornerColor: null,
         cornerDotColor: null,

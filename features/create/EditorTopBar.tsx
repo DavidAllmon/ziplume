@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Loader2, Plus, Save } from "lucide-react";
 import Link from "next/link";
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { TextInput } from "@/components/ui/inputs";
@@ -52,11 +52,30 @@ export function EditorTopBar({
   const editing = mode === "edit";
   const reasonId = useId();
   const Icon = TYPE_ICONS[type];
+  const bar = useRef<HTMLDivElement>(null);
+  // The preview and keyboard focus stay below the bar: they read its height from --editor-bar-h.
+  useEffect(() => {
+    const element = bar.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement;
+    const observer = new ResizeObserver(() =>
+      root.style.setProperty("--editor-bar-h", `${element.offsetHeight}px`),
+    );
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--editor-bar-h");
+    };
+  }, []);
   return (
+    // Sticky from 768px up; on phones it scrolls away so the form has the room (release 2d
+    // redoes the phone editor).
     <div
+      ref={bar}
       role="region"
       aria-label="Code"
-      className="sticky top-14 z-20 flex flex-col gap-2 border-b border-border bg-bg/95 py-3 backdrop-blur-md sm:top-0"
+      data-editor-bar
+      className="z-20 flex flex-col gap-2 border-b border-border bg-bg/95 py-3 backdrop-blur-md md:sticky md:top-0"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <Link

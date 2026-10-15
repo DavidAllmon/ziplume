@@ -83,6 +83,7 @@ export function PaymentForm({ values, onChange }: FormProps<"payment">) {
             placeholder={method.placeholder}
             value={values.account}
             onChange={(event) => onChange("account", event.target.value)}
+            data-field="account"
             onBlur={() => touch("account")}
           />
         )}
@@ -101,6 +102,7 @@ export function PaymentForm({ values, onChange }: FormProps<"payment">) {
               placeholder={method.amount}
               value={values.amount}
               onChange={(event) => onChange("amount", event.target.value)}
+              data-field="amount"
               onBlur={() => touch("amount")}
             />
           )}

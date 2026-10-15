@@ -33,7 +33,7 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
-const renderPage = (initialType: "links" | "url") =>
+const renderPage = (initialType: "links" | "url" | "wifi") =>
   render(
     <ToastProvider>
       <CreatePage userId="user-1" folders={[]} initialType={initialType} initialFolderId={null} />
@@ -72,5 +72,16 @@ describe("Show me", () => {
     await user.click(screen.getByRole("tab", { name: "Settings" }));
     await user.click(bar().getByRole("button", { name: "Show me" }));
     expect(screen.getByLabelText("Website address")).toHaveFocus();
+  });
+
+  it("on an instant code, goes to the field with the problem and shows it", async () => {
+    const user = userEvent.setup();
+    renderPage("wifi");
+    await user.type(screen.getByLabelText("Network name (SSID)"), "Cafe");
+    await user.type(screen.getByLabelText("Password"), "short");
+    await user.click(screen.getByRole("tab", { name: "Settings" }));
+    await user.click(bar().getByRole("button", { name: "Show me" }));
+    expect(screen.getByLabelText("Password")).toHaveFocus();
+    expect(screen.getByLabelText("Password")).toHaveAccessibleDescription(/at least 8 characters/);
   });
 });

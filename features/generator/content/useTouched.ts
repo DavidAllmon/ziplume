@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useContext, useState } from "react";
+
+import { RevealErrorsContext } from "./RevealErrors";
 
 /** Tracks which fields the user has left, so errors only appear after a field is visited. */
 export function useTouched() {
@@ -10,10 +12,11 @@ export function useTouched() {
       setTouched((current) => (current.has(field) ? current : new Set(current).add(field))),
     [],
   );
+  const reveal = useContext(RevealErrorsContext);
   const errorFor = useCallback(
     (field: string, errors: Partial<Record<string, string>>) =>
-      touched.has(field) ? errors[field] : undefined,
-    [touched],
+      reveal || touched.has(field) ? errors[field] : undefined,
+    [touched, reveal],
   );
   return { touch, errorFor };
 }

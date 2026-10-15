@@ -24,6 +24,7 @@ export function PhoneForm({ values, onChange }: FormProps<"phone">) {
           placeholder="+1 555 010 9999"
           value={values.phone}
           onChange={(event) => onChange("phone", event.target.value)}
+          data-field="phone"
           onBlur={() => touch("phone")}
         />
       )}

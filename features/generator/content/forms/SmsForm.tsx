@@ -25,6 +25,7 @@ export function SmsForm({ values, onChange }: FormProps<"sms">) {
             placeholder="+1 555 010 9999"
             value={values.phone}
             onChange={(event) => onChange("phone", event.target.value)}
+            data-field="phone"
             onBlur={() => touch("phone")}
           />
         )}

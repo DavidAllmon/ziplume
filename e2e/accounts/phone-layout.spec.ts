@@ -88,6 +88,17 @@ test.describe("signed in", () => {
     await expectFitsPhone(page, "#main", 40);
   });
 
+  test("the editor's top bar scrolls away on phones, leaving room for the form", async ({
+    page,
+  }) => {
+    await page.goto("codes/new?type=links");
+    await settled(page);
+    const position = await page
+      .getByRole("region", { name: "Code" })
+      .evaluate((el) => getComputedStyle(el).position);
+    expect(position).toBe("static");
+  });
+
   test("toasts appear above the Create bar and the tab bar", async ({ page }) => {
     await page.goto("codes/new?type=url");
     await settled(page);

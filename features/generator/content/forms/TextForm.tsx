@@ -22,6 +22,7 @@ export function TextForm({ values, onChange }: FormProps<"text">) {
           placeholder="Table 12 · Free dessert with code SWEET"
           value={values.text}
           onChange={(event) => onChange("text", event.target.value)}
+          data-field="text"
           onBlur={() => touch("text")}
         />
       )}

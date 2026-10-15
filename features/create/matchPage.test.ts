@@ -11,6 +11,7 @@ describe("matchPagePatch", () => {
     expect(matchPagePatch("#be123c", design)).toEqual({
       fgColor: "#BE123C",
       frameColor: "#BE123C",
+      bgColor: "#FFFFFF",
       gradientType: "none",
       cornerColor: null,
       cornerDotColor: null,
@@ -21,7 +22,9 @@ describe("matchPagePatch", () => {
     expect(matchPagePatch("#7FE9FF", design).fgColor).toBe("#0F172A");
   });
 
-  it("checks against the code's own background", () => {
-    expect(matchPagePatch("#FFFFFF", { ...design, bgColor: "#0A1330" }).fgColor).toBe("#FFFFFF");
+  it("puts a dark background back to white, so the code never ends up light on dark", () => {
+    const patch = matchPagePatch("#FFFFFF", { ...design, bgColor: "#0A1330" });
+    expect(patch.bgColor).toBe("#FFFFFF");
+    expect(patch.fgColor).toBe("#0F172A");
   });
 });

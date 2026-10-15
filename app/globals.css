@@ -114,6 +114,20 @@
   }
 }
 
+/* The editor: keyboard focus scrolls fields clear of the sticky top bar (768px up; its height is
+ * measured into --editor-bar-h) or of the phone header (below 640px). */
+@media (width < 40rem) {
+  :root:has([data-editor-bar]) {
+    scroll-padding-top: 4.5rem;
+  }
+}
+
+@media (width >= 48rem) {
+  :root:has([data-editor-bar]) {
+    scroll-padding-top: calc(var(--editor-bar-h, 8rem) + 1rem);
+  }
+}
+
 /* The home page's preview bar: a 3.5rem code, 0.75rem above and below, and the safe area. */
 @media (width < 48rem) {
   :root:has([data-actionbar="generator"]) {
