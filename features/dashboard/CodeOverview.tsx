@@ -336,7 +336,7 @@ export function CodeOverview({
         </div>
 
         <aside className="md:sticky md:top-20 lg:top-24">
-          <Card id="download" className="scroll-mt-6">
+          <Card id="download" className="scroll-mt-20 sm:scroll-mt-6">
             <CardHeader title="Download" />
             <div className="flex flex-col gap-5 px-5 pt-4 pb-6 sm:px-6">
               <QrTile

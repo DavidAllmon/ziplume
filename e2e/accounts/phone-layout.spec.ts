@@ -124,4 +124,17 @@ test.describe("signed in", () => {
       expect(atEnd.y).toBeCloseTo(stuck.y, 0);
     });
   }
+
+  test("jumping to the download card keeps it clear of the phone header", async ({ page }) => {
+    await page.goto(`codes/${seed().menuId}#download`);
+    await settled(page);
+    // scrollIntoView honours scroll-margin-top, like the browser's jump to #download after a
+    // code is created, without depending on when hydration finishes.
+    await page.evaluate(() => document.getElementById("download")!.scrollIntoView());
+    const header = await page
+      .locator("[data-app-shell] > header")
+      .evaluate((el) => el.getBoundingClientRect().bottom);
+    const card = await page.locator("#download").evaluate((el) => el.getBoundingClientRect().top);
+    expect(card).toBeGreaterThanOrEqual(header);
+  });
 });
