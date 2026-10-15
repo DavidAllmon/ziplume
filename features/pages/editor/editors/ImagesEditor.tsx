@@ -29,6 +29,7 @@ export function ImagesEditor({
         value={page.images}
         onChange={(images) => set({ images })}
         max={LIMITS.images}
+        field="images"
         error={touched ? errors.error("images") : undefined}
       />
     </>

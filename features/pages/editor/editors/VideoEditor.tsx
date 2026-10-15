@@ -39,6 +39,7 @@ export function VideoEditor({
         <MediaField
           label="Video"
           kind="video"
+          field="file"
           value={page.file}
           onChange={(file) => set({ file })}
           hint="MP4, WebM or MOV, up to 50 MB."

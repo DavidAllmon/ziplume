@@ -1,7 +1,8 @@
 "use client";
 
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@headlessui/react";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 
 import { Card, CardHeader } from "@/components/ui/Card";
 import type { ContentEditor } from "@/features/generator/content/types";
@@ -9,6 +10,7 @@ import type { FolderRow } from "@/types/supabase";
 
 import { CreateMobileBar } from "./CreateMobileBar";
 import { EditorTopBar } from "./EditorTopBar";
+import { focusField } from "./focusField";
 import { PreviewColumn, type CreateControls, type PreviewView } from "./PreviewColumn";
 import { ContentSection } from "./sections/ContentSection";
 import { DesignSection } from "./sections/DesignSection";
@@ -48,11 +50,24 @@ export function EditorLayout({
   const [tab, selectTab] = useEditorTab(tabs);
   /** A hosted page's preview follows the tab: the page for Content and Look, the code for QR. */
   const [view, setView] = useState<PreviewView>("page");
+  /** After "Show me", page errors show without waiting for each field to be left. */
+  const [revealErrors, setRevealErrors] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
 
   function changeTab(next: EditorTab) {
     selectTab(next);
     if (next === "qr") setView("code");
     else if (next === "content" || next === "look") setView("page");
+  }
+
+  function showMe() {
+    if (!problem) return;
+    // Render the tab and the errors first, so the field is there to take focus.
+    flushSync(() => {
+      changeTab(problem.tab);
+      setRevealErrors(true);
+    });
+    focusField(root.current, problem.tab, problem.field);
   }
 
   const editor: ContentEditor = {
@@ -61,6 +76,7 @@ export function EditorLayout({
     setPage: draft.setPage,
     pageErrors: draft.pageErrors,
     workspace: mediaOwner ? { ownerId: mediaOwner } : null,
+    revealErrors,
   };
   const page = pageType ? state.code.pages[pageType] : null;
 
@@ -104,6 +120,7 @@ export function EditorLayout({
   return (
     <TabGroup
       as="div"
+      ref={root}
       selectedIndex={tabs.indexOf(tab)}
       onChange={(index) => changeTab(tabs[index]!)}
       className="flex flex-col gap-5"
@@ -120,7 +137,7 @@ export function EditorLayout({
         submitting={controls.submitting}
         onSubmit={controls.onSubmit}
         problem={problem}
-        onShowMe={() => problem && changeTab(problem.tab)}
+        onShowMe={showMe}
         error={controls.error}
       />
       <TabList

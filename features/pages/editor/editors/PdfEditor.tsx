@@ -16,6 +16,7 @@ export function PdfEditor({
       <MediaField
         label="PDF"
         kind="pdf"
+        field="file"
         value={page.file}
         onChange={(file) =>
           set({ file, title: page.title || file?.name.replace(/\.pdf$/i, "") || "" })

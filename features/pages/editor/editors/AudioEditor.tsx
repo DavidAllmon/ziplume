@@ -16,6 +16,7 @@ export function AudioEditor({
       <MediaField
         label="Audio file"
         kind="audio"
+        field="file"
         value={page.file}
         onChange={(file) =>
           set({ file, title: page.title || file?.name.replace(/\.\w+$/, "") || "" })

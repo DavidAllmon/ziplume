@@ -119,6 +119,7 @@ export function SettingsSection({
                   <TextInput
                     {...control}
                     type="password"
+                    data-field="settings.password"
                     autoComplete="new-password"
                     maxLength={128}
                     value={settings.password}
@@ -162,6 +163,7 @@ export function SettingsSection({
                   <TextInput
                     {...control}
                     type="datetime-local"
+                    data-field="settings.endsAt"
                     value={settings.endsAt}
                     onChange={(event) => onChange({ endsAt: event.target.value })}
                   />
@@ -190,6 +192,7 @@ export function SettingsSection({
                   autoCapitalize="off"
                   autoCorrect="off"
                   spellCheck={false}
+                  data-field="settings.slug"
                   value={settings.slug}
                   onChange={(event) => onChange({ slug: event.target.value.trim() })}
                 />

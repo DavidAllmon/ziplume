@@ -16,4 +16,6 @@ export interface ContentEditor {
   pageErrors: Record<string, string>;
   /** Hosted-page media is stored in this workspace; null = the signed-in person's own. */
   workspace: { ownerId: string } | null;
+  /** Show every page error now, not only once a field has been left (after "Show me"). */
+  revealErrors?: boolean;
 }

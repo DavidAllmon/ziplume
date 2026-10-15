@@ -79,6 +79,7 @@ export function HostedPageForm({
         type={type}
         page={generator.state.pages[type]}
         errors={generator.pageErrors}
+        reveal={generator.revealErrors ?? false}
         onChange={(page) => generator.setPage(type, page as PageContentMap[PageTypeId])}
       />
     </MediaOwnerContext>
