@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Providers } from "@/components/layout/Providers";
 import { SITE_URL } from "@/lib/env";
 
-import { inter } from "./fonts";
+import { archivo, plexMono, plexSans } from "./fonts";
 import "./globals.css";
 
 const title = "QuickQReate: free QR code generator";
@@ -49,7 +49,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     // next-themes sets data-theme before hydration, so the attribute differs from the server HTML.
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${plexSans.variable} ${archivo.variable} ${plexMono.variable}`}
+    >
       <body>
         <Providers>{children}</Providers>
       </body>

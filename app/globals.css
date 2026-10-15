@@ -144,9 +144,11 @@
   --color-neutral-soft: var(--neutral-soft);
   --color-chart-1: var(--chart-1);
 
-  /* Inter only (spec §5); "display" keeps working for headings. */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* IBM Plex Sans for text, Archivo (a little wide) for headings, IBM Plex Mono for links and keys. */
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-display--font-variation-settings: "wdth" 112;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --radius-field: 0.5rem;
   --radius-control: 0.5rem;
@@ -183,6 +185,17 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+}
+
+/* Small wide capitals for labels, in the wordmark's style. */
+@utility eyebrow {
+  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  font-variation-settings: "wdth" 125;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 /* Checkerboard behind transparent QR previews. */

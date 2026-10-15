@@ -69,9 +69,16 @@ describe.each(Object.entries(themes))("%s theme tokens", (_name, palette) => {
 });
 
 describe("type and accents", () => {
-  it("uses Inter only", () => {
-    expect(css).not.toMatch(/space-grotesk/i);
-    expect(readFileSync(resolve(process.cwd(), "app/fonts.ts"), "utf8")).not.toMatch(/Grotesk/);
+  it("uses the Ziplume fonts, self-hosted, and nothing else", () => {
+    const fonts = readFileSync(resolve(process.cwd(), "app/fonts.ts"), "utf8");
+    const pkg = readFileSync(resolve(process.cwd(), "package.json"), "utf8");
+    for (const family of ["ibm-plex-sans", "archivo", "ibm-plex-mono"]) {
+      expect(fonts).toContain(family);
+    }
+    expect(fonts).not.toMatch(/fontsource-variable\/inter|grotesk/i);
+    expect(pkg).not.toMatch(/@fontsource-variable\/inter/);
+    expect(css).not.toMatch(/--font-inter|space-grotesk/i);
+    expect(css).toMatch(/--font-display--font-variation-settings:\s*"wdth" 112/);
   });
 
   it("has no lime accent left", () => {
