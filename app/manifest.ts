@@ -4,15 +4,15 @@ export const dynamic = "force-static";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "QuickQReate",
-    short_name: "QuickQReate",
-    description: "Create beautiful, scannable QR codes. Works offline, right in your browser.",
+    name: "Ziplume",
+    short_name: "Ziplume",
+    description: "QR codes, short links, and simple sharing tools.",
     id: "/",
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#F8FAFC",
-    theme_color: "#4F46E5",
+    background_color: "#FFFFFF",
+    theme_color: "#0A1330",
     categories: ["utilities", "productivity"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
