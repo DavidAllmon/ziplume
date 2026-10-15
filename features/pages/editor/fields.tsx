@@ -19,11 +19,11 @@ import { Field } from "@/components/ui/Field";
 import { Select, Textarea, TextInput } from "@/components/ui/inputs";
 import { Toggle } from "@/components/ui/Toggle";
 import { cn } from "@/lib/cn";
-import type { DayHours, LinkItem, Media, SocialItem, SocialNetwork } from "@/lib/pages/types";
+import type { DayHours, LinkItem, Media, SocialItem } from "@/lib/pages/types";
 import { SOCIAL_NETWORKS } from "@/lib/pages/types";
 import { mediaUrl } from "@/lib/pages/urls";
 
-import { fileSize, socialLabel } from "../parts";
+import { fileSize, SocialIcon, socialLabel } from "../parts";
 import { MediaOwnerContext } from "./MediaOwner";
 import { SortableList } from "./sortable/SortableList";
 import { ACCEPT, uploadMedia, type MediaKind } from "./upload";
@@ -515,6 +515,7 @@ export function LinksField({
   );
 }
 
+/** Social profiles: pick a network's icon to add its address; drag to reorder. */
 export function SocialsField({
   items,
   onChange,
@@ -528,7 +529,7 @@ export function SocialsField({
 }) {
   return (
     <SortableList
-      label="Social profiles"
+      label="Social icons"
       items={items}
       onChange={onChange}
       max={max}
@@ -538,32 +539,53 @@ export function SocialsField({
       errors={errors}
       itemLabel={(item) => socialLabel(item.network)}
       newItem={(): SocialItem => ({ network: "instagram", url: "" })}
+      adder={({ add, focus }) => (
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(2.75rem,1fr))] gap-2">
+            {SOCIAL_NETWORKS.map((network) => {
+              const at = items.findIndex((item) => item.network === network);
+              const name = socialLabel(network);
+              return (
+                <button
+                  key={network}
+                  type="button"
+                  title={name}
+                  aria-label={at === -1 ? `Add ${name}` : `Edit ${name}`}
+                  disabled={at === -1 && items.length >= max}
+                  onClick={() => (at === -1 ? add({ network, url: "" }) : focus(at))}
+                  className={cn(
+                    "grid size-11 place-items-center rounded-control border focus-ring disabled:cursor-not-allowed disabled:opacity-40",
+                    at === -1
+                      ? "border-border text-fg hover:bg-surface-2"
+                      : "border-primary bg-primary-soft text-primary-soft-fg",
+                  )}
+                >
+                  <SocialIcon network={network} className="size-5" />
+                </button>
+              );
+            })}
+          </div>
+          {items.length >= max && (
+            <p className="text-sm text-fg-muted">
+              You can add up to {max} {max === 1 ? "profile" : "profiles"}.
+            </p>
+          )}
+        </div>
+      )}
       render={(item, update, i) => (
-        <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
-          <Field label="Network">
-            {(control) => (
-              <Select
-                {...control}
-                value={item.network}
-                onChange={(event) => update({ network: event.target.value as SocialNetwork })}
-              >
-                {SOCIAL_NETWORKS.map((network) => (
-                  <option key={network} value={network}>
-                    {socialLabel(network)}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </Field>
-          <TextField
-            label="Profile link or @handle"
-            value={item.url}
-            onChange={(url) => update({ url })}
-            path={`socials.${i}.url`}
-            errors={errors}
-            placeholder="@yourname"
-            maxLength={2048}
-          />
+        <div className="flex items-start gap-3">
+          <SocialIcon network={item.network} className="mt-9 size-5 shrink-0 text-fg-muted" />
+          <div className="min-w-0 flex-1">
+            <TextField
+              label={socialLabel(item.network)}
+              value={item.url}
+              onChange={(url) => update({ url })}
+              path={`socials.${i}.url`}
+              errors={errors}
+              placeholder={item.network === "website" ? "example.com" : "Profile link or @handle"}
+              maxLength={2048}
+            />
+          </div>
         </div>
       )}
     />
