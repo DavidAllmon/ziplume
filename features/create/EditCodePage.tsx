@@ -34,7 +34,7 @@ export function EditCodePage(props: EditCodePageProps) {
   // form is built in the browser.
   const inBrowser = useInBrowser();
   return (
-    <div className="flex flex-col gap-6 pb-24 md:pb-0">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <Link
           href={props.codeHref}
