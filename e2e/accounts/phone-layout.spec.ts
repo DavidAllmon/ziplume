@@ -176,10 +176,11 @@ test.describe("signed in", () => {
       .click();
     const sheet = page.getByRole("dialog", { name: "Preview" });
     await expect(sheet.getByRole("radio", { name: "Phone" })).toBeVisible();
+    // It slides up: wait until it's in place (the transition may not have started yet).
+    const title = sheet.getByRole("heading", { name: "Preview" });
+    await expect.poll(async () => (await title.boundingBox())!.y).toBeLessThan(64);
     await settled(page);
     const { height } = page.viewportSize()!;
-    const title = (await sheet.getByRole("heading", { name: "Preview" }).boundingBox())!;
-    expect(title.y).toBeLessThan(64);
     const frame = (await sheet
       .getByRole("region", { name: "Page preview" })
       .locator("..")
