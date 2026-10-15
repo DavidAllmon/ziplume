@@ -180,7 +180,7 @@ printed codes' scans have no location, unless the owner approves turning its pro
 ## 7. Coolify app (owner, in the browser, after the server build is pushed)
 
 New resource in **TechitDave Infrastructure → production** → Application → public GitHub
-repository `https://github.com/DavidAllmon/QuickQReate`, branch `main`, build pack
+repository `https://github.com/DavidAllmon/ziplume`, branch `main`, build pack
 **Dockerfile**, port `3000`, domains `https://ziplume.com`, `https://www.ziplume.com` (www redirect: to non-www) and `https://qr.techitdave.com`, health check `127.0.0.1:3000/api/health` (see Live deployment).
 
 Environment variables:

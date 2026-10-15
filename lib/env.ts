@@ -11,7 +11,7 @@ export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
 export const accountsEnabled = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 export const BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/davidallmon";
-export const REPO_URL = "https://github.com/DavidAllmon/QuickQReate";
+export const REPO_URL = "https://github.com/DavidAllmon/ziplume";
 
 /** Short link a dynamic code encodes, e.g. https://ziplume.com/r/AB3X9Q */
 export function shortLink(slug: string): string {

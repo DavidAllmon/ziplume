@@ -67,8 +67,8 @@ Codes are generated in your browser, and nothing you type is sent anywhere unles
 Requires Node.js 22 or newer.
 
 ```bash
-git clone https://github.com/DavidAllmon/QuickQReate.git
-cd QuickQReate
+git clone https://github.com/DavidAllmon/ziplume.git
+cd ziplume
 npm ci
 npm run dev
 ```
