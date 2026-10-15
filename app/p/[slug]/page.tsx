@@ -1,9 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { resolveLook } from "@/features/pages/look/resolve";
 import { PageView } from "@/features/pages/PageView";
 import { isValidSlug } from "@/lib/dynamic/slug";
 import { SITE_URL, accountsEnabled } from "@/lib/env";
+import { pageDescription, pageImage } from "@/lib/pages/meta";
+import { mediaUrl } from "@/lib/pages/urls";
 import { pageSummary } from "@/lib/pages/validate";
 import { PAGE_TYPES } from "@/lib/pages/types";
 import { getPublicPage } from "@/lib/supabase/public";
@@ -17,21 +21,50 @@ export async function generateMetadata({ params }: PageProps<"/p/[slug]">): Prom
     // Absolute titles: hosted pages belong to their owners, so the site name is never added.
     return { title: { absolute: "Ziplume" }, robots: { index: false } };
   const title = pageSummary(page.type, page.content) || PAGE_TYPES[page.type].label;
+  const description = pageDescription(page.type, page.content) ?? undefined;
+  const image = pageImage(page.type, page.content);
   return {
     title: { absolute: title },
+    description,
     robots: { index: false, follow: false },
-    openGraph: { title, siteName: "Ziplume", type: "website" },
+    openGraph: {
+      title,
+      description,
+      siteName: "Ziplume",
+      type: "website",
+      ...(image ? { images: [mediaUrl(image.path)] } : {}),
+    },
   };
 }
 
+/** The browser's bars take the page's wallpaper color (spec 6.8). */
+export async function generateViewport({ params }: PageProps<"/p/[slug]">): Promise<Viewport> {
+  const { slug } = await params;
+  const page = isValidSlug(slug) ? await getPublicPage(slug) : null;
+  if (!page || page === "unavailable" || page.locked) return {};
+  const look = resolveLook(page.content.look);
+  return { themeColor: look.themeColor, colorScheme: look.colorScheme };
+}
+
+/** Paused, scheduled, expired and unavailable pages keep the Ziplume look (spec 6.8). */
 function Notice({ title, message }: { title: string; message: string }) {
   return (
-    <main className="grid flex-1 place-items-center px-4 py-10">
-      <div className="max-w-sm rounded-[1.5rem] border border-border bg-surface p-8 text-center shadow-card">
-        <h1 className="font-display text-xl font-bold text-fg">{title}</h1>
-        <p className="mt-2 text-fg-muted">{message}</p>
-      </div>
-    </main>
+    <div className="flex flex-1 flex-col bg-bg">
+      <main className="grid flex-1 place-items-center px-4 py-10">
+        <div className="max-w-sm rounded-[1.5rem] border border-border bg-surface p-8 text-center shadow-card">
+          <h1 className="font-display text-xl font-bold text-fg">{title}</h1>
+          <p className="mt-2 text-fg-muted">{message}</p>
+        </div>
+      </main>
+      <footer className="flex justify-center px-4 pt-2 pb-8">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-fg-muted focus-ring hover:text-fg"
+        >
+          Made with Ziplume · free QR codes
+        </Link>
+      </footer>
+    </div>
   );
 }
 

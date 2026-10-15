@@ -37,7 +37,7 @@ export function PageFrame({
     <Root
       style={style}
       data-page-frame
-      className="@container flex min-h-full flex-col font-page-body text-fg"
+      className="@container flex min-h-full flex-1 flex-col font-page-body text-fg"
     >
       <div
         data-page-column
