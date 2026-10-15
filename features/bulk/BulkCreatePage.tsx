@@ -145,7 +145,7 @@ export function BulkCreatePage({
     if (downloading || creating) return;
     setDownloading(`Preparing 0 of ${created.length}…`);
     try {
-      await downloadZip(itemsFromCodes(created), format, `quickqreate-${type}-codes.zip`, (done) =>
+      await downloadZip(itemsFromCodes(created), format, `ziplume-${type}-codes.zip`, (done) =>
         setDownloading(`Preparing ${done} of ${created.length}…`),
       );
       toast(`Downloaded ${codes(created.length)}`);

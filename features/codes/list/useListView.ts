@@ -4,7 +4,7 @@ import { useCallback, useSyncExternalStore } from "react";
 
 export type ListView = "list" | "grid";
 
-const EVENT = "quickqreate:codes-view";
+const EVENT = "ziplume:codes-view";
 const keyFor = (userId: string) => `quickqreate:codes-view:${userId}`;
 
 function read(userId: string): ListView {

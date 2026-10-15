@@ -13,5 +13,5 @@ export function slugify(value: string, maxLength = 40): string {
 
 export function buildFilename(type: CodeTypeId, label: string, extension: string): string {
   const slug = slugify(label);
-  return `quickqreate-${type}${slug ? `-${slug}` : ""}.${extension}`;
+  return `ziplume-${type}${slug ? `-${slug}` : ""}.${extension}`;
 }

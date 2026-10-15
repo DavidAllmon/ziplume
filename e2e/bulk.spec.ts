@@ -20,7 +20,7 @@ test.describe("bulk creation", () => {
       page.waitForEvent("download"),
       page.getByRole("button", { name: "Download 2 codes" }).click(),
     ]);
-    expect(download.suggestedFilename()).toBe("quickqreate-url-codes.zip");
+    expect(download.suggestedFilename()).toBe("ziplume-url-codes.zip");
     const files = unzipSync(await readFile(await download.path()));
     expect(Object.keys(files).sort()).toEqual(["index.csv", "menu.png", "spring-flyer.png"]);
     expect(strFromU8(files["index.csv"]!)).toContain(

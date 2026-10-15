@@ -54,7 +54,7 @@ export function SelectionBar({
       const blob = await zipCodes(entries, format, (done) =>
         setProgress(`Preparing ${done} of ${entries.length}…`),
       );
-      saveBlob(blob, `quickqreate-codes-${new Date().toISOString().slice(0, 10)}.zip`);
+      saveBlob(blob, `ziplume-codes-${new Date().toISOString().slice(0, 10)}.zip`);
       toast(`Downloaded ${entries.length} ${entries.length === 1 ? "code" : "codes"}`);
     } catch {
       toast("The ZIP file couldn’t be made. Please try again.", "error");

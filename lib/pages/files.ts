@@ -83,7 +83,7 @@ export function eventIcs(
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//QuickQReate//Event//EN",
+    "PRODID:-//Ziplume//Event//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

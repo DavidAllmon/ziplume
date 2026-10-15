@@ -10,7 +10,7 @@ describe("filenames", () => {
   });
 
   it("builds readable names", () => {
-    expect(buildFilename("wifi", "HomeNet", "png")).toBe("quickqreate-wifi-homenet.png");
-    expect(buildFilename("text", "", "svg")).toBe("quickqreate-text.svg");
+    expect(buildFilename("wifi", "HomeNet", "png")).toBe("ziplume-wifi-homenet.png");
+    expect(buildFilename("text", "", "svg")).toBe("ziplume-text.svg");
   });
 });

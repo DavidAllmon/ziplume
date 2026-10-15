@@ -21,7 +21,7 @@ test.describe("generated codes scan back to the right content", () => {
   test("link", async ({ page }) => {
     await page.getByLabel("Website address").fill("example.com/menu?table=12");
     const download = await downloadCode(page);
-    expect(download.suggestedFilename()).toBe("quickqreate-url-example-com.png");
+    expect(download.suggestedFilename()).toBe("ziplume-url-example-com.png");
     expect(await decodeDownload(page, download)).toBe("https://example.com/menu?table=12");
   });
 
@@ -181,7 +181,7 @@ test.describe("generated codes scan back to the right content", () => {
         .getByRole("radio", { name: label })
         .click();
       const download = await downloadCode(page);
-      expect(download.suggestedFilename()).toBe(`quickqreate-url-example-com.${ext}`);
+      expect(download.suggestedFilename()).toBe(`ziplume-url-example-com.${ext}`);
       const content = await readFile(await download.path());
       expect(content.subarray(0, signature.length).toString("latin1"), label).toBe(signature);
       expect(content.length, label).toBeGreaterThan(2000);
@@ -213,7 +213,7 @@ test.describe("generated codes scan back to the right content", () => {
         .getByRole("radio", { name: label })
         .click();
       const download = await downloadCode(page);
-      expect(download.suggestedFilename()).toBe(`quickqreate-url-example-com.${ext}`);
+      expect(download.suggestedFilename()).toBe(`ziplume-url-example-com.${ext}`);
       expect(await decodeDownload(page, download), label).toBe("https://example.com/formats");
     }
   });
