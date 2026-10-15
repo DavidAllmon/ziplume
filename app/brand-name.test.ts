@@ -4,15 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = process.cwd();
 /** Everything people can see comes from these folders. */
-const FOLDERS = [
-  "app",
-  "components",
-  "features",
-  "lib",
-  "emails",
-  "public/email-templates",
-  "pages-redirect",
-];
+const FOLDERS = ["app", "components", "features", "lib", "emails", "public/email-templates"];
 const TEXT = new Set([".ts", ".tsx", ".html", ".css", ".txt", ".mjs"]);
 const OLD_NAME = /quick\s?q\s?r?eate/i;
 /** Internal names that keep the old spelling on purpose (spec 4.7 and 5.7). */
@@ -20,8 +12,6 @@ const ALLOWED = [
   /quickqreate\.invalid/, // sentinel base URL for parsing redirect paths
   /UID:\$\{uid\}@quickqreate/, // calendar event ids: changing them duplicates events
   /quickqreate:v1/, // legacy key the generator only deletes
-  /\^\\\/QuickQReate\//, // the old GitHub Pages path the redirect page strips
-  /github\.com\/DavidAllmon\/QuickQReate/, // the repo, renamed with the move to ziplume.com
 ];
 
 function files(dir: string): string[] {
