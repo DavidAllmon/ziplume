@@ -62,6 +62,7 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
           max={LIMITS.phones}
           addLabel="Add phone"
           addAt="end"
+          newRowFocus="input[type='tel']"
           path="phones"
           errors={errors}
           itemLabel={(item, i) => rowName("phone", item.number, i)}
@@ -98,6 +99,7 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
           max={LIMITS.emails}
           addLabel="Add email"
           addAt="end"
+          newRowFocus="input[type='email']"
           path="emails"
           errors={errors}
           itemLabel={(item, i) => rowName("email", item.address, i)}

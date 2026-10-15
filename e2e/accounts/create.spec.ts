@@ -217,13 +217,19 @@ test.describe("creating codes", () => {
     await expect(said).toHaveText(/Cancelled/);
     await expect.poll(order).toEqual(["B", "C", "A"]);
 
-    // Mouse: drag A's handle onto B, from a still page.
+    // Mouse: drag A's handle onto B, from a still page once the rows have settled back from
+    // the cancelled move.
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await page.waitForFunction(() =>
+      document.getAnimations().every((animation) => animation.playState !== "running"),
+    );
     const from = (await page.getByRole("button", { name: "Drag link “A”" }).boundingBox())!;
     const to = (await page.getByRole("button", { name: "Drag link “B”" }).boundingBox())!;
     await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
     await page.mouse.down();
     await page.mouse.move(to.x + to.width / 2, to.y + 10, { steps: 12 });
+    // Let go once the row has moved into place, as a person would.
+    await expect(said).toHaveText(/link “A” is at position 1 of 3/);
     await page.mouse.up();
     await expect.poll(order).toEqual(["A", "B", "C"]);
 

@@ -88,6 +88,38 @@ test.describe("signed in", () => {
     await expectFitsPhone(page, "#main", 40);
   });
 
+  test("list rows keep their fields wide, and only the grip drags", async ({ page }) => {
+    const half = page.viewportSize()!.width / 2;
+    for (const type of ["links", "menu"]) {
+      await page.goto(`codes/new?type=${type}`);
+      await settled(page);
+      const rows = page.locator('[data-editor-panel="content"] li');
+      await expect(rows.first()).toBeVisible();
+      // Every field in a row (a menu's dishes too) gets at least half the screen.
+      const fields = await rows
+        .locator("input[type=text], input[type=url], input[type=tel], input[type=email]")
+        .evaluateAll((inputs) =>
+          inputs.map((input) => ({
+            name: input.closest("div")?.querySelector("label")?.textContent ?? input.id,
+            width: Math.round(input.getBoundingClientRect().width),
+          })),
+        );
+      expect(fields.length).toBeGreaterThan(0);
+      for (const field of fields) {
+        expect(field.width, `${type}: ${field.name}`).toBeGreaterThanOrEqual(half);
+      }
+      // A drag starts only from the grip, so a swipe anywhere else in a row scrolls the page.
+      const handles = await rows
+        .locator('[aria-roledescription="sortable"]')
+        .evaluateAll((els) => els.map((el) => el.getBoundingClientRect()));
+      expect(handles.length).toBeGreaterThan(0);
+      for (const handle of handles) {
+        expect(handle.width).toBeGreaterThanOrEqual(44);
+        expect(handle.height).toBeLessThanOrEqual(48);
+      }
+    }
+  });
+
   test("the editor's top bar scrolls away on phones, leaving room for the form", async ({
     page,
   }) => {

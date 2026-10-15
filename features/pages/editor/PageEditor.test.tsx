@@ -5,7 +5,12 @@ import { resolve } from "node:path";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { PAGE_DEFAULTS, type LinksPage, type MenuPage } from "@/lib/pages/types";
+import {
+  PAGE_DEFAULTS,
+  type LinksPage,
+  type MenuPage,
+  type PageContentMap,
+} from "@/lib/pages/types";
 import { validatePage } from "@/lib/pages/validate";
 import { PAGE_TYPE_IDS, type PageTypeId } from "@/lib/qr/types";
 
@@ -255,5 +260,49 @@ describe("PageEditor cards", () => {
     expect(screen.queryAllByRole("heading", { level: 2 })).toHaveLength(0);
     const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
     expect(headings).toEqual(CARDS.links);
+  });
+});
+
+function Stateful<K extends PageTypeId>({
+  type,
+  initial,
+}: {
+  type: K;
+  initial: PageContentMap[K];
+}) {
+  const [page, setPage] = useState(initial);
+  return <PageEditor type={type} page={page} errors={{}} onChange={setPage} />;
+}
+
+describe("PageEditor focus", () => {
+  const dish = (name: string) => ({ name, description: "", price: "", tags: "" });
+  const menu: MenuPage = {
+    ...PAGE_DEFAULTS.menu(),
+    name: "Diner",
+    sections: [
+      { name: "Starters", items: [dish("Soup")] },
+      { name: "Mains", items: [dish("Pie")] },
+    ],
+  };
+
+  it("stays on a section's own ⋯ after moving it, and goes to the next section's on remove", async () => {
+    const user = userEvent.setup();
+    render(<Stateful type="menu" initial={menu} />);
+    const mains = () => screen.getByRole("button", { name: "Actions for section “Mains”" });
+    await user.click(mains());
+    await user.click(screen.getByRole("menuitem", { name: "Move up" }));
+    expect(mains()).toHaveFocus();
+    await user.click(mains());
+    await user.click(screen.getByRole("menuitem", { name: "Remove" }));
+    expect(screen.getByRole("button", { name: "Actions for section “Starters”" })).toHaveFocus();
+  });
+
+  it("puts the cursor in a new phone's number and a new email's address", async () => {
+    const user = userEvent.setup();
+    render(<Stateful type="vcard" initial={PAGE_DEFAULTS.vcard()} />);
+    await user.click(screen.getByRole("button", { name: "Add phone" }));
+    expect(screen.getAllByLabelText("Number").at(-1)).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Add email" }));
+    expect(screen.getAllByLabelText("Email").at(-1)).toHaveFocus();
   });
 });

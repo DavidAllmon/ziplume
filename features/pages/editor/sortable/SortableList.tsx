@@ -16,6 +16,9 @@ import { SortableArea } from "./SortableArea";
 const FIRST_FIELD =
   "input:not([type='hidden']):not([type='file']):not(:disabled), textarea:not(:disabled), select:not(:disabled)";
 
+/** A row's own ⋯ button, not one of a nested list's (a section's dishes). */
+const OWN_MENU = ":scope > div > [data-row-actions] [data-row-menu]";
+
 type Update<T> = (patch: Partial<T>) => void;
 
 interface AdderActions<T> {
@@ -34,6 +37,8 @@ export interface SortableListProps<T> {
   addLabel: string;
   /** Where Add puts the new row, and where the Add button sits. */
   addAt?: "start" | "end";
+  /** The field a new row's cursor goes to (CSS selector); its first field if not given. */
+  newRowFocus?: string;
   /** A row's name in its controls and announcements: link “Shop”, or link 2. */
   itemLabel: (item: T, index: number) => string;
   /** The rows' error path ("links", "sections.0.items"), so errors move with their rows. */
@@ -58,6 +63,7 @@ export function SortableList<T>({
   newItem,
   addLabel,
   addAt = "start",
+  newRowFocus = FIRST_FIELD,
   itemLabel,
   path,
   errors,
@@ -69,8 +75,9 @@ export function SortableList<T>({
   const [ids, setIds] = useRowIds(items.length);
   const rows = useRef(new Map<string, HTMLElement>());
   const addButton = useRef<HTMLButtonElement>(null);
-  // Where focus goes once the list has re-rendered: a row's first field or its ⋯ button, or
-  // (id null) the Add button.
+  const adderArea = useRef<HTMLDivElement>(null);
+  // Where focus goes once the list has re-rendered: a new row's field or a row's own ⋯ button,
+  // or (id null, the list is empty) the way to add one.
   const pending = useRef<{ id: string | null; target: "field" | "menu" } | null>(null);
 
   useLayoutEffect(() => {
@@ -78,13 +85,13 @@ export function SortableList<T>({
     if (!want) return;
     pending.current = null;
     if (!want.id) {
-      addButton.current?.focus();
+      (
+        addButton.current ?? adderArea.current?.querySelector<HTMLElement>("button:enabled")
+      )?.focus();
       return;
     }
     const row = rows.current.get(want.id);
-    row
-      ?.querySelector<HTMLElement>(want.target === "menu" ? "[data-row-menu]" : FIRST_FIELD)
-      ?.focus();
+    row?.querySelector<HTMLElement>(want.target === "menu" ? OWN_MENU : newRowFocus)?.focus();
   });
 
   const register = useCallback((id: string, element: HTMLElement | null) => {
@@ -142,7 +149,11 @@ export function SortableList<T>({
       <legend className={cn("mb-2 text-sm font-medium text-fg", !showLabel && "sr-only")}>
         {label}
       </legend>
-      {adder && <Adder render={adder} add={add} focus={focus} />}
+      {adder && (
+        <div ref={adderArea}>
+          <Adder render={adder} add={add} focus={focus} />
+        </div>
+      )}
       {addAt === "start" && addControl}
       {items.length > 0 && (
         <SortableArea ids={ids} names={names} onMove={move}>
@@ -222,28 +233,33 @@ function SortableRow({
         transition,
       }}
       className={cn(
-        "flex gap-2 rounded-control border border-border bg-surface p-3",
+        "@container rounded-control border border-border bg-surface p-3",
         off && "border-dashed bg-surface-2",
         isDragging && "relative z-10 shadow-pop",
       )}
     >
-      <button
-        type="button"
-        ref={setActivatorNodeRef}
-        {...attributes}
-        {...listeners}
-        aria-label={`Drag ${name}`}
-        className="-my-1 -ml-1 flex w-8 shrink-0 cursor-grab touch-none justify-center rounded-control pt-2.5 text-fg-muted focus-ring hover:text-fg active:cursor-grabbing"
-      >
-        <GripVertical aria-hidden className="size-5" />
-      </button>
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        {children}
-        {off && <p className="text-[13px] text-fg-muted">Hidden from your page</p>}
-      </div>
-      <div className="flex shrink-0 items-start gap-1">
-        {actions}
-        {menu}
+      {/* A narrow row (a phone, or a dish inside a section) puts the grip and its controls on a
+          line of their own, so the fields get the whole width. */}
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-2">
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          aria-label={`Drag ${name}`}
+          // Only the grip starts a drag: a swipe anywhere else in the row scrolls the page.
+          className="col-start-1 row-start-1 grid size-11 cursor-grab touch-none place-items-center rounded-control text-fg-muted focus-ring hover:text-fg active:cursor-grabbing @min-[28rem]:size-9"
+        >
+          <GripVertical aria-hidden className="size-5" />
+        </button>
+        <div className="col-span-3 row-start-2 flex min-w-0 flex-col gap-3 @min-[28rem]:col-span-1 @min-[28rem]:col-start-2 @min-[28rem]:row-start-1">
+          {children}
+          {off && <p className="text-[13px] text-fg-muted">Hidden from your page</p>}
+        </div>
+        <div data-row-actions className="col-start-3 row-start-1 flex items-start gap-1">
+          {actions}
+          {menu}
+        </div>
       </div>
     </li>
   );

@@ -48,4 +48,29 @@ describe("ImagesField", () => {
     const first = screen.getByRole("button", { name: "Drag image 1" });
     expect(add.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  it("keeps focus on an image's ⋯ as it moves, and on the next one's after a remove", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(screen.getByRole("button", { name: "Actions for image 2" }));
+    await user.click(screen.getByRole("menuitem", { name: "Move earlier" }));
+    expect(screen.getByRole("button", { name: "Actions for image 1" })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Actions for image 1" }));
+    await user.click(screen.getByRole("menuitem", { name: "Remove" }));
+    // a.png is image 1 now.
+    expect(order()).toHaveTextContent("a.png,c.png");
+    expect(screen.getByRole("button", { name: "Actions for image 1" })).toHaveFocus();
+  });
+
+  it("goes to Add images after the last image is removed", async () => {
+    const user = userEvent.setup();
+    function One() {
+      const [images, setImages] = useState([image("a.png")]);
+      return <ImagesField value={images} onChange={setImages} max={24} />;
+    }
+    const { container } = render(<One />);
+    await user.click(screen.getByRole("button", { name: "Actions for image 1" }));
+    await user.click(screen.getByRole("menuitem", { name: "Remove" }));
+    expect(container.querySelector("input[type=file]")).toHaveFocus();
+  });
 });

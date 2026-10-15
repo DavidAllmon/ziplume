@@ -39,4 +39,12 @@ describe("SocialsField", () => {
     expect(screen.getByRole("button", { name: "Add TikTok" })).toBeDisabled();
     expect(screen.getByText("You can add up to 1 profile.")).toBeInTheDocument();
   });
+
+  it("goes back to the icons after the last profile is removed", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={[{ network: "tiktok", url: "@me" }]} />);
+    await user.click(screen.getByRole("button", { name: "Actions for TikTok" }));
+    await user.click(screen.getByRole("menuitem", { name: "Remove" }));
+    expect(screen.getByRole("button", { name: "Add Instagram" })).toHaveFocus();
+  });
 });

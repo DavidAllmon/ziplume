@@ -12,7 +12,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useContext, useId, useState, type ReactNode } from "react";
+import { useContext, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { ColorField } from "@/components/ui/ColorField";
@@ -348,6 +348,20 @@ export function ImagesField({
 
   const ids = value.map((media) => media.path);
   const names = value.map((_, i) => `image ${i + 1}`);
+  const grid = useRef<HTMLUListElement>(null);
+  // After a move or remove from a ⋯ menu, focus goes to that place's ⋯ (or, once the last
+  // image is gone, to Add images) instead of falling back to the top of the page.
+  const focusAt = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const at = focusAt.current;
+    if (at === null) return;
+    focusAt.current = null;
+    const menus = grid.current?.querySelectorAll<HTMLElement>("[data-row-menu]");
+    const target = menus?.length
+      ? menus[Math.min(at, menus.length - 1)]
+      : document.getElementById(inputId);
+    target?.focus();
+  });
   const moveImage = (from: number, to: number) => {
     if (to >= 0 && to < value.length) onChange(arrayMove(value, from, to));
   };
@@ -387,7 +401,7 @@ export function ImagesField({
       )}
       {value.length > 0 && (
         <SortableArea ids={ids} names={names} grid onMove={moveImage}>
-          <ul aria-label="Images" className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          <ul ref={grid} aria-label="Images" className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {value.map((media, i) => (
               <ImageTile
                 key={media.path}
@@ -400,8 +414,14 @@ export function ImagesField({
                   name={names[i]!}
                   first={i === 0}
                   last={i === value.length - 1}
-                  onMove={(by) => moveImage(i, i + by)}
-                  onRemove={() => onChange(value.filter((_, j) => j !== i))}
+                  onMove={(by) => {
+                    focusAt.current = i + by;
+                    moveImage(i, i + by);
+                  }}
+                  onRemove={() => {
+                    focusAt.current = i;
+                    onChange(value.filter((_, j) => j !== i));
+                  }}
                 />
               </ImageTile>
             ))}
