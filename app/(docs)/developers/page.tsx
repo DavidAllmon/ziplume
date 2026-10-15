@@ -5,9 +5,8 @@ import type { ReactNode } from "react";
 import { accountsEnabled, SITE_URL } from "@/lib/env";
 
 export const metadata: Metadata = {
-  title: "Developers · QuickQReate",
-  description:
-    "Create, update and track QR codes from your own code with the free QuickQReate API.",
+  title: "Developers",
+  description: "Create, update and track QR codes from your own code with the free Ziplume API.",
 };
 
 const BASE = `${SITE_URL}/api/v1`;
@@ -75,13 +74,13 @@ export default function DevelopersPage() {
     <>
       <h1>Developers</h1>
       <p>
-        The QuickQReate API lets your own scripts and apps create codes, change where dynamic codes
+        The Ziplume API lets your own scripts and apps create codes, change where dynamic codes
         point, and read their scan analytics. Like everything else here, it’s free.
       </p>
       {!accountsEnabled && (
         <p className="rounded-control bg-warning-soft px-4 py-3 text-sm">
-          The API is part of the account version of QuickQReate and isn’t available on this copy of
-          the site.
+          The API is part of the account version of Ziplume and isn’t available on this copy of the
+          site.
         </p>
       )}
 

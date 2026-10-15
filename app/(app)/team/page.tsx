@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth/server";
 import { emailConfigured } from "@/lib/email/brevo";
 import { loadTeam } from "@/lib/teams/server";
 
-export const metadata: Metadata = { title: "Team · QuickQReate" };
+export const metadata: Metadata = { title: "Team" };
 
 export default async function TeamPage() {
   const { supabase, user } = await requireUser("/team");

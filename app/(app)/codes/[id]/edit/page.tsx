@@ -7,7 +7,7 @@ import { isEditableType } from "@/features/create/load";
 import { requireUser } from "@/lib/auth/server";
 import { personAccess } from "@/lib/teams/server";
 
-export const metadata: Metadata = { title: "Edit code · QuickQReate" };
+export const metadata: Metadata = { title: "Edit code" };
 
 /** A saved code in the Create editor: the owner and teammates who can edit; others see the code page. */
 export default async function EditCodeRoute({

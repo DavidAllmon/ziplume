@@ -4,7 +4,7 @@ import { CreatePage } from "@/features/create/CreatePage";
 import { requireUser } from "@/lib/auth/server";
 import { isPageType, isStaticType, type CodeTypeId } from "@/lib/qr/types";
 
-export const metadata: Metadata = { title: "Create a code · QuickQReate" };
+export const metadata: Metadata = { title: "Create a code" };
 
 const isCodeType = (value: string): value is CodeTypeId => isStaticType(value) || isPageType(value);
 

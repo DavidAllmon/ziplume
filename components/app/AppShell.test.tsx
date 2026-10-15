@@ -74,7 +74,7 @@ describe("AppShell", () => {
     expect(new Set(hrefs("Team"))).toEqual(new Set(["/team"]));
     expect(hrefs("Settings")).toContain("/settings");
     expect(hrefs("Help & API docs")).toEqual(["/developers"]);
-    expect(screen.getByRole("link", { name: "Support QuickQReate" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Support Ziplume" })).toHaveAttribute(
       "href",
       "https://buymeacoffee.com/davidallmon",
     );
@@ -153,7 +153,7 @@ describe("AppShell", () => {
     renderShell();
     await userEvent.click(screen.getByRole("button", { name: "More" }));
     const sheet = screen.getByRole("dialog", { name: "More" });
-    for (const name of ["Settings", "Help & API docs", "Support QuickQReate"]) {
+    for (const name of ["Settings", "Help & API docs", "Support Ziplume"]) {
       expect(within(sheet).getByRole("link", { name })).toBeInTheDocument();
     }
     expect(within(sheet).getByRole("button", { name: "Sign out" })).toBeInTheDocument();

@@ -19,7 +19,7 @@ const PERKS = [
   "Scan analytics included",
 ];
 
-/** Hosted pages need an account (they're stored and served by QuickQReate). */
+/** Hosted pages need an account (they're stored and served by Ziplume). */
 export function HostedPageForm({
   generator,
   type,

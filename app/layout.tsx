@@ -7,15 +7,14 @@ import { SITE_URL } from "@/lib/env";
 import { archivo, plexMono, plexSans } from "./fonts";
 import "./globals.css";
 
-const title = "QuickQReate: free QR code generator";
-const description =
-  "Create beautiful, scannable QR codes for links, Wi-Fi, contacts, email, phone and SMS. Free, private and runs entirely in your browser.";
+const title = "Ziplume: Make it. Link it. Share it.";
+const description = "QR codes, short links, and simple sharing tools.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title,
+  title: { default: title, template: "%s · Ziplume" },
   description,
-  applicationName: "QuickQReate",
+  applicationName: "Ziplume",
   authors: [{ name: "David Allmon", url: "https://github.com/DavidAllmon" }],
   keywords: [
     "QR code generator",
@@ -27,12 +26,12 @@ export const metadata: Metadata = {
   openGraph: {
     title,
     description,
-    siteName: "QuickQReate",
+    siteName: "Ziplume",
     locale: "en_US",
     type: "website",
   },
   twitter: { card: "summary_large_image", title, description },
-  appleWebApp: { title: "QuickQReate", capable: true, statusBarStyle: "default" },
+  appleWebApp: { title: "Ziplume", capable: true, statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };
 

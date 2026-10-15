@@ -6,7 +6,7 @@ import { safeNext } from "@/features/auth/redirects";
 import { SignupForm } from "@/features/auth/SignupForm";
 import { getServerSupabase } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Create your account · QuickQReate" };
+export const metadata: Metadata = { title: "Create your account" };
 
 /** The unused invite a sign-up link carries (/signup?invite=<token>), checked on the server. */
 async function inviteFor(token: unknown) {

@@ -1,5 +1,5 @@
 // Public configuration, inlined at build time. Accounts, dynamic codes and analytics turn on
-// only when the Supabase project is configured; without it QuickQReate is the static generator.
+// only when the Supabase project is configured; without it Ziplume is the static generator.
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(
   /\/+$/,

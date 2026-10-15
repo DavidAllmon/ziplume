@@ -132,7 +132,7 @@ export function AppShell({
   ];
   const help: NavItem[] = [
     { href: "/developers", label: "Help & API docs", icon: BookOpen },
-    { href: BUY_ME_A_COFFEE_URL, label: "Support QuickQReate", icon: Coffee, external: true },
+    { href: BUY_ME_A_COFFEE_URL, label: "Support Ziplume", icon: Coffee, external: true },
   ];
   const more: NavItem[] = [{ href: "/settings", label: "Settings", icon: Settings }, ...help];
   const sideLink = (item: NavItem) => (
@@ -173,7 +173,7 @@ export function AppShell({
         <div className={cn("flex items-center gap-2 px-1", !expanded && "max-lg:flex-col")}>
           <Link
             href={codesHref}
-            aria-label="QuickQReate codes"
+            aria-label="Ziplume codes"
             onClick={collapse}
             className="flex items-center gap-2.5 rounded-control focus-ring"
           >
@@ -224,7 +224,7 @@ export function AppShell({
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-surface px-4 sm:hidden">
         <Link
           href={codesHref}
-          aria-label="QuickQReate codes"
+          aria-label="Ziplume codes"
           className="grid size-11 place-items-center rounded-control focus-ring"
         >
           <LogoMark className="size-7" />

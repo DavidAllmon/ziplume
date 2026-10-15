@@ -12,7 +12,7 @@ import type { TeamRole } from "@/types/supabase";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Team invite · QuickQReate", robots: { index: false } };
+export const metadata: Metadata = { title: "Team invite", robots: { index: false } };
 
 interface InviteDetails {
   owner_email: string;
@@ -84,7 +84,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
   if (!user) {
     return (
       <AuthCard
-        title={`${owner} invited you to their QuickQReate codes`}
+        title={`${owner} invited you to their Ziplume codes`}
         description={ROLE_DESCRIPTIONS[invite.role]}
       >
         <Inviter invite={invite} owner={owner} />

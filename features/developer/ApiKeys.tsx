@@ -78,7 +78,7 @@ export function ApiKeys({ keys }: { keys: KeySummary[] }) {
           href="/developers"
           className="font-medium text-link underline-offset-4 hover:underline"
         >
-          QuickQReate API
+          Ziplume API
         </Link>
         . A key can do anything you can do with your codes, so keep it secret.
       </p>

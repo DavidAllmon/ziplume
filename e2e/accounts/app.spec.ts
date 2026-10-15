@@ -159,7 +159,7 @@ test.describe("signed in as an owner", () => {
     }
     await expect(tabs.getByRole("button", { name: "More" })).toBeVisible();
     await expect(page.getByRole("complementary", { name: "Sidebar" })).toBeHidden();
-    const logo = page.getByRole("banner").getByRole("link", { name: "QuickQReate codes" });
+    const logo = page.getByRole("banner").getByRole("link", { name: "Ziplume codes" });
     expect((await logo.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await tabs.getByRole("button", { name: "More" }).click();
     for (const link of await page.getByRole("dialog", { name: "More" }).getByRole("link").all()) {

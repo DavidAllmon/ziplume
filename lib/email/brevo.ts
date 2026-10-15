@@ -37,7 +37,7 @@ export async function sendEmail(
       method: "POST",
       headers: { "api-key": key, "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify({
-        sender: { name: "QuickQReate", email: from },
+        sender: { name: "Ziplume", email: from },
         to: [{ email: message.to }],
         subject: message.subject,
         htmlContent: message.html,

@@ -8,7 +8,7 @@ interface BuyMeACoffeeProps {
   className?: string;
 }
 
-/** QuickQReate is free; these links let people support it. */
+/** Ziplume is free; these links let people support it. */
 export function BuyMeACoffee({ variant = "button", className }: BuyMeACoffeeProps) {
   if (variant === "link") {
     return (
@@ -42,7 +42,7 @@ export function BuyMeACoffee({ variant = "button", className }: BuyMeACoffeeProp
           <Coffee className="size-5" />
         </span>
         <div className="flex-1">
-          <p className="font-semibold text-fg">QuickQReate is free, with no limits.</p>
+          <p className="font-semibold text-fg">Ziplume is free, with no limits.</p>
           <p className="text-sm text-fg-muted">
             If it saves you a subscription, a coffee keeps it running.
           </p>
