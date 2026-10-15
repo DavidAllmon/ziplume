@@ -167,6 +167,67 @@ test.describe("creating codes", () => {
     }
   });
 
+  test("drags links into order by keyboard and by mouse, and Escape puts one back", async ({
+    page,
+  }) => {
+    // Tall enough that the rows stay clear of the window's edges, where dragging scrolls it.
+    await page.setViewportSize({ width: 1280, height: 1400 });
+    await page.goto("codes/new?type=links");
+    const addLink = page.getByRole("button", { name: "Add link" });
+    while ((await page.getByLabel("Button text").count()) < 3) await addLink.click();
+    for (const [i, name] of ["A", "B", "C"].entries()) {
+      await page.getByLabel("Button text").nth(i).fill(name);
+      await page
+        .getByLabel("Link", { exact: true })
+        .nth(i)
+        .fill(`${name.toLowerCase()}.example.com`);
+    }
+    const order = () =>
+      page
+        .getByLabel("Button text")
+        .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value));
+    expect(await order()).toEqual(["A", "B", "C"]);
+
+    // Keyboard: focus the handle, Space, arrow keys, Space. Each step is announced; wait for it
+    // as a person would, since the list scrolls smoothly between moves.
+    const said = page.locator('[id^="DndLiveRegion"]');
+    await page.getByRole("button", { name: "Drag link “A”" }).focus();
+    await page.keyboard.press("Space");
+    await expect(said).toHaveText(/link “A” is at position 1 of 3/);
+    await page.keyboard.press("ArrowDown");
+    await expect(said).toHaveText(/position 2 of 3/);
+    await page.keyboard.press("ArrowDown");
+    await expect(said).toHaveText(/position 3 of 3/);
+    await page.keyboard.press("Space");
+    await expect(said).toHaveText(/Dropped link “A” at position 3 of 3/);
+    await expect.poll(order).toEqual(["B", "C", "A"]);
+
+    // Escape cancels a move.
+    await page.getByRole("button", { name: "Drag link “C”" }).focus();
+    await page.keyboard.press("Space");
+    await expect(said).toHaveText(/link “C” is at position 2 of 3/);
+    await page.keyboard.press("ArrowUp");
+    await expect(said).toHaveText(/position 1 of 3/);
+    await page.keyboard.press("Escape");
+    await expect(said).toHaveText(/Cancelled/);
+    await expect.poll(order).toEqual(["B", "C", "A"]);
+
+    // Mouse: drag A's handle onto B.
+    const from = (await page.getByRole("button", { name: "Drag link “A”" }).boundingBox())!;
+    const to = (await page.getByRole("button", { name: "Drag link “B”" }).boundingBox())!;
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + 10, { steps: 12 });
+    await page.mouse.up();
+    await expect.poll(order).toEqual(["A", "B", "C"]);
+
+    // The preview follows.
+    const links = page
+      .getByRole("complementary", { name: "Preview" })
+      .getByRole("navigation", { name: "Links" });
+    await expect(links.getByText(/^[ABC]$/)).toHaveText(["A", "B", "C"]);
+  });
+
   test("the preview's menu chips don't change the editor's address", async ({ page }) => {
     await page.goto("codes/new?type=menu#content");
     await page.getByLabel("Restaurant name").fill("Diner");

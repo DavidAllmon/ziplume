@@ -1,7 +1,7 @@
 "use client";
 
+import { Switch } from "@headlessui/react";
 import {
-  ArrowDown,
   ArrowUp,
   FileAudio,
   FileText,
@@ -25,12 +25,15 @@ import { mediaUrl } from "@/lib/pages/urls";
 
 import { fileSize, socialLabel } from "../parts";
 import { MediaOwnerContext } from "./MediaOwner";
+import { SortableList } from "./sortable/SortableList";
 import { ACCEPT, uploadMedia, type MediaKind } from "./upload";
 
 /** Shows a field's error once it has been left (or after a save attempt). */
 export interface ErrorsApi {
   error: (path: string) => string | undefined;
   touch: (path: string) => void;
+  /** A list under `prefix` changed order: `order[newIndex]` is each row's old index (-1: new). */
+  reorder?: (prefix: string, order: number[]) => void;
 }
 
 interface TextFieldProps {
@@ -419,78 +422,32 @@ export function move<T>(list: T[], index: number, by: number): T[] {
   return next;
 }
 
-interface ListFieldProps<T> {
-  label: string;
-  items: T[];
-  onChange: (items: T[]) => void;
-  newItem: () => T;
-  max: number;
-  addLabel: string;
-  itemName: string;
-  render: (item: T, update: (patch: Partial<T>) => void, index: number) => ReactNode;
-}
+/** How a row is named in its controls: link “Shop”, or link 2 while it has no text. */
+export const rowName = (kind: string, text: string, index: number) =>
+  text.trim() ? `${kind} “${text.trim()}”` : `${kind} ${index + 1}`;
 
-/** A reorderable list of small forms (links, phone numbers, menu items…). */
-export function ListField<T>({
-  label,
-  items,
+/** Shows or hides one link or button on the page; off keeps it in the editor. */
+export function ShowSwitch({
+  checked,
   onChange,
-  newItem,
-  max,
-  addLabel,
-  itemName,
-  render,
-}: ListFieldProps<T>) {
+  label,
+}: {
+  checked: boolean;
+  onChange: (on: boolean) => void;
+  label: string;
+}) {
   return (
-    <fieldset className="flex flex-col gap-3">
-      <legend className="mb-2 text-sm font-medium text-fg">{label}</legend>
-      {items.map((item, i) => (
-        <div key={i} className="flex gap-2 rounded-control border border-border p-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-3">
-            {render(
-              item,
-              (patch) => onChange(items.map((it, j) => (j === i ? { ...it, ...patch } : it))),
-              i,
-            )}
-          </div>
-          <div className="flex shrink-0 flex-col gap-1">
-            <IconButton
-              label={`Move ${itemName} ${i + 1} up`}
-              size="icon-sm"
-              disabled={i === 0}
-              onClick={() => onChange(move(items, i, -1))}
-            >
-              <ArrowUp aria-hidden />
-            </IconButton>
-            <IconButton
-              label={`Move ${itemName} ${i + 1} down`}
-              size="icon-sm"
-              disabled={i === items.length - 1}
-              onClick={() => onChange(move(items, i, 1))}
-            >
-              <ArrowDown aria-hidden />
-            </IconButton>
-            <IconButton
-              label={`Remove ${itemName} ${i + 1}`}
-              size="icon-sm"
-              onClick={() => onChange(items.filter((_, j) => j !== i))}
-            >
-              <Trash2 aria-hidden />
-            </IconButton>
-          </div>
-        </div>
-      ))}
-      {items.length < max && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="self-start"
-          onClick={() => onChange([...items, newItem()])}
-        >
-          <Plus aria-hidden /> {addLabel}
-        </Button>
-      )}
-    </fieldset>
+    <Switch
+      checked={checked}
+      onChange={onChange}
+      aria-label={label}
+      className="group relative mt-1.5 inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border border-field-border bg-surface-2 transition-colors data-checked:border-primary data-checked:bg-primary data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring"
+    >
+      <span
+        aria-hidden
+        className="ml-0.5 size-5.5 rounded-full bg-white shadow-sm ring-1 ring-black/10 transition-transform group-data-checked:translate-x-5"
+      />
+    </Switch>
   );
 }
 
@@ -501,6 +458,7 @@ export function LinksField({
   max,
   errors,
   prefix = "links",
+  itemName = "link",
 }: {
   label?: string;
   items: LinkItem[];
@@ -508,16 +466,29 @@ export function LinksField({
   max: number;
   errors: ErrorsApi;
   prefix?: string;
+  /** "link", or "button" on a Business page. */
+  itemName?: string;
 }) {
+  const name = (item: LinkItem, i: number) => rowName(itemName, item.label, i);
   return (
-    <ListField
+    <SortableList
       label={label}
       items={items}
       onChange={onChange}
       max={max}
-      addLabel="Add link"
-      itemName="link"
+      addLabel={`Add ${itemName}`}
+      path={prefix}
+      errors={errors}
+      itemLabel={name}
       newItem={() => ({ label: "", url: "", on: true })}
+      off={(item) => !item.on}
+      rowActions={(item, update, i) => (
+        <ShowSwitch
+          checked={item.on}
+          onChange={(on) => update({ on })}
+          label={`Show ${name(item, i)} on the page`}
+        />
+      )}
       render={(item, update, i) => (
         <>
           <TextField
@@ -556,13 +527,16 @@ export function SocialsField({
   errors: ErrorsApi;
 }) {
   return (
-    <ListField
+    <SortableList
       label="Social profiles"
       items={items}
       onChange={onChange}
       max={max}
       addLabel="Add profile"
-      itemName="profile"
+      addAt="end"
+      path="socials"
+      errors={errors}
+      itemLabel={(item) => socialLabel(item.network)}
       newItem={(): SocialItem => ({ network: "instagram", url: "" })}
       render={(item, update, i) => (
         <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">

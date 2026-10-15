@@ -33,6 +33,7 @@ import { PdfEditor } from "./editors/PdfEditor";
 import { VcardEditor } from "./editors/VcardEditor";
 import { VideoEditor } from "./editors/VideoEditor";
 import type { ErrorsApi } from "./fields";
+import { remapTouched } from "./touched";
 
 interface PageEditorProps<K extends PageTypeId> {
   type: K;
@@ -57,12 +58,18 @@ export function PageEditor<K extends PageTypeId>({
       setTouched((current) => (current.has(path) ? current : new Set(current).add(path))),
     [],
   );
+  const reorder = useCallback(
+    (prefix: string, order: number[]) =>
+      setTouched((current) => remapTouched(current, prefix, order)),
+    [],
+  );
   const errorsApi = useMemo<ErrorsApi>(
     () => ({
       error: (path) => (reveal || touched.has(path) ? errors[path] : undefined),
       touch,
+      reorder,
     }),
-    [errors, touched, touch, reveal],
+    [errors, touched, touch, reorder, reveal],
   );
   const anyTouched = touched.size > 0 || reveal;
   const set = (patch: object) => {

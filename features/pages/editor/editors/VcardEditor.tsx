@@ -2,7 +2,8 @@
 
 import { LIMITS, type VcardPage } from "@/lib/pages/types";
 
-import { AreaField, ListField, MediaField, SocialsField, TextField } from "../fields";
+import { AreaField, MediaField, rowName, SocialsField, TextField } from "../fields";
+import { SortableList } from "../sortable/SortableList";
 import type { EditorProps } from "./shared";
 
 export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
@@ -47,13 +48,16 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
         />
       </div>
       <AreaField label="About" value={page.bio} onChange={(bio) => set({ bio })} />
-      <ListField
+      <SortableList
         label="Phone numbers"
         items={page.phones}
         onChange={(phones) => set({ phones })}
         max={LIMITS.phones}
         addLabel="Add phone"
-        itemName="phone"
+        addAt="end"
+        path="phones"
+        errors={errors}
+        itemLabel={(item, i) => rowName("phone", item.number, i)}
         newItem={() => ({ label: "Mobile", number: "" })}
         render={(item, update, i) => (
           <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">
@@ -77,13 +81,16 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
           </div>
         )}
       />
-      <ListField
+      <SortableList
         label="Email addresses"
         items={page.emails}
         onChange={(emails) => set({ emails })}
         max={LIMITS.emails}
         addLabel="Add email"
-        itemName="email"
+        addAt="end"
+        path="emails"
+        errors={errors}
+        itemLabel={(item, i) => rowName("email", item.address, i)}
         newItem={() => ({ label: "Work", address: "" })}
         render={(item, update, i) => (
           <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">

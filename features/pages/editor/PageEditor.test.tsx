@@ -1,9 +1,12 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { PAGE_DEFAULTS } from "@/lib/pages/types";
+import { PAGE_DEFAULTS, type LinksPage, type MenuPage } from "@/lib/pages/types";
+import { validatePage } from "@/lib/pages/validate";
 import { PAGE_TYPE_IDS, type PageTypeId } from "@/lib/qr/types";
 
 import { PageEditor } from "./PageEditor";
@@ -140,5 +143,77 @@ describe("PageEditor", () => {
     );
     expect(changed).toHaveLength(1);
     expect(JSON.stringify(next[changed[0]!])).toContain("Q");
+  });
+});
+
+function LinksForm({ initial }: { initial: LinksPage }) {
+  const [page, setPage] = useState(initial);
+  return (
+    <PageEditor type="links" page={page} errors={validatePage("links", page)} onChange={setPage} />
+  );
+}
+
+describe("PageEditor lists", () => {
+  const links = (rows: { label: string; url: string }[]): LinksPage => ({
+    ...PAGE_DEFAULTS.links(),
+    title: "Me",
+    links: rows.map((row) => ({ ...row, on: true })),
+  });
+
+  it("keeps an error on its row when the row moves", async () => {
+    const user = userEvent.setup();
+    render(
+      <LinksForm
+        initial={links([
+          { label: "A", url: "a.com" },
+          { label: "B", url: "" },
+        ])}
+      />,
+    );
+    await user.click(screen.getAllByLabelText("Link")[1]!);
+    await user.tab();
+    const message = "Add the link for “B”";
+    expect(screen.getByText(message)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Actions for link “B”" }));
+    await user.click(screen.getByRole("menuitem", { name: "Move up" }));
+    const row = screen.getByText(message).closest("li")!;
+    expect(within(row).getByLabelText("Button text")).toHaveValue("B");
+  });
+
+  it("switches a link off and back on", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <PageEditor
+        type="links"
+        page={links([{ label: "Shop", url: "shop.com" }])}
+        errors={{}}
+        onChange={onChange}
+      />,
+    );
+    await user.click(screen.getByRole("switch", { name: "Show link “Shop” on the page" }));
+    expect(onChange.mock.lastCall![0].links[0].on).toBe(false);
+  });
+
+  it("moves a menu section with its dishes", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const dish = (name: string) => ({ name, description: "", price: "", tags: "" });
+    const menu: MenuPage = {
+      ...PAGE_DEFAULTS.menu(),
+      name: "Diner",
+      sections: [
+        { name: "Starters", items: [dish("Soup")] },
+        { name: "Mains", items: [dish("Pie"), dish("Fish")] },
+      ],
+    };
+    render(<PageEditor type="menu" page={menu} errors={{}} onChange={onChange} />);
+    await user.click(screen.getByRole("button", { name: "Actions for section “Mains”" }));
+    await user.click(screen.getByRole("menuitem", { name: "Move up" }));
+    const next = onChange.mock.lastCall![0] as MenuPage;
+    expect(next.sections.map((s) => [s.name, s.items.map((d) => d.name)])).toEqual([
+      ["Mains", ["Pie", "Fish"]],
+      ["Starters", ["Soup"]],
+    ]);
   });
 });

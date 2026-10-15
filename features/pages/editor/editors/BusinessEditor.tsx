@@ -105,6 +105,7 @@ export function BusinessEditor({ page, set, errors }: EditorProps<BusinessPage>)
       <LinksField
         label="Buttons"
         prefix="buttons"
+        itemName="button"
         items={page.buttons}
         onChange={(buttons) => set({ buttons })}
         max={LIMITS.buttons}

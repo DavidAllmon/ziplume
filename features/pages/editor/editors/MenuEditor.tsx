@@ -2,7 +2,8 @@
 
 import { LIMITS, type MenuPage } from "@/lib/pages/types";
 
-import { AreaField, ListField, MediaField, TextField } from "../fields";
+import { AreaField, MediaField, rowName, TextField } from "../fields";
+import { SortableList } from "../sortable/SortableList";
 import type { EditorProps } from "./shared";
 
 export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
@@ -36,13 +37,16 @@ export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
         value={page.logo}
         onChange={(logo) => set({ logo })}
       />
-      <ListField
+      <SortableList
         label="Sections"
         items={page.sections}
         onChange={(sections) => set({ sections })}
         max={LIMITS.sections}
         addLabel="Add section"
-        itemName="section"
+        addAt="end"
+        path="sections"
+        errors={errors}
+        itemLabel={(section, s) => rowName("section", section.name, s)}
         newItem={() => ({ name: "", items: [{ name: "", description: "", price: "", tags: "" }] })}
         render={(section, update, s) => (
           <>
@@ -53,13 +57,16 @@ export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
               placeholder="Mains"
               maxLength={80}
             />
-            <ListField
+            <SortableList
               label="Dishes and drinks"
               items={section.items}
               onChange={(items) => update({ items })}
               max={LIMITS.items}
               addLabel="Add item"
-              itemName="item"
+              addAt="end"
+              path={`sections.${s}.items`}
+              errors={errors}
+              itemLabel={(item, i) => rowName("item", item.name, i)}
               newItem={() => ({ name: "", description: "", price: "", tags: "" })}
               render={(item, updateItem, i) => (
                 <>
