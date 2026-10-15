@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { throughSite } from "@/lib/hosts";
+import { goTo } from "@/lib/navigate";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 import { authErrorMessage } from "./messages";
@@ -20,16 +22,20 @@ export function GoogleButton({
     const supabase = getBrowserSupabase();
     if (!supabase) return;
     setPending(true);
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        // Get the address instead of leaving, so sign-in can start on the site's own address.
+        skipBrowserRedirect: true,
       },
     });
-    if (error) {
+    if (error || !data.url) {
       setPending(false);
-      onError(authErrorMessage(error));
+      onError(error ? authErrorMessage(error) : "Google sign-in couldn’t start. Please try again.");
+      return;
     }
+    goTo(throughSite(data.url));
   }
 
   return (

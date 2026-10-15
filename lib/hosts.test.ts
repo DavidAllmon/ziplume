@@ -7,6 +7,7 @@ import {
   normalizeHost,
   parseLegacyHosts,
   siteFor,
+  throughSite,
 } from "./hosts";
 
 const SITE = "https://ziplume.com";
@@ -148,5 +149,29 @@ describe("our own pages", () => {
     );
     expect(isOwnOrigin("null", "qr.techitdave.com", SITE)).toBe(false);
     expect(isOwnOrigin("https://qr.techitdave.com", null, SITE)).toBe(false);
+  });
+});
+
+describe("Google sign-in", () => {
+  const PROJECT = "https://project.supabase.example";
+
+  it("starts on the site address with the query exactly as supabase-js made it", () => {
+    const query =
+      "?provider=google&redirect_to=https%3A%2F%2Fziplume.com%2Fauth%2Fcallback%3Fnext%3D%252Fcodes&code_challenge=Ab-_9z&code_challenge_method=s256";
+    expect(throughSite(`${PROJECT}/auth/v1/authorize${query}`, SITE, PROJECT)).toBe(
+      `${SITE}/auth/v1/authorize${query}`,
+    );
+  });
+
+  it("leaves every other address alone", () => {
+    expect(throughSite("https://accounts.google.com/o/oauth2/auth?x=1", SITE, PROJECT)).toBe(
+      "https://accounts.google.com/o/oauth2/auth?x=1",
+    );
+    expect(throughSite(`${PROJECT}/auth/v1/token?x=1`, SITE, PROJECT)).toBe(
+      `${PROJECT}/auth/v1/token?x=1`,
+    );
+    expect(throughSite(`${PROJECT}/auth/v1/authorize?x=1`, SITE, "")).toBe(
+      `${PROJECT}/auth/v1/authorize?x=1`,
+    );
   });
 });

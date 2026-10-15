@@ -1,4 +1,4 @@
-import { SITE_URL } from "@/lib/env";
+import { SITE_URL, SUPABASE_URL } from "@/lib/env";
 
 // The address rules for the move to ziplume.com (spec 5.1). SITE_URL is the one true address.
 // LEGACY_HOSTS, a runtime setting, lists old addresses that keep answering printed codes.
@@ -90,4 +90,24 @@ export function isOwnOrigin(
   }
   const own = normalizeHost(host);
   return own !== "" && normalizeHost(from.host) === own;
+}
+
+/**
+ * The Google sign-in address supabase-js made, moved onto the site's own address (which passes
+ * it to Supabase), so Google's account chooser says "continue to <site>". Any other address is
+ * returned as it is.
+ */
+export function throughSite(
+  url: string,
+  siteUrl: string = SITE_URL,
+  supabaseUrl: string = SUPABASE_URL,
+): string {
+  try {
+    const from = new URL(supabaseUrl).origin;
+    const to = new URL(siteUrl).origin;
+    const start = `${from}/auth/v1/authorize`;
+    return url === start || url.startsWith(`${start}?`) ? to + url.slice(from.length) : url;
+  } catch {
+    return url;
+  }
 }
