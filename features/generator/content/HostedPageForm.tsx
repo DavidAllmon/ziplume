@@ -9,6 +9,7 @@ import { MediaOwnerContext } from "@/features/pages/editor/MediaOwner";
 import { AccentField } from "@/features/pages/editor/fields";
 import { PageEditor } from "@/features/pages/editor/PageEditor";
 import { accountsEnabled } from "@/lib/env";
+import { withButtonColor } from "@/lib/pages/look";
 import { PAGE_TYPES, type PageContentMap } from "@/lib/pages/types";
 import type { PageTypeId } from "@/lib/qr/types";
 
@@ -90,8 +91,8 @@ export function HostedPageForm({
         {!generator.pageColorInLook && (
           <div className="border-t border-border pt-5">
             <AccentField
-              value={page.color}
-              onChange={(color) => generator.setPage(type, { ...page, color })}
+              value={page.look.button.color}
+              onChange={(color) => generator.setPage(type, withButtonColor(page, color))}
             />
           </div>
         )}

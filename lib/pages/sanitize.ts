@@ -1,6 +1,8 @@
 import { normalizeHex } from "@/lib/color/contrast";
 import type { PageTypeId } from "@/lib/qr/types";
 
+import { legacyLook, sanitizeLook, themeLook, TYPE_THEME, type PageLook } from "./look";
+import { sanitizeMedia } from "./media";
 import {
   LIMITS,
   PAGE_DEFAULTS,
@@ -26,7 +28,6 @@ type Spec =
 
 const str = (max: number = LIMITS.short): Spec => ({ kind: "string", max });
 const bool: Spec = { kind: "bool" };
-const color: Spec = { kind: "color" };
 const media: Spec = { kind: "media" };
 const link: Record<string, Spec> = {
   label: str(80),
@@ -42,7 +43,6 @@ const social: Spec = {
 
 const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
   links: {
-    color,
     title: str(),
     bio: str(LIMITS.medium),
     avatar: media,
@@ -50,7 +50,6 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     socials: social,
   },
   vcard: {
-    color,
     firstName: str(60),
     lastName: str(60),
     jobTitle: str(),
@@ -64,7 +63,6 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     socials: social,
   },
   business: {
-    color,
     name: str(),
     tagline: str(),
     about: str(LIMITS.long),
@@ -80,7 +78,6 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     socials: social,
   },
   menu: {
-    color,
     name: str(),
     description: str(LIMITS.medium),
     logo: media,
@@ -100,7 +97,6 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     note: str(LIMITS.medium),
   },
   coupon: {
-    color,
     business: str(),
     headline: str(),
     offer: str(40),
@@ -113,7 +109,6 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     image: media,
   },
   event: {
-    color,
     title: str(),
     start: str(16),
     end: str(16),
@@ -127,7 +122,6 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     image: media,
   },
   feedback: {
-    color,
     business: str(),
     logo: media,
     question: str(),
@@ -135,15 +129,13 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     askContact: bool,
     thanks: str(LIMITS.medium),
   },
-  pdf: { color, title: str(), description: str(LIMITS.medium), file: media, direct: bool },
+  pdf: { title: str(), description: str(LIMITS.medium), file: media, direct: bool },
   images: {
-    color,
     title: str(),
     description: str(LIMITS.medium),
     images: { kind: "mediaList", max: LIMITS.images },
   },
   video: {
-    color,
     title: str(),
     description: str(LIMITS.medium),
     source: { kind: "enum", values: ["link", "upload"] },
@@ -151,7 +143,6 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     file: media,
   },
   audio: {
-    color,
     title: str(),
     artist: str(),
     description: str(LIMITS.medium),
@@ -160,7 +151,6 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     link: str(2048),
   },
   app: {
-    color,
     name: str(),
     description: str(LIMITS.medium),
     icon: media,
@@ -173,22 +163,7 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Storage paths are "<user uuid>/<file name>" with a safe file name. */
-export const MEDIA_PATH =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[A-Za-z0-9._-]{1,120}$/;
-
-export function sanitizeMedia(raw: unknown): Media | null {
-  if (!isObject(raw) || typeof raw.path !== "string" || !MEDIA_PATH.test(raw.path)) return null;
-  const media: Media = {
-    path: raw.path,
-    name: typeof raw.name === "string" ? raw.name.slice(0, 120) : raw.path.split("/")[1]!,
-    type: typeof raw.type === "string" ? raw.type.slice(0, 80) : "",
-    size: typeof raw.size === "number" && raw.size >= 0 ? Math.round(raw.size) : 0,
-  };
-  if (typeof raw.width === "number" && raw.width > 0) media.width = Math.round(raw.width);
-  if (typeof raw.height === "number" && raw.height > 0) media.height = Math.round(raw.height);
-  return media;
-}
+export { MEDIA_PATH, sanitizeMedia } from "./media";
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -261,10 +236,27 @@ function cleanObject(
   return out;
 }
 
-/** A valid page of the given type from any stored or edited JSON. */
-export function sanitizePage<K extends PageTypeId>(type: K, raw: unknown): PageContentMap[K] {
+/**
+ * A valid page of the given type from any stored or edited JSON. It always has a look: a saved
+ * page without one keeps how it looked (spec 6.9), garbage gets the type's defaults, and an API
+ * request without one gets the type's theme (`missingLook: "theme"`, spec 6.10). `color` always
+ * equals the look's button color.
+ */
+export function sanitizePage<K extends PageTypeId>(
+  type: K,
+  raw: unknown,
+  { missingLook = "legacy" }: { missingLook?: "legacy" | "theme" } = {},
+): PageContentMap[K] {
   const defaults = PAGE_DEFAULTS[type]() as unknown as Record<string, unknown>;
-  return cleanObject(SCHEMAS[type], raw, defaults) as unknown as PageContentMap[K];
+  const page = cleanObject(SCHEMAS[type], raw, defaults);
+  const source = isObject(raw) ? raw : null;
+  const fallback = !source
+    ? (defaults.look as PageLook)
+    : missingLook === "theme" || "look" in source
+      ? themeLook(TYPE_THEME[type], type)
+      : legacyLook(type, source);
+  const look = source && "look" in source ? sanitizeLook(source.look, fallback) : fallback;
+  return { ...page, look, color: look.button.color } as unknown as PageContentMap[K];
 }
 
 /** Every storage path a page refers to (to clean up files that are no longer used). */

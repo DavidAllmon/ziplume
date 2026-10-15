@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ContentEditor } from "@/features/generator/content/types";
 import { initialState } from "@/features/generator/state/defaults";
+import { withButtonColor } from "@/lib/pages/look";
 import { PAGE_DEFAULTS } from "@/lib/pages/types";
 import type { CodeTypeId } from "@/lib/qr/types";
 import type { FolderRow } from "@/types/supabase";
@@ -179,7 +180,7 @@ describe("LookSection", () => {
     render(<LookSection page={page} onChange={onChange} />);
     expect(screen.getByRole("heading", { name: "Page look" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Use #BE123C" }));
-    expect(onChange).toHaveBeenCalledWith({ ...page, color: "#BE123C" });
+    expect(onChange).toHaveBeenCalledWith(withButtonColor(page, "#BE123C"));
   });
 });
 
@@ -283,5 +284,17 @@ describe("the sections when editing a saved code", () => {
       />,
     );
     expect(screen.getByText("Every trackable code needs a link ending")).toBeInTheDocument();
+  });
+});
+
+describe("LookSection", () => {
+  it("sets the page's button color, and color with it", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<LookSection page={PAGE_DEFAULTS.links()} onChange={onChange} />);
+    await user.click(screen.getByRole("button", { name: "Use #BE123C" }));
+    const next = onChange.mock.lastCall![0];
+    expect(next.look.button.color).toBe("#BE123C");
+    expect(next.color).toBe("#BE123C");
   });
 });

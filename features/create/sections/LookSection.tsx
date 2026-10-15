@@ -2,6 +2,7 @@
 
 import { Card, CardHeader } from "@/components/ui/Card";
 import { AccentField } from "@/features/pages/editor/fields";
+import { withButtonColor } from "@/lib/pages/look";
 import type { PageContentMap } from "@/lib/pages/types";
 import type { PageTypeId } from "@/lib/qr/types";
 
@@ -21,7 +22,10 @@ export function LookSection({
         description="How your page looks to visitors."
       />
       <div className="px-5 pt-4 pb-6 sm:px-6">
-        <AccentField value={page.color} onChange={(color) => onChange({ ...page, color })} />
+        <AccentField
+          value={page.look.button.color}
+          onChange={(color) => onChange(withButtonColor(page, color))}
+        />
       </div>
     </Card>
   );

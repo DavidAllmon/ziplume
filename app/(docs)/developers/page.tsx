@@ -267,6 +267,46 @@ export default function DevelopersPage() {
   }
 }`}</Code>
 
+      <h3>Page looks</h3>
+      <p>
+        A page&apos;s <code>content.look</code> sets how it looks. Send it back with every change to
+        keep the look; without it, the page gets its type&apos;s default theme.{" "}
+        <code>content.color</code> always equals <code>look.button.color</code>.
+      </p>
+      <ul>
+        <li>
+          <code>theme</code>: <code>ziplume</code>, <code>paper</code>, <code>midnight</code>,{" "}
+          <code>ocean</code>, <code>sunset</code>, <code>grape</code>, <code>forest</code>,{" "}
+          <code>blush</code> or <code>sand</code>.
+        </li>
+        <li>
+          <code>wallpaper</code>: <code>{`{ "kind": "solid", "color" }`}</code>,{" "}
+          <code>{`{ "kind": "gradient", "from", "to", "direction" }`}</code> (direction{" "}
+          <code>down</code>, <code>diagonal</code> or <code>across</code>) or{" "}
+          <code>{`{ "kind": "image", "image", "dim", "color" }`}</code> (dim 0–80; an image uploaded
+          in the app; color shows while it loads).
+        </li>
+        <li>
+          <code>header</code>: <code>classic</code> or <code>hero</code>; <code>shape</code>:{" "}
+          <code>circle</code> or <code>rounded</code>.
+        </li>
+        <li>
+          <code>font</code>: <code>clean</code>, <code>bold</code>, <code>elegant</code>,{" "}
+          <code>friendly</code>, <code>modern</code> or <code>typewriter</code>; <code>text</code>:{" "}
+          <code>auto</code> or a hex color.
+        </li>
+        <li>
+          <code>button</code>: <code>shape</code> (<code>square</code>, <code>rounded</code>,{" "}
+          <code>pill</code>), <code>style</code> (<code>solid</code>, <code>outline</code>,{" "}
+          <code>soft</code>), <code>shadow</code> (<code>none</code>, <code>soft</code>,{" "}
+          <code>hard</code>), <code>color</code>, and <code>text</code> (<code>auto</code> or a hex
+          color).
+        </li>
+        <li>
+          <code>socials</code>: <code>top</code> (under the header) or <code>bottom</code>.
+        </li>
+      </ul>
+
       <h2>The code object</h2>
       <ul>
         <li>

@@ -155,7 +155,8 @@ const httpUrl = (value: unknown): string | null => {
 /** Checks and normalizes content for a type; pages may only use files from the owner's folder. */
 function content(type: CodeTypeId, raw: unknown, userId: string): Invalid | { value: Json } {
   if (isPageType(type)) {
-    const page = sanitizePage(type, raw);
+    // A request without a look gets the type's default theme (spec 6.10).
+    const page = sanitizePage(type, raw, { missingLook: "theme" });
     const errors = validatePage(type, page);
     if (Object.keys(errors).length) return invalid("content isn't valid for this type", errors);
     if (mediaPaths(page).some((path) => !path.startsWith(`${userId}/`))) {

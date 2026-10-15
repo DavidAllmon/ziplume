@@ -38,7 +38,8 @@ describe("sanitizePage", () => {
     });
     expect(page.title).toHaveLength(120);
     expect(page).not.toHaveProperty("evil");
-    expect(page.color).toBe("#0A1330");
+    // A saved page without a look gets Paper, whose buttons are ink.
+    expect(page.color).toBe("#0F172A");
     expect(page.links).toHaveLength(30);
     expect(page.links[0]).toEqual({ label: "L0", url: "https://e.com", on: true });
     expect(page.socials[0]?.network).toBe("instagram");
