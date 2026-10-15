@@ -23,12 +23,23 @@ describe("resolveLook", () => {
       expect(contrastRatio(r.text, surface), `text on ${surface}`).toBeGreaterThanOrEqual(4.5);
       expect(contrastRatio(r.muted, surface), `muted on ${surface}`).toBeGreaterThanOrEqual(4.5);
     }
+    // Notes, chips and icon circles sit on a slightly stronger tone over the cards.
+    for (const chip of r.chip) {
+      expect(contrastRatio(r.text, chip), `text on chip ${chip}`).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(r.muted, chip), `muted on chip ${chip}`).toBeGreaterThanOrEqual(4.5);
+    }
     for (const bg of r.buttonBg) {
       expect(contrastRatio(r.buttonText, bg)).toBeGreaterThanOrEqual(4.5);
     }
     for (const card of r.card) {
       expect(contrastRatio(r.accent, card)).toBeGreaterThanOrEqual(3);
     }
+  });
+
+  it("keeps muted text readable on a note placed straight on the wallpaper", () => {
+    const r = resolveLook(themeLook("sand", "menu"));
+    const noteOnWallpaper = mix("#F3E8D8", INK, 0.06);
+    expect(contrastRatio(r.muted, noteOnWallpaper)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("picks white or ink text by the wallpaper, worst end first", () => {

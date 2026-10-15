@@ -66,6 +66,8 @@ export interface ResolvedLook {
   muted: string;
   /** The card's color over each wallpaper color. */
   card: string[];
+  /** The notes and chips' color over each card and each wallpaper color. */
+  chip: string[];
   accent: string;
   /** What's behind a button's text: its color, or the wallpaper for outline buttons. */
   buttonBg: string[];
@@ -78,7 +80,20 @@ export function resolveLook(look: PageLook): ResolvedLook {
   const light = auto(walls) === INK;
   // Cards: white at 92% on light wallpapers, white at 8% on dark ones.
   const card = walls.map((wall) => mix(wall, WHITE, light ? 0.92 : 0.08));
-  const surfaces = [...walls, ...card];
+  // Notes, chips and icon circles (--surface-2): ink at 6% over light cards; over dark ones,
+  // white at 12% while the text still reads on it, otherwise black at 15% (Sunset, Grape).
+  // They sit on cards and, like the empty-page notes, straight on the wallpaper.
+  const chipBase = [...card, ...walls];
+  const lighterChip = chipBase.map((c) => mix(c, WHITE, 0.12));
+  const chipTone = light ? "ink" : worst(text, lighterChip) >= 4.5 ? "white" : "black";
+  const chip = chipBase.map((c) =>
+    chipTone === "ink"
+      ? mix(c, INK, 0.06)
+      : chipTone === "white"
+        ? mix(c, WHITE, 0.12)
+        : mix(c, "#000000", 0.15),
+  );
+  const surfaces = [...walls, ...card, ...chip];
   // Muted text: as soft as it can be while still reading at 4.5:1 on every surface.
   let muted = text;
   for (let t = 0.6; t <= 0.96; t += 0.04) {
@@ -112,7 +127,12 @@ export function resolveLook(look: PageLook): ResolvedLook {
     "--fg-muted": muted,
     "--fg-subtle": muted,
     "--surface": light ? "rgb(255 255 255 / 0.92)" : "rgb(255 255 255 / 0.08)",
-    "--surface-2": light ? "rgb(15 23 42 / 0.06)" : "rgb(255 255 255 / 0.12)",
+    "--surface-2":
+      chipTone === "ink"
+        ? "rgb(15 23 42 / 0.06)"
+        : chipTone === "white"
+          ? "rgb(255 255 255 / 0.12)"
+          : "rgb(0 0 0 / 0.15)",
     "--border": light ? "rgb(15 23 42 / 0.1)" : "rgb(255 255 255 / 0.12)",
     "--field-border": light ? "rgb(15 23 42 / 0.45)" : "rgb(255 255 255 / 0.45)",
     "--ring": text,
@@ -142,6 +162,7 @@ export function resolveLook(look: PageLook): ResolvedLook {
     text,
     muted,
     card,
+    chip,
     accent,
     buttonBg,
     buttonText,

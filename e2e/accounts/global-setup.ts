@@ -6,6 +6,7 @@ import {
   AUTH_DIR,
   MAKER,
   OWNER,
+  LOOK_PAGES,
   PAGES,
   PAT,
   PAUSED_PAGE_SLUG,
@@ -57,7 +58,7 @@ export default async function globalSetup(config: FullConfig) {
   const pagesId = await create(PAGES);
   const { error: pagesError } = await admin.from("qr_codes").insert(
     [
-      ...PHONE_PAGES.map((page) => ({
+      ...[...PHONE_PAGES, ...LOOK_PAGES].map((page) => ({
         user_id: pagesId,
         name: page.slug,
         qr_type: page.type,
