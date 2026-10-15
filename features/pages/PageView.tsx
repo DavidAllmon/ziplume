@@ -15,6 +15,8 @@ import {
   UserPlus,
 } from "lucide-react";
 
+import type { ReactNode } from "react";
+
 import { googleCalendarUrl } from "@/lib/pages/files";
 import type {
   AppPage,
@@ -333,7 +335,7 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
   );
 }
 
-function MenuView({ page }: ViewProps<MenuPage>) {
+function MenuView({ page, preview }: ViewProps<MenuPage>) {
   const sections = page.sections
     .map((s) => ({ ...s, items: s.items.filter((item) => item.name.trim()) }))
     .filter((s) => s.items.length);
@@ -352,15 +354,25 @@ function MenuView({ page }: ViewProps<MenuPage>) {
       </PageCard>
       {sections.length > 1 && (
         <nav aria-label="Menu sections" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          {sections.map((s, i) => (
-            <a
-              key={i}
-              href={`#section-${i}`}
-              className="shrink-0 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-fg"
-            >
-              {s.name || "Menu"}
-            </a>
-          ))}
+          {sections.map((s, i) =>
+            // In the editor's preview a chip mustn't navigate: #section-n would replace the tab.
+            preview ? (
+              <span
+                key={i}
+                className="shrink-0 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-fg"
+              >
+                {s.name || "Menu"}
+              </span>
+            ) : (
+              <a
+                key={i}
+                href={`#section-${i}`}
+                className="shrink-0 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-fg"
+              >
+                {s.name || "Menu"}
+              </a>
+            ),
+          )}
         </nav>
       )}
       {sections.length ? (
@@ -696,6 +708,18 @@ function ImagesView({ page, preview }: ViewProps<ImagesPage>) {
   );
 }
 
+/** In the editor's preview, media stays still: it plays on the live page. */
+function StillMedia({ icon }: { icon: ReactNode }) {
+  return (
+    <div className="grid aspect-video w-full place-items-center bg-black text-white/80">
+      <span className="flex flex-col items-center gap-2 text-sm font-medium">
+        {icon}
+        Plays on the live page
+      </span>
+    </div>
+  );
+}
+
 function VideoView({ page, preview }: ViewProps<VideoPage>) {
   const embed = page.source === "link" ? videoEmbed(page.url) : null;
   const link = page.source === "link" && !embed ? safeHref(page.url) : null;
@@ -703,7 +727,9 @@ function VideoView({ page, preview }: ViewProps<VideoPage>) {
     <PageShell color={page.color}>
       <PageCard className="flex flex-col gap-4">
         <div className="-mx-6 -mt-6 overflow-hidden rounded-t-[1.5rem] bg-black">
-          {embed ? (
+          {preview && (embed || (page.source === "upload" && page.file)) ? (
+            <StillMedia icon={<Play aria-hidden className="size-12" />} />
+          ) : embed ? (
             <iframe
               src={embed.src}
               title={page.title || "Video"}
@@ -757,9 +783,14 @@ function AudioView({ page, preview }: ViewProps<AudioPage>) {
           </span>
         )}
         <Heading sub={page.artist || undefined}>{page.title || "Audio"}</Heading>
-        {page.file && (
-          <audio src={mediaUrl(page.file.path)} controls preload="metadata" className="w-full" />
-        )}
+        {page.file &&
+          (preview ? (
+            <p className="flex items-center gap-2 text-sm font-medium text-fg-muted">
+              <Music aria-hidden className="size-4" /> Plays on the live page
+            </p>
+          ) : (
+            <audio src={mediaUrl(page.file.path)} controls preload="metadata" className="w-full" />
+          ))}
         {link && (
           <PageLink href={link} variant={page.file ? "secondary" : "primary"} preview={preview}>
             <Music aria-hidden /> Listen
