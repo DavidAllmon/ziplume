@@ -72,4 +72,56 @@ test.describe("signed in", () => {
     await expect(page.locator("[data-actionbar]")).toBeVisible();
     await expectFitsPhone(page, "#main", 40);
   });
+
+  test("toasts appear above the Create bar and the tab bar", async ({ page }) => {
+    await page.goto("codes/new");
+    await settled(page);
+    // The stack is empty and zero-height until a toast shows; its bottom edge is where they
+    // stack from.
+    const stackBottom = await page
+      .locator("[data-toasts]")
+      .evaluate((el) => el.getBoundingClientRect().bottom);
+    const barTop = await page
+      .locator("[data-actionbar]")
+      .evaluate((el) => el.getBoundingClientRect().top);
+    expect(stackBottom).toBeLessThanOrEqual(barTop);
+  });
+
+  for (const wide of [false, true]) {
+    test(`the selection bar holds its place at the end of the list${wide ? " (700px)" : ""}`, async ({
+      page,
+    }, testInfo) => {
+      test.skip(wide && testInfo.project.name !== "Pixel 7", "one width from 640px up is enough");
+      // Short enough that the two seeded codes scroll.
+      await page.setViewportSize({ width: wide ? 700 : page.viewportSize()!.width, height: 420 });
+      await page.goto("codes");
+      await settled(page);
+      await page
+        .getByRole("checkbox", { name: "Select Spring menu" })
+        .filter({ visible: true })
+        .check();
+      const bar = page.getByRole("region", { name: "Selected codes" });
+      await expect(bar).toBeVisible();
+      const scrollTo = async (fromEnd: number) => {
+        await page.evaluate(
+          (offset) =>
+            window.scrollTo(0, document.documentElement.scrollHeight - innerHeight - offset),
+          fromEnd,
+        );
+        await page.evaluate(
+          () =>
+            new Promise<void>((done) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => done())),
+            ),
+        );
+      };
+      // Just before the end it's stuck to the bottom; at the end it's back in the list. The two
+      // must match, or the bar jumps as the list ends.
+      await scrollTo(60);
+      const stuck = (await bar.boundingBox())!;
+      await scrollTo(0);
+      const atEnd = (await bar.boundingBox())!;
+      expect(atEnd.y).toBeCloseTo(stuck.y, 0);
+    });
+  }
 });
