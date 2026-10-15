@@ -49,6 +49,8 @@ test("public files load through the site, whole or in part", async ({ request })
   expect(whole.status()).toBe(200);
   expect(whole.headers()["content-type"]).toBe("image/png");
   expect(Buffer.compare(await whole.body(), png)).toBe(0);
+  // Supabase says a year; Cloudflare keeps its copy ten minutes, so deleted files stop soon.
+  expect(whole.headers()["cloudflare-cdn-cache-control"]).toBe("max-age=600");
 
   // Audio and video seek with byte ranges.
   const part = await request.get(`/storage/v1/object/public/avatars/${path}`, {

@@ -102,8 +102,10 @@ export async function GET(request: NextRequest, { params }: RouteContext<"/r/[sl
     return passwordPage(slug);
   }
 
-  // On an old address, hosted pages open there too, so an unlock cookie and the page agree.
-  const target = scanTarget(code, slug, scan.os, siteFor(request.headers.get("host")));
+  // A password-protected page opens on the address it was unlocked on, so the unlock cookie and
+  // the page agree; everything else goes to the site address.
+  const site = code.protected ? siteFor(request.headers.get("host")) : SITE_URL;
+  const target = scanTarget(code, slug, scan.os, site);
   return target ? redirect(target) : NOT_FOUND();
 }
 
@@ -145,6 +147,7 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/r/[s
   if (!code) return NOT_FOUND();
   const blocked = stateResponse(code.status);
   if (blocked) return blocked;
+  // Unlocked on this address, so the page opens on it too (see GET).
   const target = scanTarget(code, slug, scan.os, siteFor(request.headers.get("host")));
   if (!target) return NOT_FOUND();
 
