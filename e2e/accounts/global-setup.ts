@@ -6,7 +6,10 @@ import {
   AUTH_DIR,
   MAKER,
   OWNER,
+  PAGES,
   PAT,
+  PAUSED_PAGE_SLUG,
+  PHONE_PAGES,
   QUINN,
   RAY,
   SEED_FILE,
@@ -15,7 +18,7 @@ import {
   type Seed,
 } from "./fixtures";
 
-type Person = typeof OWNER;
+type Person = { email: string; password: string; name: string };
 
 /** Fresh owner and viewer accounts, two codes, and a signed-in browser state for each. */
 export default async function globalSetup(config: FullConfig) {
@@ -29,7 +32,7 @@ export default async function globalSetup(config: FullConfig) {
   });
 
   const { data: existing } = await admin.auth.admin.listUsers({ perPage: 1000 });
-  for (const person of [OWNER, VIEWER, MAKER, PAT, QUINN, RAY, SKY]) {
+  for (const person of [OWNER, VIEWER, MAKER, PAT, QUINN, RAY, SKY, PAGES]) {
     const old = existing?.users.find((user) => user.email === person.email);
     if (old) await admin.auth.admin.deleteUser(old.id);
   }
@@ -51,6 +54,30 @@ export default async function globalSetup(config: FullConfig) {
   const quinnId = await create(QUINN);
   const rayId = await create(RAY);
   const skyId = await create(SKY);
+  const pagesId = await create(PAGES);
+  const { error: pagesError } = await admin.from("qr_codes").insert(
+    [
+      ...PHONE_PAGES.map((page) => ({
+        user_id: pagesId,
+        name: page.slug,
+        qr_type: page.type,
+        is_dynamic: true,
+        slug: page.slug,
+        content: page.content,
+      })),
+      {
+        user_id: pagesId,
+        name: PAUSED_PAGE_SLUG,
+        qr_type: "links",
+        is_dynamic: true,
+        slug: PAUSED_PAGE_SLUG,
+        status: "paused",
+        content: { title: "Paused page", links: [] },
+      },
+    ],
+    { defaultToNull: false },
+  );
+  if (pagesError) throw pagesError;
 
   const { data: codes, error: codesError } = await admin
     .from("qr_codes")

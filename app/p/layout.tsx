@@ -7,7 +7,7 @@ import { LogoMark } from "@/components/brand/Logo";
 export default function HostedPageLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
-      <div className="flex-1">{children}</div>
+      <div className="flex flex-1 flex-col">{children}</div>
       <footer className="flex justify-center px-4 pt-2 pb-8">
         <Link
           href="/"

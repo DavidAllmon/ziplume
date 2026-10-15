@@ -5,6 +5,7 @@ import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { cn } from "@/lib/cn";
 
 const OPTIONS = [
   { value: "system", label: <Monitor aria-hidden />, ariaLabel: "Use system theme" },
@@ -16,7 +17,7 @@ type ThemeChoice = (typeof OPTIONS)[number]["value"];
 
 const subscribe = () => () => {};
 
-export function ThemeToggle() {
+export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
   // The stored theme is only known on the client; render the default until hydrated.
   const mounted = useSyncExternalStore(
@@ -33,7 +34,7 @@ export function ThemeToggle() {
       value={value}
       onChange={setTheme}
       options={OPTIONS}
-      className="w-[7.5rem]"
+      className={cn("w-[7.5rem]", className)}
     />
   );
 }

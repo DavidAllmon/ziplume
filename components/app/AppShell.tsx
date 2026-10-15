@@ -146,7 +146,7 @@ export function AppShell({
   );
 
   return (
-    <div className="min-h-dvh bg-bg text-sm text-fg">
+    <div data-app-shell className="bg-bg text-sm text-fg">
       <a
         href="#main"
         className="sr-only z-50 rounded-control bg-primary px-4 py-2 font-semibold text-primary-fg focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
@@ -236,13 +236,14 @@ export function AppShell({
 
       <main
         id="main"
-        className="px-4 pt-5 pb-28 sm:ml-16 sm:px-6 sm:pb-10 lg:ml-64 lg:px-10 lg:pt-8"
+        className="px-4 pt-5 pb-(--app-end) sm:ml-16 sm:px-6 lg:ml-64 lg:px-10 lg:pt-8"
       >
         <div className="mx-auto w-full max-w-6xl">{children}</div>
       </main>
 
       <nav
         aria-label="Main"
+        data-tabbar
         className={cn(
           "fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] sm:hidden",
           "grid-cols-4",

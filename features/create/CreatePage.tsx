@@ -85,7 +85,7 @@ export function CreatePage({ userId, folders, initialType, initialFolderId }: Cr
   };
 
   return (
-    <div className="flex flex-col gap-6 pb-24 md:pb-0">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Create a code"
         description="Fill in the sections in any order. The preview updates as you go."

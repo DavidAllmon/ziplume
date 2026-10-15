@@ -22,7 +22,7 @@ export function statusPage(
 <style>
   :root { color-scheme: light dark; --bg:#f4f7fb; --card:#fff; --fg:#0a1330; --muted:#45506a; --link:#0b6e8c; --line:#dce3ed; }
   @media (prefers-color-scheme: dark) { :root { --bg:#070b1a; --card:#0d1428; --fg:#e6eefa; --muted:#a9b6cc; --link:#7fe9ff; --line:#232e4d; } }
-  body { margin:0; min-height:100vh; display:grid; place-items:center; padding:16px; background:var(--bg); color:var(--fg);
+  body { box-sizing:border-box; margin:0; min-height:100vh; min-height:100dvh; display:grid; place-items:center; padding:16px; background:var(--bg); color:var(--fg);
          font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; }
   main { max-width:26rem; background:var(--card); border:1px solid var(--line); border-radius:20px; padding:32px; text-align:center; }
   img { width:48px; height:48px; border-radius:12px; }

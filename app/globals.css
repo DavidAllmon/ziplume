@@ -77,6 +77,50 @@
   --shadow-color: 228 60% 2%;
 }
 
+/* ---------------------------------------------------------------------------
+ * What's fixed to the bottom of the screen, so pages can end right above it.
+ * --tabbar-h: the app's phone tab bar. --actionbar-h: a preview bar (Create/Edit,
+ * or the home page's). --page-end: room left after the content. Each bar's height
+ * is its content's: tabs are 3.5rem, the Create bar 4.25rem, the home bar 5rem,
+ * plus a 1px top border. --app-end is computed on :root from :root's own values,
+ * so every override below must also target :root.
+ * ------------------------------------------------------------------------- */
+:root {
+  --tabbar-h: 0px;
+  --actionbar-h: 0px;
+  --page-end: 1.5rem;
+  --app-end: calc(var(--tabbar-h) + var(--actionbar-h) + var(--page-end));
+}
+
+@media (width >= 40rem) {
+  :root {
+    --page-end: 2.5rem;
+  }
+}
+
+@media (width < 40rem) {
+  :root:has([data-tabbar]) {
+    --tabbar-h: calc(3.5rem + 1px + env(safe-area-inset-bottom));
+  }
+  /* Phones: the Create bar sits on the tab bar, which already covers the safe area. */
+  :root:has([data-actionbar="create"]) {
+    --actionbar-h: calc(4.25rem + 1px);
+  }
+}
+
+@media (40rem <= width < 48rem) {
+  :root:has([data-actionbar="create"]) {
+    --actionbar-h: calc(4.25rem + 1px + env(safe-area-inset-bottom));
+  }
+}
+
+/* The home page's preview bar: a 3.5rem code, 0.75rem above and below, and the safe area. */
+@media (width < 48rem) {
+  :root:has([data-actionbar="generator"]) {
+    --actionbar-h: calc(5rem + 1px + env(safe-area-inset-bottom));
+  }
+}
+
 /* The navy sidebar: everything inside it reads these instead of the page's palette, so its
    links, switcher, Create button and menus need no colors of their own. */
 [data-surface="sidebar"] {
@@ -163,6 +207,13 @@
   html {
     -webkit-tap-highlight-color: transparent;
     text-size-adjust: 100%;
+  }
+
+  /* The signed-in app doesn't bounce past its end, so the tab bar never moves. Public pages
+   * keep the bounce and pull-to-refresh. */
+  html:has([data-app-shell]),
+  html:has([data-app-shell]) body {
+    overscroll-behavior-y: none;
   }
 
   body {

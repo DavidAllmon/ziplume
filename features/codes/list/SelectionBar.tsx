@@ -67,7 +67,7 @@ export function SelectionBar({
     <div
       role="region"
       aria-label="Selected codes"
-      className="sticky bottom-24 z-20 flex flex-wrap items-center gap-2 rounded-card border border-border bg-surface p-3 shadow-pop sm:bottom-4"
+      className="sticky bottom-(--app-end) z-20 flex flex-wrap items-center gap-2 rounded-card border border-border bg-surface p-3 shadow-pop"
     >
       <span className="px-1 text-sm font-semibold text-fg">{selected.length} selected</span>
       {busy && (
