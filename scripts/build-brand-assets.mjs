@@ -11,7 +11,7 @@ import { BRAND, markSvg } from "../components/brand/mark.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const out = (path) => resolve(root, path);
-const SITE = process.env.BRAND_SITE_URL ?? "https://qr.techitdave.com";
+const SITE = process.env.BRAND_SITE_URL ?? "https://ziplume.com";
 
 async function fontFace(family, file, weight, extra = "") {
   const data = await readFile(out(`node_modules/${file}`));

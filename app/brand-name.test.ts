@@ -44,3 +44,18 @@ describe("the old name", () => {
     expect(leftovers).toEqual([]);
   });
 });
+
+describe("the old address", () => {
+  it("appears nowhere people can see it (it lives on only in LEGACY_HOSTS)", () => {
+    const leftovers = [...FOLDERS, "scripts"]
+      .flatMap((folder) => files(resolve(ROOT, folder)))
+      .flatMap((path) =>
+        readFileSync(path, "utf8")
+          .split("\n")
+          .map((line, i) => ({ line, at: `${relative(ROOT, path)}:${i + 1}` }))
+          .filter(({ line }) => /qr\.techitdave\.com/i.test(line))
+          .map(({ at, line }) => `${at}  ${line.trim()}`),
+      );
+    expect(leftovers).toEqual([]);
+  });
+});

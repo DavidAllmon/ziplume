@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://qr.techitdave.com"><strong>Open Ziplume →</strong></a>
+  <a href="https://ziplume.com"><strong>Open Ziplume →</strong></a>
   &nbsp;·&nbsp;
   <a href="https://buymeacoffee.com/davidallmon">Buy me a coffee</a>
 </p>
@@ -46,11 +46,11 @@
 - **Scan check:** contrast, inverted colors, logo coverage and data density are checked as you edit. The rendered code is then decoded with a real QR reader, so "Verified scannable" means exactly that.
 - **Make it yours:** scan-safe color presets, linear and radial gradients, separate corner colors, transparent backgrounds, six pattern styles, five corner styles and five corner centers, frames with a "Scan me" call to action, and your own logo or one of 24 built-in icons. Adding a logo raises error correction to High automatically.
 - **Quick styles and templates:** apply a ready-made look in one tap, or save your own designs to your account and use them on any device.
-- **Export:** PNG, SVG, JPG or WebP at 512 to 4096 px, plus vector PDF and EPS for print shops. Copy to clipboard or use the native share sheet where supported. Files get readable names like `quickqreate-wifi-cafe-guest.png`.
+- **Export:** PNG, SVG, JPG or WebP at 512 to 4096 px, plus vector PDF and EPS for print shops. Copy to clipboard or use the native share sheet where supported. Files get readable names like `ziplume-wifi-cafe-guest.png`.
 - **Remembers your style:** design and export settings are saved on your device. What you type, such as Wi-Fi passwords, never is.
 - **Works offline:** install it as an app; it keeps working without a connection.
 - **Free accounts (optional):** sign up with email and password or Google to save unlimited codes, with optional two-factor authentication. The generator never requires an account.
-- **Dynamic codes:** a Link code can point at a short link (`qr.techitdave.com/r/…`) whose destination you change any time, even after printing. Pause a code, customize its ending, or add UTM tags for Google Analytics.
+- **Dynamic codes:** a Link code can point at a short link (`ziplume.com/r/…`) whose destination you change any time, even after printing. Pause a code, customize its ending, or add UTM tags for Google Analytics.
 - **Folders and bulk tools:** file codes in folders, select several to move them or download them as one ZIP, and create up to 500 codes at once from a spreadsheet (CSV), downloaded as a ZIP and optionally saved as dynamic links.
 - **Passwords and schedules:** protect a dynamic code or hosted page with a password, or make it work only between two dates. Scanners see a friendly "not active yet" or "expired" page outside them.
 - **Teams:** invite coworkers to your workspace as viewers or editors with a one-time invite link. Switch between workspaces from your dashboard.
@@ -60,7 +60,7 @@
 
 ## Privacy
 
-Codes are generated in your browser, and nothing you type is sent anywhere unless you save a code to your account. There are no ads, tracking scripts or advertising cookies. Scans of dynamic codes record an approximate location, device type and a daily-salted visitor hash; IP addresses are never stored. See the [privacy policy](https://qr.techitdave.com/privacy).
+Codes are generated in your browser, and nothing you type is sent anywhere unless you save a code to your account. There are no ads, tracking scripts or advertising cookies. Scans of dynamic codes record an approximate location, device type and a daily-salted visitor hash; IP addresses are never stored. See the [privacy policy](https://ziplume.com/privacy).
 
 ## Getting started
 
@@ -142,7 +142,7 @@ e2e/                    Playwright tests that download codes and decode them wit
 
 ## Deployment
 
-Ziplume runs as a Next.js server from the `Dockerfile` (standalone output, health check at `/api/health`). Production is a Coolify application at `https://qr.techitdave.com` that redeploys on every push to `main`. GitHub Actions runs lint, formatting, type checks, unit and end-to-end tests on every push and pull request.
+Ziplume runs as a Next.js server from the `Dockerfile` (standalone output, health check at `/api/health`). Production is a Coolify application at `https://ziplume.com` that redeploys on every push to `main`. The old address, `https://qr.techitdave.com`, still answers printed codes, hosted pages and the API, and forwards everything else. GitHub Actions runs lint, formatting, type checks, unit and end-to-end tests on every push and pull request.
 
 The one-time setup (Supabase project, Brevo email, Google sign-in, DNS and Coolify) is in [docs/accounts-setup.md](docs/accounts-setup.md). The old GitHub Pages address becomes a redirect by running the CI workflow manually with `redirect_to` set to the new URL.
 
