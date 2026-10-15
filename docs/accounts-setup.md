@@ -23,7 +23,7 @@ environment's secrets.
 | Pricing | Completely free, no limits. Buy Me a Coffee links: `https://buymeacoffee.com/davidallmon` |
 | Old Pages URL | `davidallmon.github.io/QuickQReate` forwards to `https://ziplume.com` |
 
-## Live deployment (verified 14 October 2026)
+## Live deployment (verified 15 October 2026, after the move to ziplume.com)
 
 | Item | Value |
 | --- | --- |
@@ -37,7 +37,9 @@ environment's secrets.
 | DNS | Cloudflare `ziplume.com` A `152.44.42.29` and `www` CNAME `ziplume.com`, proxied; SSL/TLS Full (strict); Always Use HTTPS off (certificate renewals pass over plain HTTP); visitor location headers on. `qr.techitdave.com` A `152.44.42.29` stays DNS only unless its proxy change is approved |
 | Email | Brevo, sender `Ziplume <no-reply@ziplume.com>` (ziplume.com authenticated: `brevo-code` TXT, `brevo1`/`brevo2._domainkey` CNAMEs DNS only, `_dmarc` `v=DMARC1; p=none; rua=mailto:dmarc@ziplume.com`); the techitdave.com sender stays. One SPF record: `v=spf1 include:_spf.mx.cloudflare.net include:spf.brevo.com ~all` |
 | Mail to ziplume.com | Cloudflare Email Routing: `support@` and `dmarc@` → `dallmon@techitdave.com` |
-| Google sign-in | Google Cloud project `quickqreate` (External, in production, no logo), web client ID `31907044023-urs4031kmta7apq7rkkn9sa7b606sh92.apps.googleusercontent.com`, redirects `https://ziplume.com/auth/v1/callback` (used) and `<API URL>/auth/v1/callback` (kept for rollback) |
+| Google sign-in | Google Cloud project `ziplume` in the techitdave.com organization (External, in production, no logo), web client "Ziplume web" `147783092225-nmjm1llk3l6v8o4d10oto3dp7p0mf3a4.apps.googleusercontent.com`, origins `https://ziplume.com` and `https://qr.techitdave.com`, redirects `https://ziplume.com/auth/v1/callback` (used) and `<API URL>/auth/v1/callback` (kept for rollback). The go-live client in the HopeLinx project `quickqreate` is retired |
+| Switch | 15 October 2026: PR #14 merged 03:56 UTC, build live 03:58 UTC |
+| Certificates | Let's Encrypt for ziplume.com issued 15 October 2026, expires 13 January 2027; Traefik renews about 14 December 2026 (plain HTTP through Cloudflare, Always Use HTTPS off) |
 | Auto-deploy | GitHub webhook (push) → Coolify manual GitHub webhook |
 | Backups | Included in the host's daily backup with an off-server copy that is restored and hash-checked (first receipt: archive `20261014T003300Z`) |
 
@@ -91,14 +93,14 @@ schema and adds one trigger on `auth.users` to create profiles.
 
 ## 4. Google sign-in (owner, in the browser)
 
-In <https://console.cloud.google.com> (any project you own):
+In <https://console.cloud.google.com>, project **Ziplume** (`ziplume`) in the techitdave.com organization:
 
 1. **APIs & Services → OAuth consent screen**: External; app name **Ziplume**; support
    email; logo (use `public/icons/icon-512.png`); app domain `https://ziplume.com`;
    privacy policy `https://ziplume.com/privacy`; terms `https://ziplume.com/terms`;
    authorized domains `ziplume.com` and `techitdave.com`; scopes `openid`, `email`, `profile`.
    Publish the app.
-2. **Credentials → Create credentials → OAuth client ID → Web application**, named QuickQReate:
+2. **Clients → Create client → Web application**, named "Ziplume web":
    - Authorized JavaScript origins: `https://ziplume.com` and `https://qr.techitdave.com`
    - Authorized redirect URIs: `https://ziplume.com/auth/v1/callback` and `<API URL>/auth/v1/callback`
 3. Keep the client ID and client secret for step 5.
@@ -122,27 +124,36 @@ SMTP_ADMIN_EMAIL=no-reply@ziplume.com                                [GOTRUE_SMT
 SMTP_SENDER_NAME=Ziplume                                             [GOTRUE_SMTP_SENDER_NAME]
 ```
 
-Google is not in the default `.env`; add these to the **auth** service environment:
+Google is not in the default `.env`; these are the project environment keys (GoTrue names in
+brackets):
 
 ```
-GOTRUE_EXTERNAL_GOOGLE_ENABLED=true
-GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=<Google client ID>
-GOTRUE_EXTERNAL_GOOGLE_SECRET=<Google client secret>
-GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://ziplume.com/auth/v1/callback
+GOOGLE_ENABLED=true                                                  [GOTRUE_EXTERNAL_GOOGLE_ENABLED]
+GOOGLE_CLIENT_ID=<Google client ID>                                  [GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID]
+GOOGLE_SECRET=<Google client secret>                                 [GOTRUE_EXTERNAL_GOOGLE_SECRET]
+GOOGLE_REDIRECT_URI=https://ziplume.com/auth/v1/callback             [GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI]
 ```
+
+Without `GOOGLE_REDIRECT_URI` the redirect falls back to `${API_EXTERNAL_URL}/callback` (the
+Supabase address). Don't change `API_EXTERNAL_URL` itself: it is also the token issuer.
 
 Branded emails (after the app is deployed, so the template URLs resolve):
 
 ```
-GOTRUE_MAILER_TEMPLATES_CONFIRMATION=https://ziplume.com/email-templates/confirm.html
-GOTRUE_MAILER_TEMPLATES_RECOVERY=https://ziplume.com/email-templates/recovery.html
-GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE=https://ziplume.com/email-templates/email-change.html
-GOTRUE_MAILER_TEMPLATES_MAGIC_LINK=https://ziplume.com/email-templates/magic-link.html
-GOTRUE_MAILER_SUBJECTS_CONFIRMATION=Confirm your Ziplume account
-GOTRUE_MAILER_SUBJECTS_RECOVERY=Reset your Ziplume password
-GOTRUE_MAILER_SUBJECTS_EMAIL_CHANGE=Confirm your new email for Ziplume
-GOTRUE_MAILER_SUBJECTS_MAGIC_LINK=Your Ziplume sign-in link
+MAILER_TEMPLATES_CONFIRMATION=https://qr.techitdave.com/email-templates/confirm.html
+MAILER_TEMPLATES_RECOVERY=https://qr.techitdave.com/email-templates/recovery.html
+MAILER_TEMPLATES_EMAIL_CHANGE=https://qr.techitdave.com/email-templates/email-change.html
+MAILER_TEMPLATES_MAGIC_LINK=https://qr.techitdave.com/email-templates/magic-link.html
+MAILER_SUBJECTS_CONFIRMATION=Confirm your Ziplume account
+MAILER_SUBJECTS_RECOVERY=Reset your Ziplume password
+MAILER_SUBJECTS_EMAIL_CHANGE=Confirm your new email for Ziplume
+MAILER_SUBJECTS_MAGIC_LINK=Your Ziplume sign-in link
 ```
+
+(GoTrue names: `GOTRUE_MAILER_TEMPLATES_*`, `GOTRUE_MAILER_SUBJECTS_*`.) The templates load from the
+old address on purpose: it serves `/email-templates/*` forever and isn't behind Cloudflare, so
+the auth server's fetch is never challenged. The links inside use `{{ .SiteURL }}`, which is
+ziplume.com.
 
 On ziplume.com the app passes `/auth/v1/authorize`, `/auth/v1/callback` and
 `/storage/v1/object/public/*` through to the project, so Google's screen and public file links
@@ -154,10 +165,10 @@ with the server key) has to do.
 
 On the panel these values are set through the project's environment (`Manage` → `Configure`, or
 the panel's `POST /api/projects/<id>/env`, which merges keys). The pinned compose file does not wire
-Google sign-in or mail templates, so the project's `docker-compose.yml` adds these auth variables,
-read from `.env`: `GOTRUE_EXTERNAL_GOOGLE_ENABLED/CLIENT_ID/SECRET/REDIRECT_URI` and
-`GOTRUE_MAILER_TEMPLATES_*` / `GOTRUE_MAILER_SUBJECTS_*`. Redeploy from the panel; only the auth
-container is recreated.
+Google sign-in or mail templates, so the project's `docker-compose.yml` maps the keys above to
+the GoTrue names, including
+`GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-${API_EXTERNAL_URL}/callback}`.
+Redeploy from the panel; only the auth container is recreated.
 
 ## 6. DNS (owner, Cloudflare)
 
