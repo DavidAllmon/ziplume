@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { LogoMark } from "@/components/brand/Logo";
+import { Wordmark } from "@/components/brand/Logo";
 
 interface AuthCardProps {
   title: string;
@@ -13,7 +13,7 @@ export function AuthCard({ title, description, children, footer }: AuthCardProps
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 py-4 sm:py-10">
       <div className="flex flex-col items-center gap-3 text-center">
-        <LogoMark className="size-12" />
+        <Wordmark framed className="text-[28px]" />
         <h1 className="font-display text-2xl font-bold tracking-tight text-balance text-fg">
           {title}
         </h1>

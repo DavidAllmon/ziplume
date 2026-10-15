@@ -17,7 +17,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { LogoMark } from "@/components/brand/Logo";
+import { LogoMark, Wordmark } from "@/components/brand/Logo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Sheet } from "@/components/ui/Sheet";
 import { useProfile } from "@/features/profile/useProfile";
@@ -175,9 +175,10 @@ export function AppShell({
             href={codesHref}
             aria-label="QuickQReate codes"
             onClick={collapse}
-            className="rounded-control focus-ring"
+            className="flex items-center gap-2.5 rounded-control focus-ring"
           >
             <LogoMark className="size-8" />
+            <Wordmark className={cn("text-[15px]", !expanded && "max-lg:hidden")} />
           </Link>
           <button
             ref={toggleRef}
