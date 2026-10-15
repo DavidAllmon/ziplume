@@ -57,9 +57,12 @@ export function CreateMobileBar({
               <span className="flex items-center gap-1 text-sm font-semibold text-fg">
                 Preview <ChevronUp aria-hidden className="size-4 text-fg-muted" />
               </span>
+              {/* A save error gets two lines: it's what the person needs to read. */}
               <span
                 className={
-                  error ? "truncate text-[13px] text-danger" : "truncate text-[13px] text-fg-muted"
+                  error
+                    ? "line-clamp-2 text-[13px] text-danger"
+                    : "truncate text-[13px] text-fg-muted"
                 }
               >
                 {error ?? blocker ?? summary}

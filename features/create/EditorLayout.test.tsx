@@ -34,7 +34,14 @@ function renderLayout({
   dirty = false,
   type = "url",
   savedSlug,
-}: { mode?: "create" | "edit"; dirty?: boolean; type?: CodeTypeId; savedSlug?: string } = {}) {
+  error = null,
+}: {
+  mode?: "create" | "edit";
+  dirty?: boolean;
+  type?: CodeTypeId;
+  savedSlug?: string;
+  error?: string | null;
+} = {}) {
   const initial = savedSlug
     ? fromSavedCode(
         savedRow({
@@ -70,7 +77,7 @@ function renderLayout({
         mode,
         submitting: false,
         onSubmit: vi.fn(),
-        error: null,
+        error,
         dirty,
         onDiscard: vi.fn(),
       }}
@@ -83,6 +90,15 @@ const preview = () => within(screen.getByRole("complementary", { name: "Preview"
 const tabNames = () => screen.getAllByRole("tab").map((tab) => tab.textContent);
 
 describe("EditorLayout", () => {
+  it("shows a save error on up to two lines in the phone's bottom bar, not cut to one", () => {
+    const error = "That short link is already taken. Pick another one in Settings.";
+    renderLayout({ error });
+    const phoneBar = document.querySelector<HTMLElement>('[data-actionbar="create"]')!;
+    const line = within(phoneBar).getByText(error);
+    expect(line).toHaveClass("line-clamp-2");
+    expect(line).not.toHaveClass("truncate");
+  });
+
   it("hands the code owner's space to the content editor", () => {
     renderLayout({ mode: "edit" });
     expect(seen.editor?.workspace).toEqual({ ownerId: "owner-1" });

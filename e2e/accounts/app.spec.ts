@@ -154,6 +154,22 @@ test.describe("signed in as an owner", () => {
     }
   }
 
+  test("clicking a card's heading or blank space in the editor keeps the page where it is", async ({
+    page,
+  }) => {
+    await page.goto("codes/new?type=links");
+    const addLink = page.getByRole("button", { name: "Add link", exact: true });
+    while ((await page.getByLabel("Button text").count()) < 6) await addLink.click();
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const before = await page.evaluate(() => Math.round(window.scrollY));
+    expect(before).toBeGreaterThan(100);
+    await page.getByRole("heading", { level: 2, name: "Social icons" }).click();
+    await page.evaluate(
+      () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+    );
+    expect(await page.evaluate(() => Math.round(window.scrollY))).toBe(before);
+  });
+
   test("the editor keeps the sidebar a rail up to 1280px, so the form keeps its room", async ({
     page,
   }) => {

@@ -154,6 +154,19 @@ test.describe("signed in", () => {
       .toBeGreaterThanOrEqual(tabs.y + tabs.height);
   });
 
+  test("tapping a card's heading or blank space keeps the page where it is", async ({ page }) => {
+    await page.goto("codes/new?type=links");
+    await settled(page);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const before = await page.evaluate(() => Math.round(window.scrollY));
+    expect(before).toBeGreaterThan(100);
+    await page.getByRole("heading", { level: 2, name: "Social icons" }).tap();
+    await page.evaluate(
+      () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+    );
+    expect(await page.evaluate(() => Math.round(window.scrollY))).toBe(before);
+  });
+
   test("Preview opens full screen, with the whole device in view", async ({ page }) => {
     await page.goto("codes/new?type=links");
     await settled(page);
