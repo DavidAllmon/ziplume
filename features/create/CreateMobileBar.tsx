@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { QrTile } from "@/features/generator/preview/QrTile";
 
+import type { DeviceId } from "@/features/pages/preview/devices";
+
 import { PreviewColumn, type CreateControls, type PreviewView } from "./PreviewColumn";
 import type { CodeDraft } from "./useCodeDraft";
 
@@ -15,11 +17,17 @@ export function CreateMobileBar({
   draft,
   view,
   onViewChange,
+  device,
+  onDeviceChange,
+  liveHref,
   ...controls
 }: {
   draft: CodeDraft;
   view: PreviewView;
   onViewChange: (view: PreviewView) => void;
+  device: DeviceId;
+  onDeviceChange: (device: DeviceId) => void;
+  liveHref: string | null;
 } & CreateControls) {
   const [open, setOpen] = useState(false);
   const { renderOptions, summary, info, blocker } = draft;
@@ -76,7 +84,17 @@ export function CreateMobileBar({
       </div>
       <Sheet open={open} onClose={() => setOpen(false)} title="Preview">
         <div className="pt-2">
-          <PreviewColumn draft={draft} view={view} onViewChange={onViewChange} mode={mode} />
+          <PreviewColumn
+            draft={draft}
+            view={view}
+            onViewChange={onViewChange}
+            device={device}
+            onDeviceChange={onDeviceChange}
+            liveHref={liveHref}
+            // Leaves room to see the sheet's other controls, and to scroll it past the frame.
+            frameHeight="min(560px, 55dvh)"
+            mode={mode}
+          />
         </div>
       </Sheet>
     </>

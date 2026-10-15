@@ -23,11 +23,13 @@ import { copyToMyCodes } from "@/features/codes/duplicate";
 import { moveCodes } from "@/features/folders/api";
 import { MoveDialog } from "@/features/folders/MoveDialog";
 import { ExportPanel } from "@/features/generator/export/ExportPanel";
+import { PagePreview } from "@/features/generator/preview/PagePreview";
 import { QrTile } from "@/features/generator/preview/QrTile";
 import { DEFAULT_EXPORT } from "@/features/generator/state/defaults";
 import { shortLink, shortLinkLabel } from "@/lib/env";
+import { sanitizePage } from "@/lib/pages/sanitize";
 import { buildFilename, slugify } from "@/lib/qr/filename";
-import { isPageType } from "@/lib/qr/types";
+import { isPageType, type PageTypeId } from "@/lib/qr/types";
 import { useInBrowser } from "@/lib/useInBrowser";
 import type { FolderRow, QrCodeRow } from "@/types/supabase";
 
@@ -72,6 +74,8 @@ export function CodeOverview({
   fromTeammate: boolean;
 }) {
   const isPage = isPageType(initial.qr_type);
+  // What the page shows today, for the small preview (checked the same way /p checks it).
+  const page = isPage ? sanitizePage(initial.qr_type as PageTypeId, initial.content) : null;
   const router = useRouter();
   const toast = useToast();
   const inBrowser = useInBrowser();
@@ -216,9 +220,37 @@ export function CodeOverview({
                 title="Hosted page"
                 description="Edit the code to change the page. Printed codes always open the latest version."
               />
-              <div className="flex flex-col gap-5 px-5 pt-4 pb-6 sm:px-6">
-                {shortLinkRow}
-                {activeToggle}
+              {/* Side by side only when the card itself is wide enough: its column narrows
+                  between the app's sidebar and the Download panel. */}
+              <div className="@container px-5 pt-4 pb-6 sm:px-6">
+                <div className="grid gap-6 @min-[29rem]:grid-cols-[minmax(0,1fr)_12rem]">
+                  <div className="flex min-w-0 flex-col gap-5">
+                    {shortLinkRow}
+                    {activeToggle}
+                  </div>
+                  {page && code.slug && (
+                    <div className="flex flex-col items-center gap-3">
+                      {/* A glimpse only (View page and Edit page are beside it): it doesn't take
+                          the wheel, focus or a screen reader's attention from the code page. */}
+                      <div inert className="w-full max-w-48">
+                        <PagePreview
+                          type={initial.qr_type as PageTypeId}
+                          page={page}
+                          slug={code.slug}
+                          maxHeight={360}
+                        />
+                      </div>
+                      {canEdit && (
+                        <Link
+                          href={`${editHref}#content`}
+                          className={buttonClasses("outline", "sm")}
+                        >
+                          Edit page
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </Card>
           )}

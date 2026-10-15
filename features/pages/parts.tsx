@@ -24,8 +24,10 @@ export function PageShell({
 }) {
   const style = { "--page-accent": color, "--page-accent-fg": textColorOn(color) } as CSSProperties;
   return (
-    <div style={style} className={cn("min-h-full bg-bg", className)}>
-      <div className="h-36 bg-[var(--page-accent)] sm:h-44" aria-hidden={!header}>
+    // A container: the page lays out by its own width, so the editor's device preview matches a
+    // real screen of that size.
+    <div style={style} className={cn("@container min-h-full bg-bg", className)}>
+      <div className="h-36 bg-[var(--page-accent)] @min-[40rem]:h-44" aria-hidden={!header}>
         {header}
       </div>
       <main className="relative mx-auto -mt-24 flex max-w-lg flex-col gap-4 px-4 pb-10">
@@ -39,7 +41,7 @@ export function PageCard({ children, className }: { children: ReactNode; classNa
   return (
     <section
       className={cn(
-        "rounded-[1.5rem] border border-border bg-surface p-5 shadow-card sm:p-6",
+        "rounded-[1.5rem] border border-border bg-surface p-5 shadow-card @min-[40rem]:p-6",
         className,
       )}
     >
