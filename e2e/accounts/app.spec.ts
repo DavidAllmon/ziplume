@@ -134,6 +134,31 @@ test.describe("signed in as an owner", () => {
     });
   }
 
+  test("the editor keeps the sidebar a rail up to 1280px, so the form keeps its room", async ({
+    page,
+  }) => {
+    const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+    const width = async () => Math.round((await sidebar.boundingBox())!.width);
+    await page.setViewportSize({ width: 1100, height: 900 });
+    await page.goto("codes");
+    expect(await width()).toBe(256);
+
+    await page.goto("codes/new?type=links");
+    const bar = page.getByRole("region", { name: "Code" });
+    await expect(bar).toBeVisible();
+    expect(await width()).toBe(64);
+    // Opened, it lays over the editor instead of pushing it aside.
+    const left = (await bar.boundingBox())!.x;
+    await page.getByRole("button", { name: "Expand menu" }).click();
+    expect(await width()).toBe(256);
+    expect((await bar.boundingBox())!.x).toBe(left);
+    await page.keyboard.press("Escape");
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    expect(await width()).toBe(256);
+    await expect(page.getByRole("button", { name: "Expand menu" })).toBeHidden();
+  });
+
   test("the editor's top bar never covers the preview or a focused field", async ({ page }) => {
     await page.goto("codes/new?type=links");
     const bar = page.getByRole("region", { name: "Code" });

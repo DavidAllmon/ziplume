@@ -85,7 +85,7 @@ export function FolderNav({
   }
 
   return (
-    <div className={cn("flex flex-col", !expanded && "max-lg:hidden")}>
+    <div className={cn("flex flex-col", !expanded && "rail:hidden")}>
       <ul aria-label="Folders" className="ml-4 flex flex-col gap-0.5 border-l border-border pl-2">
         <li>
           <Link

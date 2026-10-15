@@ -3,6 +3,22 @@
 /* Dark mode follows the data-theme attribute set by next-themes (system, light or dark). */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* "rail:": the sidebar shows as a narrow icon rail (expand it for labels): below 1024px, or below
+   1280px in the code editor, so the form keeps its room. Registered before phone:, which wins
+   where both match. */
+@custom-variant rail {
+  [data-app-shell]:not([data-editor]) & {
+    @media (width < 64rem) {
+      @slot;
+    }
+  }
+  [data-app-shell][data-editor] & {
+    @media (width < 80rem) {
+      @slot;
+    }
+  }
+}
+
 /* "phone:": the app's phone layout (top bar and bottom tabs, no sidebar): below 640px, or below
    768px in the code editor, which then takes the whole screen. */
 @custom-variant phone {

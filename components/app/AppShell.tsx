@@ -63,11 +63,11 @@ function SideLink({
   onNavigate: () => void;
 }) {
   const Icon = item.icon;
-  const className = cn(sideLinkClass, !expanded && "max-lg:justify-center max-lg:px-0");
+  const className = cn(sideLinkClass, !expanded && "rail:justify-center rail:px-0");
   const content = (
     <>
       <Icon aria-hidden />
-      <span className={cn("truncate", !expanded && "max-lg:sr-only")}>{item.label}</span>
+      <span className={cn("truncate", !expanded && "rail:sr-only")}>{item.label}</span>
     </>
   );
   return item.external ? (
@@ -167,7 +167,7 @@ export function AppShell({
         <div
           aria-hidden
           onClick={collapse}
-          className="fixed inset-0 z-30 hidden bg-black/30 sm:block lg:hidden"
+          className="fixed inset-0 z-30 hidden bg-black/30 rail:block"
         />
       )}
 
@@ -176,10 +176,10 @@ export function AppShell({
         data-surface="sidebar"
         className={cn(
           "fixed inset-y-0 left-0 z-40 flex flex-col gap-3 overflow-y-auto border-r border-border bg-surface px-3 py-4 phone:hidden",
-          expanded ? "w-64 shadow-pop" : "w-16 lg:w-64",
+          expanded ? "w-64 shadow-pop" : "w-64 rail:w-16",
         )}
       >
-        <div className={cn("flex items-center gap-2 px-1", !expanded && "max-lg:flex-col")}>
+        <div className={cn("flex items-center gap-2 px-1", !expanded && "rail:flex-col")}>
           <Link
             href={codesHref}
             aria-label="Ziplume codes"
@@ -187,7 +187,7 @@ export function AppShell({
             className="flex items-center gap-2.5 rounded-control focus-ring"
           >
             <LogoMark className="size-8" />
-            <Wordmark className={cn("text-[15px]", !expanded && "max-lg:hidden")} />
+            <Wordmark className={cn("text-[15px]", !expanded && "rail:hidden")} />
           </Link>
           <button
             ref={toggleRef}
@@ -195,7 +195,7 @@ export function AppShell({
             aria-label={expanded ? "Collapse menu" : "Expand menu"}
             aria-expanded={expanded}
             onClick={() => setOpenedAt(expanded ? null : here)}
-            className="grid size-10 place-items-center rounded-control text-fg-muted focus-ring hover:bg-surface-2 hover:text-fg lg:hidden [&_svg]:size-5"
+            className="hidden size-10 place-items-center rounded-control text-fg-muted focus-ring hover:bg-surface-2 hover:text-fg rail:grid [&_svg]:size-5"
           >
             {expanded ? <PanelLeftClose aria-hidden /> : <PanelLeftOpen aria-hidden />}
           </button>
@@ -221,7 +221,7 @@ export function AppShell({
           <div
             className={cn(
               "flex min-h-11 items-center justify-between gap-2 px-2.5 text-sm font-medium text-fg-muted",
-              !expanded && "max-lg:hidden",
+              !expanded && "rail:hidden",
             )}
           >
             Theme <ThemeToggle />
@@ -248,7 +248,7 @@ export function AppShell({
       <main
         id="main"
         className={cn(
-          "ml-16 px-4 pt-5 pb-(--app-end) sm:px-6 lg:ml-64 lg:px-10 lg:pt-8 phone:ml-0",
+          "ml-64 px-4 pt-5 pb-(--app-end) sm:px-6 lg:px-10 lg:pt-8 rail:ml-16 phone:ml-0",
           // The editor's own top bar is the first thing on a phone's screen.
           editor && "max-md:pt-0",
         )}
