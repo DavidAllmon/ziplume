@@ -125,13 +125,33 @@ test.describe("signed in as an owner", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Flyers" })).toBeVisible();
   });
 
-  for (const path of ["codes", "codes/new", "codes/new?type=links", "team"]) {
+  for (const path of ["codes", "codes/new", "team"]) {
     test(`/${path} passes axe in dark mode`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: "dark" });
       await page.goto(path);
       await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
       await expectNoAxeViolations(page);
     });
+  }
+
+  // The editor in dark mode at a phone, tablet and desktop width (spec 7).
+  for (const path of [
+    "codes/new?type=links",
+    "codes/new?type=business",
+    "codes/new?type=event",
+    "codes/{menu}/edit",
+  ]) {
+    for (const width of WIDTHS) {
+      test(`/${path} passes axe in dark mode at ${width}px`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await page.emulateMedia({ colorScheme: "dark" });
+        await page.goto(resolve(path));
+        await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+        await expect(page.locator("main h1").first()).toBeVisible();
+        await expectNoSidewaysScroll(page);
+        await expectNoAxeViolations(page);
+      });
+    }
   }
 
   test("the editor keeps the sidebar a rail up to 1280px, so the form keeps its room", async ({
