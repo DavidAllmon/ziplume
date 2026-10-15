@@ -1,11 +1,12 @@
 "use client";
 
+import { arrayMove, useSortable } from "@dnd-kit/sortable";
 import { Switch } from "@headlessui/react";
 import {
-  ArrowUp,
   FileAudio,
   FileText,
   FileVideo,
+  GripVertical,
   Loader2,
   Plus,
   Trash2,
@@ -13,7 +14,7 @@ import {
 } from "lucide-react";
 import { useContext, useId, useState, type ReactNode } from "react";
 
-import { Button, IconButton } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import { ColorField } from "@/components/ui/ColorField";
 import { Field } from "@/components/ui/Field";
 import { Select, Textarea, TextInput } from "@/components/ui/inputs";
@@ -25,6 +26,8 @@ import { mediaUrl } from "@/lib/pages/urls";
 
 import { fileSize, SocialIcon, socialLabel } from "../parts";
 import { MediaOwnerContext } from "./MediaOwner";
+import { RowMenu } from "./sortable/RowMenu";
+import { SortableArea } from "./sortable/SortableArea";
 import { SortableList } from "./sortable/SortableList";
 import { ACCEPT, uploadMedia, type MediaKind } from "./upload";
 
@@ -338,42 +341,14 @@ export function ImagesField({
     }
   }
 
+  const ids = value.map((media) => media.path);
+  const names = value.map((_, i) => `image ${i + 1}`);
+  const moveImage = (from: number, to: number) => {
+    if (to >= 0 && to < value.length) onChange(arrayMove(value, from, to));
+  };
+
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-sm font-medium text-fg">Images</span>
-      {value.length > 0 && (
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {value.map((image, i) => (
-            <li key={image.path} className="group relative">
-              {/* eslint-disable-next-line @next/next/no-img-element -- uploaded file preview */}
-              <img
-                src={mediaUrl(image.path)}
-                alt={`Image ${i + 1}`}
-                className="aspect-square w-full rounded-lg object-cover"
-              />
-              <div className="absolute inset-x-1 bottom-1 flex justify-between">
-                <IconButton
-                  label={`Move image ${i + 1} earlier`}
-                  size="icon-sm"
-                  variant="secondary"
-                  disabled={i === 0}
-                  onClick={() => onChange(move(value, i, -1))}
-                >
-                  <ArrowUp aria-hidden className="-rotate-90" />
-                </IconButton>
-                <IconButton
-                  label={`Remove image ${i + 1}`}
-                  size="icon-sm"
-                  variant="secondary"
-                  onClick={() => onChange(value.filter((_, j) => j !== i))}
-                >
-                  <Trash2 aria-hidden />
-                </IconButton>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="flex flex-col gap-3">
       {value.length < max && (
         <label
           htmlFor={inputId}
@@ -405,6 +380,29 @@ export function ImagesField({
           />
         </label>
       )}
+      {value.length > 0 && (
+        <SortableArea ids={ids} names={names} grid onMove={moveImage}>
+          <ul aria-label="Images" className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {value.map((media, i) => (
+              <ImageTile
+                key={media.path}
+                id={media.path}
+                name={names[i]!}
+                src={mediaUrl(media.path)}
+              >
+                <RowMenu
+                  layout="grid"
+                  name={names[i]!}
+                  first={i === 0}
+                  last={i === value.length - 1}
+                  onMove={(by) => moveImage(i, i + by)}
+                  onRemove={() => onChange(value.filter((_, j) => j !== i))}
+                />
+              </ImageTile>
+            ))}
+          </ul>
+        </SortableArea>
+      )}
       {(problem || error) && (
         <p role="alert" className="text-sm text-danger">
           {problem ?? error}
@@ -414,12 +412,59 @@ export function ImagesField({
   );
 }
 
-export function move<T>(list: T[], index: number, by: number): T[] {
-  const target = index + by;
-  if (target < 0 || target >= list.length) return list;
-  const next = [...list];
-  [next[index], next[target]] = [next[target]!, next[index]!];
-  return next;
+/** One uploaded image in the grid: a drag handle on top, its ⋯ menu below. */
+function ImageTile({
+  id,
+  name,
+  src,
+  children,
+}: {
+  id: string;
+  name: string;
+  src: string;
+  children: ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+  return (
+    <li
+      ref={setNodeRef}
+      style={{
+        transform: transform
+          ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
+          : undefined,
+        transition,
+      }}
+      className={cn("relative", isDragging && "z-10")}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- uploaded file preview */}
+      <img
+        src={src}
+        alt={name.replace(/^i/, "I")}
+        className="aspect-square w-full rounded-lg object-cover"
+      />
+      <button
+        type="button"
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        aria-label={`Drag ${name}`}
+        className="absolute top-1 left-1 grid size-9 cursor-grab touch-none place-items-center rounded-control bg-surface/90 text-fg shadow-sm focus-ring active:cursor-grabbing"
+      >
+        <GripVertical aria-hidden className="size-4" />
+      </button>
+      <div className="absolute right-1 bottom-1 rounded-control bg-surface/90 shadow-sm">
+        {children}
+      </div>
+    </li>
+  );
 }
 
 /** How a row is named in its controls: link “Shop”, or link 2 while it has no text. */
