@@ -90,7 +90,7 @@ export default function DevelopersPage() {
         once, so store it somewhere safe, like your app’s secret settings. Send it with every
         request:
       </p>
-      <Code>{`Authorization: Bearer qq_your_key_here`}</Code>
+      <Code>{`Authorization: Bearer zl_your_key_here`}</Code>
       <p>
         A key acts as you, on the codes in your own account. Keep keys on servers: anyone with a key
         can change your codes. You can revoke a key at any time.

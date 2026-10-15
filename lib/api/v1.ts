@@ -60,16 +60,20 @@ function rateLimited(key: string, now = Date.now()): boolean {
 
 export type Admin = NonNullable<ReturnType<typeof getAdminSupabase>>;
 
+/** The API key in an Authorization header: zl_ keys, or qq_ keys issued before Ziplume. */
+export function apiKeyFrom(header: string | null): string | null {
+  return /^Bearer\s+((?:qq|zl)_[0-9a-f]{48})$/i.exec(header ?? "")?.[1] ?? null;
+}
+
 /** The key owner's id and an admin client, or an error response. */
 export async function authenticate(
   request: Request,
 ): Promise<{ userId: string; admin: Admin } | Response> {
   const admin = getAdminSupabase();
   if (!admin) return apiError(503, "unavailable", "The API isn't available on this server.");
-  const match = /^Bearer\s+(qq_[0-9a-f]{48})$/i.exec(request.headers.get("authorization") ?? "");
-  if (!match)
-    return apiError(401, "unauthorized", "Send your API key as: Authorization: Bearer qq_…");
-  const key = match[1]!;
+  const key = apiKeyFrom(request.headers.get("authorization"));
+  if (!key)
+    return apiError(401, "unauthorized", "Send your API key as: Authorization: Bearer zl_…");
   if (rateLimited(key))
     return apiError(429, "rate_limited", "Too many requests. The limit is 120 per minute.");
   const { data, error } = await admin.rpc("api_key_user", { p_key: key });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { imageOptions, parseCreate, parseUpdate, withLinks } from "./v1";
+import { apiKeyFrom, imageOptions, parseCreate, parseUpdate, withLinks } from "./v1";
 
 const USER = "11111111-1111-4111-8111-111111111111";
 
@@ -163,5 +163,21 @@ describe("withLinks and imageOptions", () => {
       /format/,
     );
     expect(await errorOf(imageOptions(new URLSearchParams("fg=zzz")) as never)).toMatch(/hex/);
+  });
+});
+
+describe("apiKeyFrom", () => {
+  const key = (prefix: string) => `${prefix}_${"a1".repeat(24)}`;
+
+  it("accepts qq_ and zl_ keys", () => {
+    expect(apiKeyFrom(`Bearer ${key("zl")}`)).toBe(key("zl"));
+    expect(apiKeyFrom(`Bearer ${key("qq")}`)).toBe(key("qq"));
+  });
+
+  it("refuses anything else", () => {
+    expect(apiKeyFrom(`Bearer ${key("xx")}`)).toBeNull();
+    expect(apiKeyFrom(key("zl"))).toBeNull();
+    expect(apiKeyFrom(`Bearer zl_short`)).toBeNull();
+    expect(apiKeyFrom(null)).toBeNull();
   });
 });
