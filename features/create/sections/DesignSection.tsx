@@ -26,15 +26,20 @@ import { Swatches } from "@/features/generator/style/StyleCard";
 import { TemplatesSection } from "@/features/generator/style/TemplatesSection";
 import { LOGO_ICONS } from "@/lib/qr/logo-icons";
 
-/** Step 3: start from a style, then colors, shape, logo and frame (several can be open). */
+import { matchPagePatch } from "../matchPage";
+
+/** The QR code tab: start from a style, then colors, shape, image and frame (several can be open). */
 export function DesignSection({
   design,
   dispatch,
   onResetToStyle,
+  matchColor,
 }: {
   design: DesignState;
   dispatch: (action: GeneratorAction) => void;
   onResetToStyle: () => void;
+  /** A hosted page's color, for "Match my page"; absent for other codes. */
+  matchColor?: string | null;
 }) {
   const logo = design.logo
     ? "Your image"
@@ -45,8 +50,7 @@ export function DesignSection({
     <Card aria-labelledby="design-heading">
       <CardHeader
         id="design-heading"
-        step={3}
-        title="Design"
+        title="QR code design"
         description="Start from a style, then make it yours. The preview updates as you go."
         action={
           <Button variant="ghost" onClick={onResetToStyle}>
@@ -55,6 +59,19 @@ export function DesignSection({
           </Button>
         }
       />
+      {matchColor && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 sm:px-6">
+          <p className="text-sm text-fg-muted">Use your page’s color for the code.</p>
+          <Button
+            variant="outline"
+            onClick={() =>
+              dispatch({ type: "setDesign", patch: matchPagePatch(matchColor, design) })
+            }
+          >
+            Match my page
+          </Button>
+        </div>
+      )}
       <div className="mt-4">
         <Section
           title="Start from a style"
@@ -74,7 +91,7 @@ export function DesignSection({
         >
           <ShapeSection design={design} dispatch={dispatch} />
         </Section>
-        <Section title="Logo" icon={<ImageIcon />} summary={logo}>
+        <Section title="Image in the code" icon={<ImageIcon />} summary={logo}>
           <LogoSection design={design} dispatch={dispatch} />
         </Section>
         <Section

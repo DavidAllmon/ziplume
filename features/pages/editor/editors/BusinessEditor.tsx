@@ -11,7 +11,7 @@ import {
   TextField,
   ToggleField,
 } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function BusinessEditor({ page, set, errors }: EditorProps<BusinessPage>) {
   return (
@@ -116,7 +116,6 @@ export function BusinessEditor({ page, set, errors }: EditorProps<BusinessPage>)
         max={LIMITS.socials}
         errors={errors}
       />
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

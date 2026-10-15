@@ -3,7 +3,7 @@
 import { type PdfPage } from "@/lib/pages/types";
 
 import { AreaField, MediaField, TextField, ToggleField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function PdfEditor({
   page,
@@ -35,7 +35,6 @@ export function PdfEditor({
         checked={page.direct}
         onChange={(direct) => set({ direct })}
       />
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

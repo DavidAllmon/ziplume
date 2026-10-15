@@ -3,7 +3,7 @@
 import { LIMITS, type LinksPage } from "@/lib/pages/types";
 
 import { AreaField, LinksField, MediaField, SocialsField, TextField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function LinksEditor({ page, set, errors }: EditorProps<LinksPage>) {
   return (
@@ -45,7 +45,6 @@ export function LinksEditor({ page, set, errors }: EditorProps<LinksPage>) {
         max={LIMITS.socials}
         errors={errors}
       />
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

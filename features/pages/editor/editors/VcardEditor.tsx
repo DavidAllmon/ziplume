@@ -3,7 +3,7 @@
 import { LIMITS, type VcardPage } from "@/lib/pages/types";
 
 import { AreaField, ListField, MediaField, SocialsField, TextField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
   return (
@@ -133,7 +133,6 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
         max={LIMITS.socials}
         errors={errors}
       />
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

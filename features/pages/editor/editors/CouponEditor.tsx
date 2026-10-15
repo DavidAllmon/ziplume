@@ -3,7 +3,7 @@
 import { type CouponPage } from "@/lib/pages/types";
 
 import { AreaField, MediaField, TextField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function CouponEditor({ page, set, errors }: EditorProps<CouponPage>) {
   return (
@@ -88,7 +88,6 @@ export function CouponEditor({ page, set, errors }: EditorProps<CouponPage>) {
         value={page.image}
         onChange={(image) => set({ image })}
       />
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

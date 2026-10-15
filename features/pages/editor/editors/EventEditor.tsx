@@ -3,7 +3,7 @@
 import { type EventPage } from "@/lib/pages/types";
 
 import { AreaField, MediaField, TextField, TimeZoneField, ToggleField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function EventEditor({ page, set, errors }: EditorProps<EventPage>) {
   return (
@@ -93,7 +93,6 @@ export function EventEditor({ page, set, errors }: EditorProps<EventPage>) {
         value={page.image}
         onChange={(image) => set({ image })}
       />
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

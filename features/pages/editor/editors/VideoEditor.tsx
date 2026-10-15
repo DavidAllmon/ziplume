@@ -4,7 +4,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { type VideoPage } from "@/lib/pages/types";
 
 import { AreaField, MediaField, TextField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function VideoEditor({
   page,
@@ -51,7 +51,6 @@ export function VideoEditor({
         value={page.description}
         onChange={(description) => set({ description })}
       />
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

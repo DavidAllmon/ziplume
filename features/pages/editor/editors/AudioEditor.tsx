@@ -3,7 +3,7 @@
 import { type AudioPage } from "@/lib/pages/types";
 
 import { AreaField, MediaField, TextField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function AudioEditor({
   page,
@@ -56,7 +56,6 @@ export function AudioEditor({
         value={page.description}
         onChange={(description) => set({ description })}
       />
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

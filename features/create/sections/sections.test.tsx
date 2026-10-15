@@ -4,15 +4,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ContentEditor } from "@/features/generator/content/types";
 import { initialState } from "@/features/generator/state/defaults";
+import { PAGE_DEFAULTS } from "@/lib/pages/types";
 import type { CodeTypeId } from "@/lib/qr/types";
 import type { FolderRow } from "@/types/supabase";
 
 import { DEFAULT_SETTINGS } from "../state";
 import { ContentSection } from "./ContentSection";
 import { DesignSection } from "./DesignSection";
-import { NameFolderSection } from "./NameFolderSection";
+import { FolderSection } from "./FolderSection";
+import { LookSection } from "./LookSection";
 import { SettingsSection, type SavedSettings } from "./SettingsSection";
-import { TypeSection } from "./TypeSection";
 
 // Style previews draw on a canvas, which jsdom does not have.
 vi.mock("@/features/generator/preview/QrView", () => ({ QrView: () => null }));
@@ -23,38 +24,6 @@ const editorFor = (type: CodeTypeId): ContentEditor => ({
   setPage: vi.fn(),
   pageErrors: {},
   workspace: null,
-});
-
-describe("TypeSection", () => {
-  it("offers eight common types and finds the rest by search", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<TypeSection value="url" onChange={onChange} />);
-    expect(screen.getAllByRole("radio")).toHaveLength(8);
-    expect(screen.getByRole("radio", { name: /Open a website/ })).toBeChecked();
-    await user.click(screen.getByRole("button", { name: "More types" }));
-    await user.type(screen.getByLabelText("Search types"), "whatsapp");
-    await user.click(screen.getByRole("button", { name: /WhatsApp/ }));
-    expect(onChange).toHaveBeenCalledWith("whatsapp");
-    expect(screen.queryByLabelText("Search types")).toBeNull();
-  });
-
-  it("says when no type matches", async () => {
-    const user = userEvent.setup();
-    render(<TypeSection value="url" onChange={vi.fn()} />);
-    await user.click(screen.getByRole("button", { name: "More types" }));
-    await user.type(screen.getByLabelText("Search types"), "zzz");
-    expect(screen.getByText("No types match “zzz”.")).toBeInTheDocument();
-  });
-
-  it("shows a less common type as its own tile, and Contact for both contact kinds", () => {
-    const { rerender } = render(<TypeSection value="whatsapp" onChange={vi.fn()} />);
-    expect(screen.getAllByRole("radio")).toHaveLength(9);
-    expect(screen.getByRole("radio", { name: /Start a WhatsApp chat/ })).toBeChecked();
-    rerender(<TypeSection value="vcard" onChange={vi.fn()} />);
-    expect(screen.getAllByRole("radio")).toHaveLength(8);
-    expect(screen.getByRole("radio", { name: /Share contact details/ })).toBeChecked();
-  });
 });
 
 describe("ContentSection", () => {
@@ -75,6 +44,37 @@ describe("ContentSection", () => {
 });
 
 describe("DesignSection", () => {
+  it("calls the logo the image in the code, and matches a hosted page's color", async () => {
+    const user = userEvent.setup();
+    const dispatch = vi.fn();
+    const design = initialState().design;
+    const { rerender } = render(
+      <DesignSection design={design} dispatch={dispatch} onResetToStyle={vi.fn()} />,
+    );
+    expect(screen.getByRole("heading", { name: "QR code design" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Image in the code/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Match my page" })).toBeNull();
+    rerender(
+      <DesignSection
+        design={design}
+        dispatch={dispatch}
+        onResetToStyle={vi.fn()}
+        matchColor="#BE123C"
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Match my page" }));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "setDesign",
+      patch: {
+        fgColor: "#BE123C",
+        frameColor: "#BE123C",
+        gradientType: "none",
+        cornerColor: null,
+        cornerDotColor: null,
+      },
+    });
+  });
+
   it("starts from a style, keeps scan reliability under More design options, and resets", async () => {
     const user = userEvent.setup();
     const onResetToStyle = vi.fn();
@@ -170,41 +170,34 @@ describe("SettingsSection", () => {
   });
 });
 
-describe("NameFolderSection", () => {
-  it("suggests a name and files the code in a folder", async () => {
+describe("LookSection", () => {
+  it("changes the page's color", async () => {
     const user = userEvent.setup();
-    const onFolder = vi.fn();
+    const onChange = vi.fn();
+    const page = PAGE_DEFAULTS.links();
+    render(<LookSection page={page} onChange={onChange} />);
+    expect(screen.getByRole("heading", { name: "Page look" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Use #BE123C" }));
+    expect(onChange).toHaveBeenCalledWith({ ...page, color: "#BE123C" });
+  });
+});
+
+describe("FolderSection", () => {
+  it("files the code in a folder", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
     const folders = [
       { id: "f1", name: "Flyers" },
       { id: "f2", name: "Menus" },
     ] as FolderRow[];
-    render(
-      <NameFolderSection
-        name=""
-        placeholder="example.com"
-        onName={vi.fn()}
-        folderId="f1"
-        folders={folders}
-        onFolder={onFolder}
-      />,
-    );
-    expect(screen.getByLabelText("Code name")).toHaveAttribute("placeholder", "example.com");
+    render(<FolderSection folderId="f1" folders={folders} onChange={onChange} />);
     expect(screen.getByLabelText("Folder")).toHaveValue("f1");
     await user.selectOptions(screen.getByLabelText("Folder"), "");
-    expect(onFolder).toHaveBeenCalledWith(null);
+    expect(onChange).toHaveBeenCalledWith(null);
   });
 });
 
 describe("the sections when editing a saved code", () => {
-  it("shows the type without letting it change", () => {
-    render(<TypeSection value="wifi" onChange={vi.fn()} locked />);
-    expect(screen.queryAllByRole("radio")).toHaveLength(0);
-    expect(screen.queryByRole("button", { name: "More types" })).toBeNull();
-    expect(
-      screen.getByText("Set when the code was created. Duplicate it to make a different type."),
-    ).toBeInTheDocument();
-  });
-
   it("hides the contact-kind switch", () => {
     render(<ContentSection editor={editorFor("contact")} onTypeChange={vi.fn()} typeLocked />);
     expect(screen.queryByRole("radiogroup", { name: "How should it work?" })).toBeNull();

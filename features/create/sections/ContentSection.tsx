@@ -22,7 +22,7 @@ const CONTACT_KINDS = [
   },
 ] as const;
 
-/** Step 2: the chosen type's form. Contact first asks how it should work. */
+/** The Content tab: the chosen type's form. Contact first asks how it should work. */
 export function ContentSection({
   editor,
   onTypeChange,
@@ -36,12 +36,7 @@ export function ContentSection({
   const type = editor.state.activeType;
   return (
     <Card aria-labelledby="content-heading">
-      <CardHeader
-        id="content-heading"
-        step={2}
-        title="Content"
-        description={typeDescription(type)}
-      />
+      <CardHeader id="content-heading" title="Content" description={typeDescription(type)} />
       <div className="flex flex-col gap-6 px-5 pt-4 pb-6 sm:px-6">
         {isContactType(type) && !typeLocked && (
           <RadioGroup

@@ -29,7 +29,7 @@ export interface SavedSettings {
   onRemovePassword: (remove: boolean) => void;
 }
 
-/** Step 4: tracking, a password, active dates and the short link. Off, with why, when static. */
+/** The Settings tab: tracking, a password, active dates and the short link. Off, with why, when static. */
 export function SettingsSection({
   type,
   settings,
@@ -56,7 +56,6 @@ export function SettingsSection({
     <Card aria-labelledby="settings-heading">
       <CardHeader
         id="settings-heading"
-        step={4}
         title="Settings"
         description="Tracking, a password, active dates and the short link."
       />

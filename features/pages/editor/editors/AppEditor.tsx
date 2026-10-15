@@ -3,7 +3,7 @@
 import { type AppPage } from "@/lib/pages/types";
 
 import { AreaField, MediaField, TextField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function AppEditor({ page, set, errors }: EditorProps<AppPage>) {
   return (
@@ -67,7 +67,6 @@ export function AppEditor({ page, set, errors }: EditorProps<AppPage>) {
         iPhones go straight to the App Store and Android phones to Google Play. Everyone else sees a
         page with both.
       </p>
-      <Appearance color={page.color} set={set} />
     </>
   );
 }
