@@ -12,7 +12,7 @@ function localDateTime(daysFromNow: number) {
 const createButton = (page: Page) =>
   page.getByRole("complementary", { name: "Preview" }).getByRole("button", { name: "Create code" });
 
-const draftKey = () => `quickqreate:draft:v2:${seed().makerId}`;
+const draftKey = () => `ziplume:draft:v2:${seed().makerId}`;
 const storedDraft = (page: Page) =>
   page.evaluate((key) => window.localStorage.getItem(key), draftKey());
 

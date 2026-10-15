@@ -1,11 +1,22 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { accountsEnabled } from "@/lib/env";
+import { accountsEnabled, SITE_URL } from "@/lib/env";
+import { legacyHostAction, legacyHosts } from "@/lib/hosts";
 import { editRedirect } from "@/lib/redirects";
 import { refreshSession } from "@/lib/supabase/proxy";
 
+/** The pages that read the signed-in session; only these refresh it. */
+const SESSION_PATHS = /^\/(?:$|(?:codes|team|settings|account)(?:\/|$))/;
+
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
+
+  // An old address (LEGACY_HOSTS) keeps answering printed codes and forwards everything else.
+  const forward = legacyHostAction(request.headers.get("host"), pathname, search, {
+    siteUrl: SITE_URL,
+    legacyHosts: legacyHosts(),
+  });
+  if (forward) return NextResponse.redirect(forward, 308);
 
   // Dynamic codes are encoded in uppercase (HTTPS://QR.EXAMPLE/R/AB3X9Q) so the QR can use its
   // compact alphanumeric mode; route those to the lowercase /r/ handler.
@@ -19,17 +30,11 @@ export async function proxy(request: NextRequest) {
   const edit = editRedirect(request.nextUrl);
   if (edit) return NextResponse.redirect(edit, 308);
 
-  if (!accountsEnabled) return NextResponse.next();
+  if (!accountsEnabled || !SESSION_PATHS.test(pathname)) return NextResponse.next();
   return refreshSession(request);
 }
 
 export const config = {
-  matcher: [
-    "/",
-    "/R/:path*",
-    "/codes/:path*",
-    "/team/:path*",
-    "/settings/:path*",
-    "/account/:path*",
-  ],
+  // Every request, so the old-address rule sees them all; Next's own build files skip it.
+  matcher: ["/((?!_next/static|_next/image).*)"],
 };

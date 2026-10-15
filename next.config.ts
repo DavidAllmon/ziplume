@@ -17,6 +17,17 @@ const nextConfig: NextConfig = {
       { source: "/account", destination: "/settings", permanent: true },
     ];
   },
+  // Google sign-in goes through the site's own address, so Google's screen names it (spec 5.1).
+  // Public files have their own route (app/storage/…), which also sets their edge lifetime.
+  // Uploads, the database API and realtime still talk to Supabase directly.
+  async rewrites() {
+    const supabase = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, "");
+    if (!supabase) return [];
+    return ["/auth/v1/authorize", "/auth/v1/callback"].map((source) => ({
+      source,
+      destination: `${supabase}${source}`,
+    }));
+  },
 };
 
 export default nextConfig;

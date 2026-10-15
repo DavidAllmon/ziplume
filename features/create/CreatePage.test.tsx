@@ -188,7 +188,7 @@ describe("CreatePage", () => {
     renderPage();
     await user.click(await screen.findByRole("button", { name: "Discard" }));
     expect(screen.queryByText(/unfinished code/)).toBeNull();
-    expect(window.localStorage.getItem("quickqreate:draft:v2:user-1")).toBeNull();
+    expect(window.localStorage.getItem("ziplume:draft:v2:user-1")).toBeNull();
     expect(screen.getByLabelText("Code name")).toHaveValue("");
   });
 

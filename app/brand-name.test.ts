@@ -19,8 +19,6 @@ const OLD_NAME = /quick\s?q\s?r?eate/i;
 const ALLOWED = [
   /quickqreate\.invalid/, // sentinel base URL for parsing redirect paths
   /UID:\$\{uid\}@quickqreate/, // calendar event ids: changing them duplicates events
-  /quickqreate:draft:v2:/, // storage key, renamed with the move to ziplume.com
-  /quickqreate:codes-view:\$\{userId\}/, // storage key, renamed with the move to ziplume.com
   /quickqreate:v1/, // legacy key the generator only deletes
   /\^\\\/QuickQReate\//, // the old GitHub Pages path the redirect page strips
   /github\.com\/DavidAllmon\/QuickQReate/, // the repo, renamed with the move to ziplume.com
@@ -43,6 +41,21 @@ describe("the old name", () => {
         .filter(({ line }) => OLD_NAME.test(line) && !ALLOWED.some((ok) => ok.test(line)))
         .map(({ at, line }) => `${at}  ${line.trim()}`),
     );
+    expect(leftovers).toEqual([]);
+  });
+});
+
+describe("the old address", () => {
+  it("appears nowhere people can see it (it lives on only in LEGACY_HOSTS)", () => {
+    const leftovers = [...FOLDERS, "scripts"]
+      .flatMap((folder) => files(resolve(ROOT, folder)))
+      .flatMap((path) =>
+        readFileSync(path, "utf8")
+          .split("\n")
+          .map((line, i) => ({ line, at: `${relative(ROOT, path)}:${i + 1}` }))
+          .filter(({ line }) => /qr\.techitdave\.com/i.test(line))
+          .map(({ at, line }) => `${at}  ${line.trim()}`),
+      );
     expect(leftovers).toEqual([]);
   });
 });

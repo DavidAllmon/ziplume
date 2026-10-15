@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 import { paintSvg, renderSvg, type RenderOptions } from "@/lib/qr/renderer";
 
 /** Sample content drawn faintly while the user hasn't entered anything yet. */
-const PLACEHOLDER = "https://qr.techitdave.com";
+const PLACEHOLDER = "https://ziplume.com";
 
 interface QrViewProps {
   options: RenderOptions;

@@ -26,7 +26,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "node scripts/start.mjs",
-    env: { PORT: String(PORT) },
+    env: { PORT: String(PORT), LEGACY_HOSTS: "qr.techitdave.com" },
     url: `http://localhost:${PORT}/api/health`,
     reuseExistingServer: !process.env.CI,
   },

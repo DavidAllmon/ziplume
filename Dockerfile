@@ -1,4 +1,4 @@
-# QuickQReate production image for Coolify.
+# Ziplume production image for Coolify.
 # NEXT_PUBLIC_* values are inlined at build time, so pass them as build arguments.
 
 FROM node:22-alpine AS deps

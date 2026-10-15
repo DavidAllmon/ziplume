@@ -48,6 +48,13 @@ describe("inviteEmail", () => {
     const tracked = inviteEmail(withInviter({ avatarUrl: "https://tracker.example/p.gif" })).html;
     expect(tracked).not.toContain("tracker.example");
     expect(tracked).toContain(">DA</div>");
+    const uploaded = "https://ziplume.example/storage/v1/object/public/avatars/u1/a.webp";
+    expect(
+      inviteEmail({
+        ...withInviter({ avatarUrl: uploaded }),
+        photoOrigins: ["https://project.example", "https://ziplume.example"],
+      }).html,
+    ).toContain(`<img src="${uploaded}"`);
   });
 });
 

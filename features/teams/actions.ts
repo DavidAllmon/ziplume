@@ -94,7 +94,7 @@ async function deliver(
     role: invite.role,
     acceptUrl: `${SITE_URL}/invite/${invite.token}`,
     expiresAt: invite.expires_at,
-    supabaseUrl: SUPABASE_URL,
+    photoOrigins: [SUPABASE_URL, SITE_URL],
   });
   const sent = await sendEmail({
     to: invite.email,
