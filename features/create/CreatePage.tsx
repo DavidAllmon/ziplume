@@ -7,8 +7,10 @@ import { PageHeader } from "@/components/app/PageHeader";
 import { useToast } from "@/components/ui/Toast";
 import { createCodeWithSettings, designForStorage } from "@/features/codes/api";
 import type { CodeTypeId } from "@/lib/qr/types";
+import { useInBrowser } from "@/lib/useInBrowser";
 import type { FolderRow } from "@/types/supabase";
 
+import { parseDraft, rawDraft } from "./draft";
 import { DraftBanner } from "./DraftBanner";
 import { EditorLayout } from "./EditorLayout";
 import type { CreateState } from "./state";
@@ -21,33 +23,66 @@ export interface CreatePageProps {
   folders: FolderRow[];
   initialType: CodeTypeId;
   initialFolderId: string | null;
+  /** Opened from the gallery's Continue: start from the unfinished code. */
+  resume?: boolean;
 }
 
+/** A saved folder that's gone (or in another workspace) falls back to the page's folder. */
+const inFolders = (
+  saved: CreateState,
+  folders: FolderRow[],
+  fallback: string | null,
+): CreateState => ({
+  ...saved,
+  folderId: folders.some((folder) => folder.id === saved.folderId) ? saved.folderId : fallback,
+});
+
 /** One page: sections on the left in any order, the live preview and Create on the right. */
-export function CreatePage({ userId, folders, initialType, initialFolderId }: CreatePageProps) {
+export function CreatePage(props: CreatePageProps) {
+  // A draft lives in this browser only, so Continue opens it once the page is in the browser.
+  const inBrowser = useInBrowser();
+  if (props.resume && !inBrowser) {
+    return (
+      <p aria-busy="true" className="text-sm text-fg-muted">
+        Opening your unfinished code…
+      </p>
+    );
+  }
+  return <CreateEditor {...props} />;
+}
+
+function CreateEditor({
+  userId,
+  folders,
+  initialType,
+  initialFolderId,
+  resume = false,
+}: CreatePageProps) {
   const router = useRouter();
   const toast = useToast();
   const defaults = useMemo(
     () => ({ type: initialType, folderId: initialFolderId }),
     [initialType, initialFolderId],
   );
-  const draft = useCodeDraft(defaults);
+  // Continue from the gallery: start from the saved draft, read once.
+  const [resumed] = useState(() => {
+    const saved = resume ? parseDraft(rawDraft(userId)) : null;
+    return saved ? inFolders(saved.state, folders, initialFolderId) : null;
+  });
+  const draft = useCodeDraft(defaults, resumed ? { initial: resumed } : undefined);
   const { state, dispatch } = draft;
   const restore = useCallback(
     (saved: CreateState) =>
-      dispatch({
-        type: "restore",
-        state: {
-          ...saved,
-          // A folder that's gone (or in another workspace) falls back to this page's folder.
-          folderId: folders.some((folder) => folder.id === saved.folderId)
-            ? saved.folderId
-            : defaults.folderId,
-        },
-      }),
+      dispatch({ type: "restore", state: inFolders(saved, folders, defaults.folderId) }),
     [dispatch, folders, defaults.folderId],
   );
-  const drafts = useDraftStorage({ userId, state, defaults, onRestore: restore });
+  const drafts = useDraftStorage({
+    userId,
+    state,
+    defaults,
+    onRestore: restore,
+    startOwned: resumed !== null,
+  });
   const [creating, setCreating] = useState(false);
   /** Why the last Create failed, shown until the page changes. */
   const [failure, setFailure] = useState<{ message: string; state: CreateState } | null>(null);

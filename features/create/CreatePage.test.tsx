@@ -192,6 +192,29 @@ describe("CreatePage", () => {
     expect(screen.getByLabelText("Code name")).toHaveValue("");
   });
 
+  it("opens an unfinished code straight away from the gallery's Continue", async () => {
+    const old = createReducer(
+      createReducer(initialCreateState({ type: "url", folderId: "gone" }), {
+        type: "code",
+        action: { type: "setField", qrType: "url", field: "url", value: "https://example.com/old" },
+      }),
+      { type: "code", action: { type: "setName", name: "Old poster" } },
+    );
+    saveDraft(USER, old);
+    renderPage({ initialFolderId: "f1", resume: true });
+    expect(await screen.findByLabelText("Website address")).toHaveValue("https://example.com/old");
+    expect(screen.getByLabelText("Code name")).toHaveValue("Old poster");
+    // The draft's folder is gone, so it goes in the folder the page was opened for.
+    expect(screen.getByLabelText("Folder")).toHaveValue("f1");
+    expect(screen.queryByText(/unfinished code/)).toBeNull();
+  });
+
+  it("opens fresh when Continue finds nothing to resume", async () => {
+    renderPage({ resume: true });
+    expect(await screen.findByLabelText("Website address")).toHaveValue("");
+    expect(screen.queryByText(/unfinished code/)).toBeNull();
+  });
+
   it("offers Download without saving for static codes only", () => {
     const { unmount } = renderPage({ initialType: "text" });
     expect(preview().getByRole("button", { name: "Download without saving" })).toBeInTheDocument();
