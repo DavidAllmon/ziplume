@@ -9,6 +9,7 @@ const PAGES = [
   "codes",
   "codes?folder={folder}",
   "codes/new",
+  "codes/new?type=links",
   "codes/bulk",
   "codes/{menu}",
   "codes/{menu}/edit",
@@ -120,7 +121,7 @@ test.describe("signed in as an owner", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Flyers" })).toBeVisible();
   });
 
-  for (const path of ["codes", "codes/new", "team"]) {
+  for (const path of ["codes", "codes/new", "codes/new?type=links", "team"]) {
     test(`/${path} passes axe in dark mode`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: "dark" });
       await page.goto(path);

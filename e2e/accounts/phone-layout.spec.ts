@@ -28,6 +28,8 @@ const APP_PAGES = [
   "codes",
   "codes?folder={folder}",
   "codes/new",
+  "codes/new?type=url",
+  "codes/new?type=links",
   "codes/bulk",
   "codes/{menu}",
   "codes/{menu}/edit",
@@ -63,7 +65,7 @@ test.describe("signed in", () => {
       await page.goto(resolve(path));
       await settled(page);
       // The editors build their form in the browser; measure once the Create bar is up.
-      if (path === "codes/new" || path.endsWith("/edit")) {
+      if (path.startsWith("codes/new?") || path.endsWith("/edit")) {
         await expect(page.locator("[data-actionbar]")).toBeVisible();
       }
       await expectNoSidewaysScroll(page);
@@ -80,14 +82,14 @@ test.describe("signed in", () => {
   test("small tablets and landscape phones clear the Create bar", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "Pixel 7", "one width between 640 and 767px is enough");
     await page.setViewportSize({ width: 700, height: 390 });
-    await page.goto("codes/new");
+    await page.goto("codes/new?type=url");
     await settled(page);
     await expect(page.locator("[data-actionbar]")).toBeVisible();
     await expectFitsPhone(page, "#main", 40);
   });
 
   test("toasts appear above the Create bar and the tab bar", async ({ page }) => {
-    await page.goto("codes/new");
+    await page.goto("codes/new?type=url");
     await settled(page);
     // The stack is empty and zero-height until a toast shows; its bottom edge is where they
     // stack from.
