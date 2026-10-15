@@ -217,3 +217,43 @@ describe("PageEditor lists", () => {
     ]);
   });
 });
+
+/** The spec's cards for each type, in order (5.4). */
+const CARDS: Record<PageTypeId, string[]> = {
+  links: ["Header", "Links", "Social icons"],
+  vcard: [
+    "Header",
+    "About",
+    "Phone numbers",
+    "Email addresses",
+    "Website and address",
+    "Social icons",
+  ],
+  business: ["Header", "Contact", "About", "Opening hours", "Buttons", "Social icons"],
+  menu: ["Header", "Sections and dishes", "Currency and note"],
+  coupon: ["Header", "Offer", "Button", "Terms"],
+  event: ["Header", "When", "Where", "Details", "Tickets"],
+  feedback: ["Header", "Question", "After sending"],
+  pdf: ["File", "Details", "Opening"],
+  images: ["Details", "Images"],
+  video: ["Video", "Details"],
+  audio: ["Audio", "Header", "Details"],
+  app: ["Header", "Store links", "Website"],
+};
+
+describe("PageEditor cards", () => {
+  it.each(PAGE_TYPE_IDS)("%s: its cards come in the spec's order", (type) => {
+    render(
+      <PageEditor type={type} page={PAGE_DEFAULTS[type]()} errors={{}} onChange={vi.fn()} cards />,
+    );
+    const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+    expect(headings).toEqual(CARDS[type]);
+  });
+
+  it("draws the parts as sections inside the home page's form", () => {
+    render(<PageEditor type="links" page={PAGE_DEFAULTS.links()} errors={{}} onChange={vi.fn()} />);
+    expect(screen.queryAllByRole("heading", { level: 2 })).toHaveLength(0);
+    const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+    expect(headings).toEqual(CARDS.links);
+  });
+});

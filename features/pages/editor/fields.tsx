@@ -52,6 +52,8 @@ interface TextFieldProps {
   type?: "text" | "url" | "email" | "tel" | "date" | "datetime-local" | "time";
   inputMode?: "text" | "url" | "email" | "tel" | "decimal";
   autoComplete?: string;
+  /** See Field. */
+  hideLabel?: boolean;
 }
 
 export function TextField({
@@ -67,12 +69,14 @@ export function TextField({
   type = "text",
   inputMode,
   autoComplete,
+  hideLabel,
 }: TextFieldProps) {
   return (
     <Field
       label={label}
       hint={hint}
       optional={optional}
+      hideLabel={hideLabel}
       error={path ? errors?.error(path) : undefined}
     >
       {(control) => (
@@ -104,9 +108,10 @@ export function AreaField({
   placeholder,
   maxLength = 300,
   rows = 3,
+  hideLabel,
 }: Omit<TextFieldProps, "type" | "path" | "errors"> & { rows?: number }) {
   return (
-    <Field label={label} hint={hint} optional={optional}>
+    <Field label={label} hint={hint} optional={optional} hideLabel={hideLabel}>
       {(control) => (
         <Textarea
           {...control}
@@ -518,6 +523,7 @@ export function LinksField({
   return (
     <SortableList
       label={label}
+      showLabel={false}
       items={items}
       onChange={onChange}
       max={max}
@@ -575,6 +581,7 @@ export function SocialsField({
   return (
     <SortableList
       label="Social icons"
+      showLabel={false}
       items={items}
       onChange={onChange}
       max={max}
@@ -652,7 +659,7 @@ export function HoursField({
     onChange(hours.map((h, j) => (j === i ? { ...h, ...patch } : h)));
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="mb-1 text-sm font-medium text-fg">Opening hours</legend>
+      <legend className="sr-only">Opening hours</legend>
       {hours.map((h, i) => (
         <div key={DAY_NAMES[i]} className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">

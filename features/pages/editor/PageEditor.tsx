@@ -33,6 +33,7 @@ import { PdfEditor } from "./editors/PdfEditor";
 import { VcardEditor } from "./editors/VcardEditor";
 import { VideoEditor } from "./editors/VideoEditor";
 import type { ErrorsApi } from "./fields";
+import { FormCardStyle } from "./FormCard";
 import { remapTouched } from "./touched";
 
 interface PageEditorProps<K extends PageTypeId> {
@@ -42,6 +43,8 @@ interface PageEditorProps<K extends PageTypeId> {
   onChange: (page: PageContentMap[K]) => void;
   /** Show every error now, as if each field had been left. */
   reveal?: boolean;
+  /** Each part of the form is its own card (the Create editor). */
+  cards?: boolean;
 }
 
 /** Form for a hosted page; errors show once a field has been visited. */
@@ -51,6 +54,7 @@ export function PageEditor<K extends PageTypeId>({
   errors,
   onChange,
   reveal = false,
+  cards = false,
 }: PageEditorProps<K>) {
   const [touched, setTouched] = useState<ReadonlySet<string>>(() => new Set());
   const touch = useCallback(
@@ -140,5 +144,9 @@ export function PageEditor<K extends PageTypeId>({
     }
   })();
 
-  return <div className="flex flex-col gap-5">{body}</div>;
+  return (
+    <FormCardStyle value={cards ? "card" : "section"}>
+      <div className={cards ? "flex flex-col gap-6" : "flex flex-col gap-5"}>{body}</div>
+    </FormCardStyle>
+  );
 }

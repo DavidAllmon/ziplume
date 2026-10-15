@@ -5,7 +5,7 @@ import { Radio, RadioGroup } from "@headlessui/react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { ContentForm } from "@/features/generator/content/ContentForm";
 import type { ContentEditor } from "@/features/generator/content/types";
-import type { CodeTypeId } from "@/lib/qr/types";
+import { isPageType, type CodeTypeId } from "@/lib/qr/types";
 
 import { isContactType, typeDescription } from "../catalog";
 
@@ -34,29 +34,45 @@ export function ContentSection({
   typeLocked?: boolean;
 }) {
   const type = editor.state.activeType;
+  const kindPicker =
+    isContactType(type) && !typeLocked ? (
+      <RadioGroup
+        value={type}
+        onChange={onTypeChange}
+        aria-label="How should it work?"
+        className="grid gap-2 sm:grid-cols-2"
+      >
+        {CONTACT_KINDS.map((kind) => (
+          <Radio
+            key={kind.value}
+            value={kind.value}
+            className="flex min-h-11 cursor-pointer flex-col gap-1 rounded-control border border-border bg-surface p-3 data-checked:border-primary data-checked:bg-surface-2 data-checked:ring-1 data-checked:ring-primary data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring"
+          >
+            <span className="text-sm font-semibold text-fg">{kind.label}</span>
+            <span className="text-[13px] text-fg-muted">{kind.hint}</span>
+          </Radio>
+        ))}
+      </RadioGroup>
+    ) : null;
+  if (isPageType(type)) {
+    // A hosted page's form is a stack of cards: Header, then the page's own parts.
+    return (
+      <div className="flex flex-col gap-6">
+        {kindPicker && (
+          <Card aria-labelledby="content-heading">
+            <CardHeader id="content-heading" title="Contact" description="How should it work?" />
+            <div className="px-5 pt-4 pb-6 sm:px-6">{kindPicker}</div>
+          </Card>
+        )}
+        <ContentForm generator={editor} />
+      </div>
+    );
+  }
   return (
     <Card aria-labelledby="content-heading">
       <CardHeader id="content-heading" title="Content" description={typeDescription(type)} />
       <div className="flex flex-col gap-6 px-5 pt-4 pb-6 sm:px-6">
-        {isContactType(type) && !typeLocked && (
-          <RadioGroup
-            value={type}
-            onChange={onTypeChange}
-            aria-label="How should it work?"
-            className="grid gap-2 sm:grid-cols-2"
-          >
-            {CONTACT_KINDS.map((kind) => (
-              <Radio
-                key={kind.value}
-                value={kind.value}
-                className="flex min-h-11 cursor-pointer flex-col gap-1 rounded-control border border-border bg-surface p-3 data-checked:border-primary data-checked:bg-surface-2 data-checked:ring-1 data-checked:ring-primary data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-ring"
-              >
-                <span className="text-sm font-semibold text-fg">{kind.label}</span>
-                <span className="text-[13px] text-fg-muted">{kind.hint}</span>
-              </Radio>
-            ))}
-          </RadioGroup>
-        )}
+        {kindPicker}
         <ContentForm generator={editor} />
       </div>
     </Card>
