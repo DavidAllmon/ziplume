@@ -43,6 +43,11 @@ const resolve = (path: string) =>
 async function settled(page: Page) {
   await expect(page.locator("main h1").first()).toBeVisible();
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  // Sections that load in the browser (two-step verification, the editors) show a placeholder
+  // first and then grow; measure after they've swapped in.
+  await expect(
+    page.getByText(/^(Loading…|Opening the editor…|Checking your account…)$/),
+  ).toHaveCount(0);
   await page.waitForFunction(() =>
     document.getAnimations().every((a) => a.playState !== "running"),
   );
