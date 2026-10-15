@@ -13,9 +13,11 @@ export function Header() {
         <Link href="/" className="rounded-control focus-ring" aria-label="Ziplume home">
           <Logo />
         </Link>
+        {/* Phones keep the logo and the account button; the theme and coffee links move to the
+            footer, or the header is wider than the screen. */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <BuyMeACoffee />
-          <ThemeToggle />
+          <BuyMeACoffee className="max-sm:hidden" />
+          <ThemeToggle className="max-sm:hidden" />
           <AccountMenu />
         </div>
       </div>

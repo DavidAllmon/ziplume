@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { PHONE_SPEC, PHONES } from "./e2e/phones";
+
 // Signed-in browser tests against a local Supabase. Run them with `npm run test:e2e:accounts`,
 // which sets the project's URL and keys and builds the app first.
 const PORT = 4174;
@@ -15,8 +17,10 @@ export default defineConfig({
   projects: [
     {
       name: "accounts",
+      testIgnore: PHONE_SPEC,
       use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 } },
     },
+    ...PHONES,
   ],
   webServer: {
     command: "node scripts/start.mjs",

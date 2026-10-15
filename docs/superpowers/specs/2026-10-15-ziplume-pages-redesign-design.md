@@ -79,6 +79,9 @@ implementation plan, written just before it starts.
 - Smaller offsets that don't follow the bar's real height: the toast stack (`Toast.tsx:35`,
   `bottom-28`), the codes selection bar (`SelectionBar.tsx:70`, `bottom-24`, which rides up 16px
   at the end of the list) and the Create bar (`CreateMobileBar.tsx:21`).
+- Found while writing the tests: the signed-out header (logo, coffee button, theme switch, Sign
+  in) is wider than every phone up to 412px, so the whole site scrolls sideways (97px at 320px,
+  24px on an iPhone 15).
 - Related: the paused/expired notice on `/p/<slug>` (`app/p/[slug]/page.tsx:29`) and the
   short-link status page (`lib/dynamic/status-page.ts:25`) are always taller than the screen;
   the code page's `#download` jump lands under the 56px phone top bar (`CodeOverview.tsx:339`,
@@ -99,6 +102,9 @@ implementation plan, written just before it starts.
   `box-sizing: border-box` and `min-height: 100dvh`; the download card's scroll margin clears the
   phone top bar.
 
+- The signed-out header keeps only the logo and Sign in below 640px; the theme switch moves to
+  the footer there (the coffee link is already in it).
+
 If David's phone still shows the bar moving after this ships, the fallback is an app-style shell
 where the page itself never scrolls and only `main` does (`h-dvh` flex column). It is held back
 because it stops the browser toolbar from hiding and needs scroll-to-top handling on every
@@ -106,18 +112,21 @@ navigation.
 
 ### 4.3 Proving it on every phone
 
-New Playwright projects run a phone-layout suite on real engine emulation:
+New Playwright projects run a phone-layout suite on six device profiles (heights are the
+browser's visible area):
 
-| Project | Engine | Screen (CSS px) |
+| Project | Engine | Viewport (CSS px) |
 |---|---|---|
+| iPhone SE (1st gen) | WebKit | 320 × 568 |
 | iPhone SE | WebKit | 375 × 667 |
-| iPhone 15 | WebKit | 393 × 852 |
-| iPhone 15 Pro Max | WebKit | 430 × 932 |
-| Pixel 7 | Chromium | 412 × 915 |
-| Small Android | Chromium | 360 × 740 |
+| iPhone 15 | WebKit | 393 × 659 |
+| iPhone 15 Pro Max | WebKit | 430 × 739 |
+| Pixel 7 | Chromium | 412 × 839 |
+| Galaxy S8 | Chromium | 360 × 740 |
 
 On every signed-in page (`/codes`, `/codes/new`, a code page, its edit page, `/codes/bulk`,
-`/team`, each Settings tab) and every public page type, the suite checks:
+`/team`, each Settings tab), every public page type, and the signed-out site (home, sign-in,
+sign-up, privacy, bulk, the short-link status page), the suite checks:
 
 - no sideways scroll;
 - after scrolling to the end, the tab bar's bottom edge equals the screen's bottom edge, and its

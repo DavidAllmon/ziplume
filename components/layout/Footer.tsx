@@ -5,6 +5,7 @@ import { BuyMeACoffee } from "@/components/support/BuyMeACoffee";
 import { accountsEnabled, REPO_URL } from "@/lib/env";
 
 import { GitHubIcon } from "./GitHubIcon";
+import { ThemeToggle } from "./ThemeToggle";
 
 const linkClass = "font-medium text-link underline-offset-4 hover:underline";
 
@@ -18,6 +19,10 @@ export function Footer() {
             Free forever, with no limits. Codes never stop working.
           </p>
           <BuyMeACoffee variant="link" />
+          {/* On phones the header has no room for it. */}
+          <div className="flex items-center gap-2 sm:hidden">
+            Theme <ThemeToggle />
+          </div>
         </div>
         <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <span>
