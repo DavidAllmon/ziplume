@@ -58,6 +58,14 @@ test.describe("without accounts configured", () => {
     expect(await response.text()).toContain("Temporarily unavailable");
   });
 
+  test("the short-link notice card keeps its width on wide screens", async ({ page }) => {
+    test.skip(page.viewportSize()!.width < 600, "on phones the card fills the screen");
+    await page.goto("r/ABC234");
+    // 26rem of content, 32px padding and a 1px border on each side.
+    const box = await page.locator("main").boundingBox();
+    expect(box?.width).toBeCloseTo(482, 0);
+  });
+
   test("uppercase short links (as encoded in QR codes) reach the same route", async ({
     request,
   }) => {

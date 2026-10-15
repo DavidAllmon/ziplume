@@ -14,7 +14,10 @@ describe("phone layout variables", () => {
     expect(css).toContain("--actionbar-h: calc(4.25rem + 1px + env(safe-area-inset-bottom))");
   });
 
-  it("turn off the end-of-page bounce on app pages only", () => {
-    expect(css).toMatch(/html:has\(\[data-app-shell\]\)\s*\{\s*overscroll-behavior-y: none;/);
+  // Some WebKit versions read it from body rather than html.
+  it("turn off the end-of-page bounce on app pages only, on html and body", () => {
+    expect(css).toMatch(
+      /html:has\(\[data-app-shell\]\),\s*html:has\(\[data-app-shell\]\) body\s*\{\s*overscroll-behavior-y: none;/,
+    );
   });
 });

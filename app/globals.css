@@ -211,7 +211,8 @@
 
   /* The signed-in app doesn't bounce past its end, so the tab bar never moves. Public pages
    * keep the bounce and pull-to-refresh. */
-  html:has([data-app-shell]) {
+  html:has([data-app-shell]),
+  html:has([data-app-shell]) body {
     overscroll-behavior-y: none;
   }
 

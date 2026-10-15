@@ -14,10 +14,12 @@ import { OWNER, PAUSED_PAGE_SLUG, PHONE_PAGES, seed } from "./fixtures";
 
 test.describe("signed out", () => {
   for (const path of ["", "login", "signup", "privacy"]) {
-    test(`/${path} fits the screen's width`, async ({ page }) => {
+    test(`/${path} fits the screen and ends where its content ends`, async ({ page }) => {
       await page.goto(path);
       await expect(page.locator("h1").first()).toBeVisible();
       await expectNoSidewaysScroll(page);
+      // The site footer keeps 2rem under its last line.
+      await expectFitsPhone(page, "body", 40);
     });
   }
 });
