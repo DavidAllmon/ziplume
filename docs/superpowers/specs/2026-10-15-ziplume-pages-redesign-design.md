@@ -225,8 +225,10 @@ Holds the existing page color picker, moved out of Content. Release 3 fills it o
 Today's Design section, unchanged inside: Start from a style, Colors, Shape, Logo, Frame, More
 design options. Two changes:
 
-- **Match my page** (page types): sets the code color and frame color from the page's button
-  color when it has at least 4.5:1 contrast on white, otherwise from the page's text color.
+- **Match my page** (page types): sets the code color and frame color to the first of these
+  with at least 4.5:1 contrast on the code's white background: the page's button color, its
+  darkest wallpaper color, or ink `#0F172A`. A code on light-on-dark colors would scan badly, so
+  the background stays white.
 - The QR "Logo" section is renamed **Image in the code**, so it isn't confused with a page logo.
 
 ### 5.7 Settings tab
