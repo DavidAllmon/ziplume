@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 
-import { PageHeader } from "@/components/app/PageHeader";
+import { newCodeHref } from "@/components/app/nav";
 import { useToast } from "@/components/ui/Toast";
 import { createCodeWithSettings, designForStorage } from "@/features/codes/api";
 import type { CodeTypeId } from "@/lib/qr/types";
@@ -121,10 +121,6 @@ function CreateEditor({
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Create a code"
-        description="Fill in the sections in any order. The preview updates as you go."
-      />
       {drafts.offer && (
         <DraftBanner
           savedAt={drafts.offer.savedAt}
@@ -132,7 +128,16 @@ function CreateEditor({
           onDiscard={drafts.discard}
         />
       )}
-      <EditorLayout draft={draft} folders={folders} mediaOwner={null} controls={controls} />
+      <EditorLayout
+        draft={draft}
+        folders={folders}
+        mediaOwner={null}
+        controls={controls}
+        back={{
+          href: newCodeHref({ folderId: initialFolderId, ownerId: null }),
+          label: "Change type",
+        }}
+      />
     </div>
   );
 }

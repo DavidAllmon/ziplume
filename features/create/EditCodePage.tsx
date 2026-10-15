@@ -1,7 +1,5 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
@@ -33,29 +31,17 @@ export function EditCodePage(props: EditCodePageProps) {
   // Start and end times show in the viewer's time zone, which the server can't know, so the
   // form is built in the browser.
   const inBrowser = useInBrowser();
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        <Link
-          href={props.codeHref}
-          className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-link underline-offset-4 hover:underline"
-        >
-          <ArrowLeft aria-hidden className="size-4" /> Back to {props.code.name}
-        </Link>
-        <PageHeader
-          title="Edit code"
-          description="Change anything below, then save. The preview updates as you go."
-        />
-      </div>
-      {inBrowser ? (
-        <EditForm {...props} />
-      ) : (
+  if (!inBrowser) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Edit code" />
         <p aria-busy="true" className="text-sm text-fg-muted">
           Opening the editor…
         </p>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+  return <EditForm {...props} />;
 }
 
 function EditForm({ code, folders, mediaOwner, codeHref }: EditCodePageProps) {
@@ -122,6 +108,7 @@ function EditForm({ code, folders, mediaOwner, codeHref }: EditCodePageProps) {
         dirty,
         onDiscard: discard,
       }}
+      back={{ href: codeHref, label: `Back to ${code.name}` }}
       saved={{
         slug: code.slug,
         hasPassword: code.has_password,
