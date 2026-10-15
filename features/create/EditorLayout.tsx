@@ -6,6 +6,7 @@ import { flushSync } from "react-dom";
 
 import { Card, CardHeader } from "@/components/ui/Card";
 import type { ContentEditor } from "@/features/generator/content/types";
+import type { DeviceId } from "@/features/pages/preview/devices";
 import type { FolderRow } from "@/types/supabase";
 
 import { CreateMobileBar } from "./CreateMobileBar";
@@ -48,16 +49,23 @@ export function EditorLayout({
   const editing = controls.mode === "edit";
   const tabs = tabsFor(pageType !== null);
   const [tab, selectTab] = useEditorTab(tabs);
-  /** A hosted page's preview follows the tab: the page for Content and Look, the code for QR. */
+  /** A hosted page's preview follows the tab: the page for Content and Look, the code for QR;
+   * Settings keeps whichever was showing. Picking one by hand holds until the tab changes. */
   const [view, setView] = useState<PreviewView>("page");
+  const [viewTab, setViewTab] = useState<EditorTab>("content");
+  if (viewTab !== tab) {
+    // The tab changed (a click, or the address after hydration): adjust while rendering.
+    setViewTab(tab);
+    if (tab === "qr") setView("code");
+    else if (tab !== "settings") setView("page");
+  }
+  const [device, setDevice] = useState<DeviceId>("phone");
   /** After "Show me", page errors show without waiting for each field to be left. */
   const [revealErrors, setRevealErrors] = useState(false);
   const root = useRef<HTMLDivElement>(null);
 
   function changeTab(next: EditorTab) {
     selectTab(next);
-    if (next === "qr") setView("code");
-    else if (next === "content" || next === "look") setView("page");
   }
 
   function showMe() {
@@ -80,6 +88,8 @@ export function EditorLayout({
     pageColorInLook: true,
   };
   const page = pageType ? state.code.pages[pageType] : null;
+  const liveHref =
+    editing && pageType && saved?.slug ? `/p/${encodeURIComponent(saved.slug)}` : null;
 
   const panels: Record<EditorTab, ReactNode> = {
     content: (
@@ -174,13 +184,24 @@ export function EditorLayout({
                 draft={draft}
                 view={view}
                 onViewChange={setView}
+                device={device}
+                onDeviceChange={setDevice}
+                liveHref={liveHref}
                 mode={controls.mode}
               />
             </div>
           </Card>
         </aside>
       </div>
-      <CreateMobileBar draft={draft} view={view} onViewChange={setView} {...controls} />
+      <CreateMobileBar
+        draft={draft}
+        view={view}
+        onViewChange={setView}
+        device={device}
+        onDeviceChange={setDevice}
+        liveHref={liveHref}
+        {...controls}
+      />
     </TabGroup>
   );
 }

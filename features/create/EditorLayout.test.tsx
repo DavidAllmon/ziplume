@@ -33,8 +33,20 @@ function renderLayout({
   mode = "create",
   dirty = false,
   type = "url",
-}: { mode?: "create" | "edit"; dirty?: boolean; type?: CodeTypeId } = {}) {
-  const initial = mode === "edit" ? fromSavedCode(savedRow()) : undefined;
+  savedSlug,
+}: { mode?: "create" | "edit"; dirty?: boolean; type?: CodeTypeId; savedSlug?: string } = {}) {
+  const initial = savedSlug
+    ? fromSavedCode(
+        savedRow({
+          qr_type: "links",
+          is_dynamic: true,
+          slug: savedSlug,
+          content: { title: "Menu", links: [] },
+        }),
+      )
+    : mode === "edit"
+      ? fromSavedCode(savedRow())
+      : undefined;
   const { result } = renderHook(() =>
     useCodeDraft({ type, folderId: null }, { initial, requireSlug: mode === "edit" }),
   );
@@ -44,6 +56,16 @@ function renderLayout({
       folders={[]}
       mediaOwner="owner-1"
       back={{ href: "/codes/new", label: "Change type" }}
+      saved={
+        savedSlug
+          ? {
+              slug: savedSlug,
+              hasPassword: false,
+              removePassword: false,
+              onRemovePassword: vi.fn(),
+            }
+          : undefined
+      }
       controls={{
         mode,
         submitting: false,
@@ -119,5 +141,30 @@ describe("EditorLayout", () => {
     renderLayout({ mode: "edit", dirty: true });
     expect(bar().getByRole("button", { name: "Save changes" })).toBeEnabled();
     expect(bar().getByRole("button", { name: "Discard changes" })).toBeInTheDocument();
+  });
+
+  it("shows the code straight away when the page opens on the QR code tab", () => {
+    window.history.replaceState(null, "", "/codes/new?type=links#qr");
+    renderLayout({ type: "links" });
+    expect(preview().getByText("QR tile")).toBeInTheDocument();
+  });
+
+  it("switches the page preview between phone, tablet and desktop", async () => {
+    const user = userEvent.setup();
+    renderLayout({ type: "links" });
+    expect(preview().getByRole("radio", { name: "Phone" })).toBeChecked();
+    await user.click(preview().getByRole("radio", { name: "Desktop" }));
+    expect(preview().getByRole("radio", { name: "Desktop" })).toBeChecked();
+    await user.click(screen.getByRole("tab", { name: "QR code" }));
+    // The device switch is for the page only.
+    expect(preview().queryByRole("radio", { name: "Desktop" })).toBeNull();
+  });
+
+  it("links to the live page when editing a saved hosted page", () => {
+    renderLayout({ mode: "edit", type: "links", savedSlug: "MENU12" });
+    expect(preview().getByRole("link", { name: /Open the live page/ })).toHaveAttribute(
+      "href",
+      "/p/MENU12",
+    );
   });
 });

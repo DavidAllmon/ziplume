@@ -1,6 +1,6 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -8,6 +8,7 @@ import { useExport } from "@/features/generator/export/useExport";
 import { PagePreview } from "@/features/generator/preview/PagePreview";
 import { QrTile } from "@/features/generator/preview/QrTile";
 import { ScanBadge, ScanIssues } from "@/features/generator/preview/ScanCheck";
+import { DEVICE_IDS, DEVICES, type DeviceId } from "@/features/pages/preview/devices";
 
 import { typeLabel } from "./catalog";
 import type { CodeDraft } from "./useCodeDraft";
@@ -33,11 +34,18 @@ export function PreviewColumn({
   draft,
   view,
   onViewChange,
+  device,
+  onDeviceChange,
+  liveHref = null,
   mode,
 }: {
   draft: CodeDraft;
   view: PreviewView;
   onViewChange: (view: PreviewView) => void;
+  device: DeviceId;
+  onDeviceChange: (device: DeviceId) => void;
+  /** Editing a saved hosted page: its live address. */
+  liveHref?: string | null;
   mode: "create" | "edit";
 }) {
   const { state, renderOptions, summary, info, report, blocker, pageType, trackable, previewSlug } =
@@ -62,8 +70,22 @@ export function PreviewColumn({
           ]}
         />
       )}
+      {pageType && view === "page" && (
+        <SegmentedControl
+          aria-label="Device"
+          size="touch"
+          value={device}
+          onChange={onDeviceChange}
+          options={DEVICE_IDS.map((id) => ({ value: id, label: DEVICES[id].label }))}
+        />
+      )}
       {pageType && view === "page" ? (
-        <PagePreview type={pageType} page={state.code.pages[pageType]} slug={previewSlug} />
+        <PagePreview
+          type={pageType}
+          page={state.code.pages[pageType]}
+          slug={previewSlug}
+          device={device}
+        />
       ) : (
         <QrTile
           options={renderOptions}
@@ -71,6 +93,16 @@ export function PreviewColumn({
           emptyHint={info.emptyHint}
           className="mx-auto w-full max-w-[20rem]"
         />
+      )}
+      {pageType && view === "page" && liveHref && (
+        <a
+          href={liveHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-1.5 self-center text-sm font-medium text-link underline-offset-4 hover:underline"
+        >
+          Open the live page <ExternalLink aria-hidden className="size-4" />
+        </a>
       )}
       <div className="flex flex-col items-center gap-2 text-center">
         <ScanBadge report={report} />
