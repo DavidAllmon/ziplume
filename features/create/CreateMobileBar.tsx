@@ -91,6 +91,8 @@ export function CreateMobileBar({
             device={device}
             onDeviceChange={onDeviceChange}
             liveHref={liveHref}
+            // Leaves room to see the sheet's other controls, and to scroll it past the frame.
+            frameHeight="min(560px, 55dvh)"
             mode={mode}
           />
         </div>

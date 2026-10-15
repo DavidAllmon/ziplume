@@ -37,6 +37,7 @@ export function PreviewColumn({
   device,
   onDeviceChange,
   liveHref = null,
+  frameHeight,
   mode,
 }: {
   draft: CodeDraft;
@@ -46,6 +47,8 @@ export function PreviewColumn({
   onDeviceChange: (device: DeviceId) => void;
   /** Editing a saved hosted page: its live address. */
   liveHref?: string | null;
+  /** The tallest the device frame may be: px, or a CSS length (see DeviceFrame). */
+  frameHeight?: number | string;
   mode: "create" | "edit";
 }) {
   const { state, renderOptions, summary, info, report, blocker, pageType, trackable, previewSlug } =
@@ -85,6 +88,7 @@ export function PreviewColumn({
           page={state.code.pages[pageType]}
           slug={previewSlug}
           device={device}
+          maxHeight={frameHeight}
         />
       ) : (
         <QrTile

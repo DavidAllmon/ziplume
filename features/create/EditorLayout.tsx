@@ -187,6 +187,10 @@ export function EditorLayout({
                 device={device}
                 onDeviceChange={setDevice}
                 liveHref={liveHref}
+                // The whole frame stays on screen while the aside is stuck under the top bar:
+                // the screen's height less the bar, this card's controls above the frame and a
+                // little room below it.
+                frameHeight="clamp(240px, 100dvh - var(--editor-bar-h, 8rem) - 15rem, 560px)"
                 mode={controls.mode}
               />
             </div>

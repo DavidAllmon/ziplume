@@ -146,6 +146,27 @@ test.describe("creating codes", () => {
     expect(await height()).toBe(144);
   });
 
+  test("the whole preview stays on a laptop screen while you scroll a long form", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("codes/new?type=links");
+    const addLink = page.getByRole("button", { name: "Add link" });
+    while ((await page.getByLabel("Button text").count()) < 12) await addLink.click();
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const preview = page.getByRole("complementary", { name: "Preview" });
+    const frame = preview.getByRole("region", { name: "Page preview" }).locator("..");
+    for (const device of ["Phone", "Tablet", "Desktop"]) {
+      await preview.getByRole("radio", { name: device }).click();
+      await expect
+        .poll(async () => {
+          const box = (await frame.boundingBox())!;
+          return box.y + box.height;
+        }, `${device} frame bottom`)
+        .toBeLessThanOrEqual(800);
+    }
+  });
+
   test("the preview's menu chips don't change the editor's address", async ({ page }) => {
     await page.goto("codes/new?type=menu#content");
     await page.getByLabel("Restaurant name").fill("Diner");

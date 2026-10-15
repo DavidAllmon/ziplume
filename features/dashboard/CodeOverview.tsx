@@ -220,28 +220,37 @@ export function CodeOverview({
                 title="Hosted page"
                 description="Edit the code to change the page. Printed codes always open the latest version."
               />
-              <div className="grid gap-6 px-5 pt-4 pb-6 sm:grid-cols-[minmax(0,1fr)_12rem] sm:px-6">
-                <div className="flex min-w-0 flex-col gap-5">
-                  {shortLinkRow}
-                  {activeToggle}
-                </div>
-                {page && code.slug && (
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-full max-w-48">
-                      <PagePreview
-                        type={initial.qr_type as PageTypeId}
-                        page={page}
-                        slug={code.slug}
-                        maxHeight={360}
-                      />
-                    </div>
-                    {canEdit && (
-                      <Link href={`${editHref}#content`} className={buttonClasses("outline", "sm")}>
-                        Edit page
-                      </Link>
-                    )}
+              {/* Side by side only when the card itself is wide enough: its column narrows
+                  between the app's sidebar and the Download panel. */}
+              <div className="@container px-5 pt-4 pb-6 sm:px-6">
+                <div className="grid gap-6 @min-[29rem]:grid-cols-[minmax(0,1fr)_12rem]">
+                  <div className="flex min-w-0 flex-col gap-5">
+                    {shortLinkRow}
+                    {activeToggle}
                   </div>
-                )}
+                  {page && code.slug && (
+                    <div className="flex flex-col items-center gap-3">
+                      {/* A glimpse only (View page and Edit page are beside it): it doesn't take
+                          the wheel, focus or a screen reader's attention from the code page. */}
+                      <div inert className="w-full max-w-48">
+                        <PagePreview
+                          type={initial.qr_type as PageTypeId}
+                          page={page}
+                          slug={code.slug}
+                          maxHeight={360}
+                        />
+                      </div>
+                      {canEdit && (
+                        <Link
+                          href={`${editHref}#content`}
+                          className={buttonClasses("outline", "sm")}
+                        >
+                          Edit page
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </Card>
           )}

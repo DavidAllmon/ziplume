@@ -120,6 +120,19 @@ describe("activeWindow", () => {
     );
   });
 
+  it("keeps the page's thumbnail out of the way: no scrolling, focus or reading it out", () => {
+    renderOverview(
+      savedRow({
+        qr_type: "links",
+        is_dynamic: true,
+        slug: "MENU12",
+        content: { title: "Lunch links", links: [] },
+      }),
+    );
+    // View page and Edit page sit beside it.
+    expect(screen.getByRole("region", { name: "Page preview" }).closest("[inert]")).not.toBeNull();
+  });
+
   it("leaves Edit page out for people who can only view", () => {
     renderOverview(
       savedRow({
