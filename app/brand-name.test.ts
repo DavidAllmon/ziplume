@@ -19,8 +19,6 @@ const OLD_NAME = /quick\s?q\s?r?eate/i;
 const ALLOWED = [
   /quickqreate\.invalid/, // sentinel base URL for parsing redirect paths
   /UID:\$\{uid\}@quickqreate/, // calendar event ids: changing them duplicates events
-  /quickqreate:draft:v2:/, // storage key, renamed with the move to ziplume.com
-  /quickqreate:codes-view:\$\{userId\}/, // storage key, renamed with the move to ziplume.com
   /quickqreate:v1/, // legacy key the generator only deletes
   /\^\\\/QuickQReate\//, // the old GitHub Pages path the redirect page strips
   /github\.com\/DavidAllmon\/QuickQReate/, // the repo, renamed with the move to ziplume.com

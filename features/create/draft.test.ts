@@ -24,7 +24,7 @@ beforeEach(() => window.localStorage.clear());
 
 describe("drafts", () => {
   it("are kept per person under a versioned key", () => {
-    expect(draftKey(USER)).toBe("quickqreate:draft:v2:user-1");
+    expect(draftKey(USER)).toBe("ziplume:draft:v2:user-1");
   });
 
   it("never store the password", () => {

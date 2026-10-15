@@ -31,7 +31,7 @@ const text = (value: unknown, max: number) =>
   typeof value === "string" ? value.slice(0, max) : "";
 
 /** One unfinished code per person per browser. */
-export const draftKey = (userId: string) => `quickqreate:draft:v2:${userId}`;
+export const draftKey = (userId: string) => `ziplume:draft:v2:${userId}`;
 
 export interface StoredDraft {
   /** When it was last saved (ISO). */

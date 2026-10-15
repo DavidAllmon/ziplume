@@ -5,11 +5,12 @@ import { useCallback, useSyncExternalStore } from "react";
 export type ListView = "list" | "grid";
 
 const EVENT = "ziplume:codes-view";
-const keyFor = (userId: string) => `quickqreate:codes-view:${userId}`;
+/** Where the choice is kept on this device, per person. */
+export const listViewKey = (userId: string) => `ziplume:codes-view:${userId}`;
 
 function read(userId: string): ListView {
   try {
-    return window.localStorage.getItem(keyFor(userId)) === "grid" ? "grid" : "list";
+    return window.localStorage.getItem(listViewKey(userId)) === "grid" ? "grid" : "list";
   } catch {
     return "list";
   }
@@ -34,7 +35,7 @@ export function useListView(userId: string): [ListView, (view: ListView) => void
   const setView = useCallback(
     (next: ListView) => {
       try {
-        window.localStorage.setItem(keyFor(userId), next);
+        window.localStorage.setItem(listViewKey(userId), next);
       } catch {
         // Storage is unavailable; the choice lasts until the page closes.
       }
