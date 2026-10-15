@@ -517,7 +517,7 @@ export function LinksField({
       max={max}
       addLabel="Add link"
       itemName="link"
-      newItem={() => ({ label: "", url: "" })}
+      newItem={() => ({ label: "", url: "", on: true })}
       render={(item, update, i) => (
         <>
           <TextField

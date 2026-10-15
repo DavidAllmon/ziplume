@@ -16,7 +16,7 @@ import {
 
 type Spec =
   | { kind: "string"; max: number }
-  | { kind: "bool" }
+  | { kind: "bool"; fallback?: boolean }
   | { kind: "color" }
   | { kind: "media" }
   | { kind: "mediaList"; max: number }
@@ -28,7 +28,12 @@ const str = (max: number = LIMITS.short): Spec => ({ kind: "string", max });
 const bool: Spec = { kind: "bool" };
 const color: Spec = { kind: "color" };
 const media: Spec = { kind: "media" };
-const link: Record<string, Spec> = { label: str(80), url: str(2048) };
+const link: Record<string, Spec> = {
+  label: str(80),
+  url: str(2048),
+  // Pages saved before links could be switched off show every link.
+  on: { kind: "bool", fallback: true },
+};
 const social: Spec = {
   kind: "list",
   max: LIMITS.socials,
@@ -230,7 +235,7 @@ function emptyFor(spec: Spec): unknown {
     case "string":
       return "";
     case "bool":
-      return false;
+      return spec.fallback ?? false;
     case "list":
     case "mediaList":
       return [];

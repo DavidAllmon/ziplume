@@ -18,6 +18,8 @@ export interface Media {
 export interface LinkItem {
   label: string;
   url: string;
+  /** Off keeps the link in the editor but not on the page. */
+  on: boolean;
 }
 
 export const SOCIAL_NETWORKS = [
@@ -233,7 +235,7 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
     title: "",
     bio: "",
     avatar: null,
-    links: [{ label: "", url: "" }],
+    links: [{ label: "", url: "", on: true }],
     socials: [],
   }),
   vcard: () => ({

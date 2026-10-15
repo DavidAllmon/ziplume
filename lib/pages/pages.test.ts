@@ -40,7 +40,7 @@ describe("sanitizePage", () => {
     expect(page).not.toHaveProperty("evil");
     expect(page.color).toBe("#0A1330");
     expect(page.links).toHaveLength(30);
-    expect(page.links[0]).toEqual({ label: "L0", url: "https://e.com" });
+    expect(page.links[0]).toEqual({ label: "L0", url: "https://e.com", on: true });
     expect(page.socials[0]?.network).toBe("instagram");
   });
 
@@ -128,8 +128,8 @@ describe("validatePage", () => {
       ...PAGE_DEFAULTS.links(),
       title: "Me",
       links: [
-        { label: "Bad", url: "javascript:alert(1)" },
-        { label: "Good", url: "example.com" },
+        { label: "Bad", url: "javascript:alert(1)", on: true },
+        { label: "Good", url: "example.com", on: true },
       ],
     };
     expect(validatePage("links", page)).toEqual({
@@ -231,7 +231,7 @@ describe("validatePage names what's missing", () => {
     expect(
       validatePage("links", {
         ...PAGE_DEFAULTS.links(),
-        links: [{ label: "Buy me a coffee", url: "" }],
+        links: [{ label: "Buy me a coffee", url: "", on: true }],
       }),
     ).toMatchObject({ title: "Add a title", "links.0.url": "Add the link for “Buy me a coffee”" });
     expect(validatePage("business", PAGE_DEFAULTS.business())).toMatchObject({
@@ -255,8 +255,52 @@ describe("validatePage names what's missing", () => {
       validatePage("business", {
         ...PAGE_DEFAULTS.business(),
         name: "Cafe",
-        buttons: [{ label: "Order", url: "" }],
+        buttons: [{ label: "Order", url: "", on: true }],
       }),
     ).toMatchObject({ "buttons.0.url": "Add the link for “Order”" });
+  });
+});
+
+describe("links and buttons can be switched off", () => {
+  it("are on unless saved as off, including pages saved before the switch existed", () => {
+    const page = sanitizePage("links", {
+      links: [
+        { label: "A", url: "a.com" },
+        { label: "B", url: "b.com", on: false },
+        { label: "C", url: "c.com", on: "no" },
+      ],
+    });
+    expect(page.links.map((link) => link.on)).toEqual([true, false, true]);
+    const business = sanitizePage("business", { buttons: [{ label: "Order", url: "o.com" }] });
+    expect(business.buttons[0]?.on).toBe(true);
+    expect(PAGE_DEFAULTS.links().links[0]?.on).toBe(true);
+  });
+
+  it("aren't checked while off, and only links that are on count", () => {
+    const base = { ...PAGE_DEFAULTS.links(), title: "Me" };
+    const shop = { label: "Shop", url: "shop.com", on: true };
+    expect(
+      validatePage("links", { ...base, links: [{ label: "Later", url: "", on: false }, shop] }),
+    ).toEqual({});
+    expect(
+      validatePage("links", {
+        ...base,
+        links: [{ label: "Bad", url: "javascript:alert(1)", on: false }, shop],
+      }),
+    ).toEqual({});
+    expect(validatePage("links", { ...base, links: [{ ...shop, on: false }] })).toEqual({
+      "links.0.url": "Turn on at least one link",
+    });
+    // Back on, its problem is back.
+    expect(
+      validatePage("links", { ...base, links: [{ label: "Later", url: "", on: true }] }),
+    ).toMatchObject({ "links.0.url": "Add the link for “Later”" });
+    expect(
+      validatePage("business", {
+        ...PAGE_DEFAULTS.business(),
+        name: "Cafe",
+        buttons: [{ label: "Order", url: "", on: false }],
+      }),
+    ).toEqual({});
   });
 });
