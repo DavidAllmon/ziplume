@@ -120,12 +120,14 @@ test.describe("signed in as an owner", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Flyers" })).toBeVisible();
   });
 
-  test("/codes passes axe in dark mode", async ({ page }) => {
-    await page.emulateMedia({ colorScheme: "dark" });
-    await page.goto("codes");
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expectNoAxeViolations(page);
-  });
+  for (const path of ["codes", "codes/new", "team"]) {
+    test(`/${path} passes axe in dark mode`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: "dark" });
+      await page.goto(path);
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+      await expectNoAxeViolations(page);
+    });
+  }
 
   test("old addresses land on the new pages", async ({ page }) => {
     await page.goto("dashboard");
@@ -159,7 +161,7 @@ test.describe("signed in as an owner", () => {
     }
     await expect(tabs.getByRole("button", { name: "More" })).toBeVisible();
     await expect(page.getByRole("complementary", { name: "Sidebar" })).toBeHidden();
-    const logo = page.getByRole("banner").getByRole("link", { name: "QuickQReate codes" });
+    const logo = page.getByRole("banner").getByRole("link", { name: "Ziplume codes" });
     expect((await logo.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await tabs.getByRole("button", { name: "More" }).click();
     for (const link of await page.getByRole("dialog", { name: "More" }).getByRole("link").all()) {

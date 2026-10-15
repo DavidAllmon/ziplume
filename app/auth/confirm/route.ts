@@ -15,7 +15,7 @@ const TYPES: EmailOtpType[] = [
 ];
 
 /**
- * Links in QuickQReate's branded emails land here with a token hash. Verifying it on the
+ * Links in Ziplume's branded emails land here with a token hash. Verifying it on the
  * server works even when the email is opened on a different device than the one that signed up.
  */
 export async function GET(request: NextRequest) {

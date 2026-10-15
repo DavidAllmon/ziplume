@@ -137,7 +137,7 @@ export function CodeOverview({
 
   const shortLinkRow = code.slug ? (
     <div className="flex flex-wrap items-center gap-2 rounded-control bg-surface-2 px-3.5 py-2.5 text-sm">
-      <span className="text-fg-muted">Short link</span>
+      <span className="eyebrow text-fg-muted">Short link</span>
       <span className="font-mono text-fg">{shortLinkLabel(code.slug)}</span>
       <CopyButton text={shortLink(code.slug)} />
       <a

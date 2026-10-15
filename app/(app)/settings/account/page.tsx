@@ -4,7 +4,7 @@ import { SettingsSection } from "@/components/app/SettingsSection";
 import { DeleteAccountForm } from "@/features/auth/DeleteAccountForm";
 import { requireUser } from "@/lib/auth/server";
 
-export const metadata: Metadata = { title: "Account · Settings · QuickQReate" };
+export const metadata: Metadata = { title: "Account · Settings" };
 
 export default async function AccountSettingsPage() {
   await requireUser("/settings/account");

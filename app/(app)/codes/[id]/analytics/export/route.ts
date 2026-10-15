@@ -125,7 +125,7 @@ export async function GET(
   });
 
   const slug = (code.slug ?? "code").toLowerCase();
-  const filename = `quickqreate-scans-${slug}-${range}-${dayInZone(now, timeZone)}.csv`;
+  const filename = `ziplume-scans-${slug}-${range}-${dayInZone(now, timeZone)}.csv`;
   return new Response(stream, {
     headers: {
       "content-type": "text/csv; charset=utf-8",

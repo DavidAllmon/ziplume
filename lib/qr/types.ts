@@ -13,7 +13,7 @@ export const QR_TYPE_IDS = [
 ] as const;
 export type QrTypeId = (typeof QR_TYPE_IDS)[number];
 
-/** Codes that open a mobile page hosted by QuickQReate (free account needed). */
+/** Codes that open a mobile page hosted by Ziplume (free account needed). */
 export const PAGE_TYPE_IDS = [
   "links",
   "vcard",

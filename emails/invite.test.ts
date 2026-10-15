@@ -16,9 +16,9 @@ const withInviter = (patch: Partial<InviteEmailInput["inviter"]>) => ({
 
 describe("inviteEmail", () => {
   it("names the inviter in the subject, or uses their email", () => {
-    expect(inviteEmail(base).subject).toBe("David Allmon invited you to their QuickQReate codes");
+    expect(inviteEmail(base).subject).toBe("David Allmon invited you to their Ziplume codes");
     expect(inviteEmail(withInviter({ name: null })).subject).toBe(
-      "david@example.com invited you to their QuickQReate codes",
+      "david@example.com invited you to their Ziplume codes",
     );
     expect(inviteEmail(withInviter({ name: "Eve\r\nBcc: x@example.com" })).subject).not.toMatch(
       /[\r\n]/,
@@ -70,8 +70,15 @@ describe("inviterName", () => {
     const { subject, html, text } = inviteEmail(
       withInviter({ name: "Claim refund at evil.example" }),
     );
-    expect(subject).toBe("david@example.com invited you to their QuickQReate codes");
+    expect(subject).toBe("david@example.com invited you to their Ziplume codes");
     expect(html).not.toContain("evil.example");
     expect(text).not.toContain("evil.example");
+  });
+  it("uses the Ziplume layout, with its header from the site the invite links to", () => {
+    const { html, text } = inviteEmail(base);
+    expect(html).toContain(`src="${new URL(base.acceptUrl).origin}/brand/email-header.png"`);
+    expect(html).toContain("background:#0a1330");
+    expect(text).toContain("Ziplume · Make it. Link it. Share it.");
+    expect(html + text).not.toMatch(/quickqreate/i);
   });
 });

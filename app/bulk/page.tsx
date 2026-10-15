@@ -4,7 +4,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { BulkGenerator } from "@/features/bulk/BulkGenerator";
 
 export const metadata: Metadata = {
-  title: "Bulk QR codes · QuickQReate",
+  title: "Bulk QR codes",
   description:
     "Create hundreds of QR codes at once from a spreadsheet and download them as a ZIP. Free, with no limits.",
 };

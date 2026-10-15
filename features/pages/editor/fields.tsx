@@ -129,14 +129,14 @@ export function ToggleField({
 }
 
 const ACCENTS = [
+  "#0A1330",
+  "#0B6E8C",
   "#4F46E5",
   "#0F766E",
   "#B45309",
   "#BE123C",
   "#7C3AED",
-  "#0E7490",
   "#15803D",
-  "#0F172A",
 ];
 
 export function AccentField({

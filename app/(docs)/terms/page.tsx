@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { REPO_URL } from "@/lib/env";
 
-export const metadata: Metadata = { title: "Terms · QuickQReate" };
+export const metadata: Metadata = { title: "Terms" };
 
 export default function TermsPage() {
   return (
@@ -12,8 +12,8 @@ export default function TermsPage() {
 
       <h2>A free service</h2>
       <p>
-        QuickQReate is free, with no plans, trials or limits. Codes you create are yours to use for
-        any lawful purpose, including commercial use. Dynamic codes keep working for as long as your
+        Ziplume is free, with no plans, trials or limits. Codes you create are yours to use for any
+        lawful purpose, including commercial use. Dynamic codes keep working for as long as your
         account exists; they are never switched off to ask for payment.
       </p>
 
@@ -24,16 +24,16 @@ export default function TermsPage() {
           settings.
         </li>
         <li>
-          Don’t use QuickQReate for anything illegal, including phishing, malware or fraud. Short
-          links that are reported and found to break the law may be disabled.
+          Don’t use Ziplume for anything illegal, including phishing, malware or fraud. Short links
+          that are reported and found to break the law may be disabled.
         </li>
       </ul>
 
       <h2>No warranty</h2>
       <p>
-        QuickQReate is provided “as is”, without warranties of any kind. Test printed codes before
-        you use them widely. To the extent the law allows, the operator isn’t liable for losses
-        arising from use of the service, including downtime of dynamic codes.
+        Ziplume is provided “as is”, without warranties of any kind. Test printed codes before you
+        use them widely. To the extent the law allows, the operator isn’t liable for losses arising
+        from use of the service, including downtime of dynamic codes.
       </p>
 
       <h2>Changes</h2>

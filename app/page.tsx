@@ -9,11 +9,11 @@ export default function Home() {
     <PageShell className="pb-32 md:pb-16">
       <div className="mb-6 max-w-2xl lg:mb-8">
         <h1 className="font-display text-[1.75rem] leading-tight font-bold tracking-tight text-balance text-fg sm:text-4xl">
-          Create a QR code in seconds
+          Make it. Link it. Share it.
         </h1>
         <p className="mt-2 text-fg-muted sm:text-lg">
-          Free forever, with no sign-up needed. Create a free account for editable codes and scan
-          analytics.
+          QR codes, short links, and simple sharing tools. Free forever, with no sign-up needed.
+          Create a free account for editable codes and scan analytics.
         </p>
         <p className="mt-2 text-sm text-fg-muted">
           Need lots of codes?{" "}

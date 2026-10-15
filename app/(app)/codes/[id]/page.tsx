@@ -8,7 +8,7 @@ import { requireUser } from "@/lib/auth/server";
 import { personLabel } from "@/lib/teams/access";
 import { codesHref, personAccess } from "@/lib/teams/server";
 
-export const metadata: Metadata = { title: "Code · QuickQReate" };
+export const metadata: Metadata = { title: "Code" };
 
 export default async function CodePage({ params, searchParams }: PageProps<"/codes/[id]">) {
   const { id } = await params;

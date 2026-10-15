@@ -17,7 +17,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { LogoMark } from "@/components/brand/Logo";
+import { LogoMark, Wordmark } from "@/components/brand/Logo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Sheet } from "@/components/ui/Sheet";
 import { useProfile } from "@/features/profile/useProfile";
@@ -132,7 +132,7 @@ export function AppShell({
   ];
   const help: NavItem[] = [
     { href: "/developers", label: "Help & API docs", icon: BookOpen },
-    { href: BUY_ME_A_COFFEE_URL, label: "Support QuickQReate", icon: Coffee, external: true },
+    { href: BUY_ME_A_COFFEE_URL, label: "Support Ziplume", icon: Coffee, external: true },
   ];
   const more: NavItem[] = [{ href: "/settings", label: "Settings", icon: Settings }, ...help];
   const sideLink = (item: NavItem) => (
@@ -164,6 +164,7 @@ export function AppShell({
 
       <aside
         aria-label="Sidebar"
+        data-surface="sidebar"
         className={cn(
           "fixed inset-y-0 left-0 z-40 hidden flex-col gap-3 overflow-y-auto border-r border-border bg-surface px-3 py-4 sm:flex",
           expanded ? "w-64 shadow-pop" : "w-16 lg:w-64",
@@ -172,11 +173,12 @@ export function AppShell({
         <div className={cn("flex items-center gap-2 px-1", !expanded && "max-lg:flex-col")}>
           <Link
             href={codesHref}
-            aria-label="QuickQReate codes"
+            aria-label="Ziplume codes"
             onClick={collapse}
-            className="rounded-control focus-ring"
+            className="flex items-center gap-2.5 rounded-control focus-ring"
           >
             <LogoMark className="size-8" />
+            <Wordmark className={cn("text-[15px]", !expanded && "max-lg:hidden")} />
           </Link>
           <button
             ref={toggleRef}
@@ -222,7 +224,7 @@ export function AppShell({
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-surface px-4 sm:hidden">
         <Link
           href={codesHref}
-          aria-label="QuickQReate codes"
+          aria-label="Ziplume codes"
           className="grid size-11 place-items-center rounded-control focus-ring"
         >
           <LogoMark className="size-7" />

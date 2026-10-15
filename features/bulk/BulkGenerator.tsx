@@ -42,7 +42,7 @@ export function BulkGenerator() {
     if (!valid.length || progress) return;
     setProgress(`Preparing 0 of ${valid.length}…`);
     try {
-      await downloadZip(itemsFromRows(valid), format, `quickqreate-${type}-codes.zip`, (done) =>
+      await downloadZip(itemsFromRows(valid), format, `ziplume-${type}-codes.zip`, (done) =>
         setProgress(`Preparing ${done} of ${valid.length}…`),
       );
       toast(`Downloaded ${valid.length} ${valid.length === 1 ? "code" : "codes"}`);

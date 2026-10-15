@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Choose a new password · QuickQReate" };
+export const metadata: Metadata = { title: "Choose a new password" };
 
 export default async function UpdatePasswordPage() {
   await requireUser("/account/update-password");

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { BUY_ME_A_COFFEE_URL, REPO_URL } from "@/lib/env";
 
-export const metadata: Metadata = { title: "Privacy · QuickQReate" };
+export const metadata: Metadata = { title: "Privacy" };
 
 export default function PrivacyPage() {
   return (
@@ -10,8 +10,8 @@ export default function PrivacyPage() {
       <h1>Privacy</h1>
       <p>Last updated 13 October 2026.</p>
       <p>
-        QuickQReate is a free QR code generator run by David Allmon. This page explains what it
-        stores and why, in plain language.
+        Ziplume is a free QR code generator run by David Allmon. This page explains what it stores
+        and why, in plain language.
       </p>
 
       <h2>Without an account</h2>
@@ -48,8 +48,8 @@ export default function PrivacyPage() {
           <strong>Teams:</strong> people you invite can see your codes, analytics and feedback
           (viewers) or also change them (editors). An invite keeps the email address you entered
           until it’s used, revoked or expires after 14 days. When you invite someone by email,
-          QuickQReate sends the invite for you through Brevo; it shows your name and photo. Teams
-          you join can see your name and email address.
+          Ziplume sends the invite for you through Brevo; it shows your name and photo. Teams you
+          join can see your name and email address.
         </li>
         <li>
           <strong>API keys:</strong> only a one-way hash of each key is stored, with the name you
@@ -67,14 +67,14 @@ export default function PrivacyPage() {
 
       <h2>Feedback pages</h2>
       <p>
-        When someone answers a feedback page, QuickQReate stores their rating, any comment and any
+        When someone answers a feedback page, Ziplume stores their rating, any comment and any
         contact details they choose to give, plus the same daily-salted visitor hash used for scans
         (to stop repeat submissions). Only the page’s owner can see responses.
       </p>
 
       <h2>Scans of dynamic codes</h2>
       <p>
-        When someone scans a dynamic code, QuickQReate records the time, the approximate location
+        When someone scans a dynamic code, Ziplume records the time, the approximate location
         (country, region and city, as provided by Cloudflare), the device type, operating system and
         browser. To count unique visitors it stores a one-way hash of the IP address and browser,
         salted with a value that changes every day. The IP address itself is never stored, and the
@@ -104,8 +104,8 @@ export default function PrivacyPage() {
 
       <h2>Contact</h2>
       <p>
-        Questions or requests: open an issue on <a href={`${REPO_URL}/issues`}>GitHub</a>.
-        QuickQReate is free and open source; if it helps you, you can{" "}
+        Questions or requests: open an issue on <a href={`${REPO_URL}/issues`}>GitHub</a>. Ziplume
+        is free and open source; if it helps you, you can{" "}
         <a href={BUY_ME_A_COFFEE_URL}>buy me a coffee</a>.
       </p>
     </>

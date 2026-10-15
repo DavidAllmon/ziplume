@@ -308,7 +308,7 @@ async function renderPdf(rendered: RenderedSvg): Promise<Blob> {
     orientation: width > height ? "landscape" : "portrait",
     compress: true,
   });
-  doc.setProperties({ title: "QR code", creator: "QuickQReate" });
+  doc.setProperties({ title: "QR code", creator: "Ziplume" });
   const svg = imagesForNonLatinText(rendered.svg);
   const element = new DOMParser().parseFromString(svg, "image/svg+xml").documentElement;
   // svg2pdf reads computed styles, so the SVG is attached (off screen) while it converts.

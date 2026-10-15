@@ -241,7 +241,7 @@ describe("BulkCreatePage", () => {
     expect(downloadZip).toHaveBeenCalledWith(
       [expect.objectContaining({ label: "Menu" })],
       "png",
-      "quickqreate-url-codes.zip",
+      "ziplume-url-codes.zip",
       expect.any(Function),
     );
   });

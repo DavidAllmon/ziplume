@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { BulkCreatePage } from "@/features/bulk/BulkCreatePage";
 import { requireUser } from "@/lib/auth/server";
 
-export const metadata: Metadata = { title: "Bulk create · QuickQReate" };
+export const metadata: Metadata = { title: "Bulk create" };
 
 /** Bulk-created codes always go in your own space, whoever's codes you came from. */
 export default async function BulkCreateRoute({ searchParams }: PageProps<"/codes/bulk">) {

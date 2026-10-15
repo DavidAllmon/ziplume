@@ -5,7 +5,7 @@ import { TotpSettings } from "@/features/auth/TotpSettings";
 import { UpdatePasswordForm } from "@/features/auth/UpdatePasswordForm";
 import { requireUser } from "@/lib/auth/server";
 
-export const metadata: Metadata = { title: "Security · Settings · QuickQReate" };
+export const metadata: Metadata = { title: "Security · Settings" };
 
 export default async function SecuritySettingsPage() {
   const { user } = await requireUser("/settings/security");

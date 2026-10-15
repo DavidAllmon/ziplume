@@ -14,7 +14,7 @@ import {
   type Segment,
 } from "./svg-geometry";
 
-// Converts the SVG that QuickQReate renders (qr-code-styling output plus frames) into an
+// Converts the SVG that Ziplume renders (qr-code-styling output plus frames) into an
 // Encapsulated PostScript file: vector shapes, clip paths, axial/radial gradients via
 // Level 3 shading, embedded images and Latin-1 text in Helvetica.
 
@@ -514,7 +514,7 @@ export async function svgToEps(svg: string, options: EpsOptions): Promise<string
     `%%BoundingBox: 0 0 ${Math.ceil(W)} ${Math.ceil(H)}`,
     `%%HiResBoundingBox: 0 0 ${fmt(W)} ${fmt(H)}`,
     `%%Title: ${title}`,
-    "%%Creator: QuickQReate",
+    "%%Creator: Ziplume",
     "%%LanguageLevel: 3",
     "%%DocumentData: Clean7Bit",
     "%%EndComments",

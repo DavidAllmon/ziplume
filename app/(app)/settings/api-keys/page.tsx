@@ -5,7 +5,7 @@ import { SettingsSection } from "@/components/app/SettingsSection";
 import { ApiKeys } from "@/features/developer/ApiKeys";
 import { requireUser } from "@/lib/auth/server";
 
-export const metadata: Metadata = { title: "API keys · Settings · QuickQReate" };
+export const metadata: Metadata = { title: "API keys · Settings" };
 
 export default async function ApiKeySettingsPage() {
   const { supabase } = await requireUser("/settings/api-keys");

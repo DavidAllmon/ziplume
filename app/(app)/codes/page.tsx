@@ -13,7 +13,7 @@ import { requireUser } from "@/lib/auth/server";
 import { accessTo, personLabel } from "@/lib/teams/access";
 import { loadTeam } from "@/lib/teams/server";
 
-export const metadata: Metadata = { title: "Codes · QuickQReate" };
+export const metadata: Metadata = { title: "Codes" };
 
 export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
   const params = await searchParams;

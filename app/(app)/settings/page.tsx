@@ -7,7 +7,7 @@ import { requireUser } from "@/lib/auth/server";
 
 import { HashRedirect } from "./HashRedirect";
 
-export const metadata: Metadata = { title: "Profile · Settings · QuickQReate" };
+export const metadata: Metadata = { title: "Profile · Settings" };
 
 export default async function ProfileSettingsPage() {
   const { supabase, user } = await requireUser("/settings");

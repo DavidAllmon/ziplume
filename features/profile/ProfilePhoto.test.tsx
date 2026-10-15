@@ -52,7 +52,7 @@ describe("ProfilePhoto", () => {
   it("shows an uploaded photo and tells the rest of the page", async () => {
     vi.mocked(uploadAvatar).mockResolvedValue({ ok: true, url: UPLOADED });
     const heard = vi.fn();
-    window.addEventListener("quickqreate:profile", (event) => heard((event as CustomEvent).detail));
+    window.addEventListener("ziplume:profile", (event) => heard((event as CustomEvent).detail));
     const { container } = renderPhoto();
     const file = new File(["x"], "me.jpg", { type: "image/jpeg" });
     await userEvent.upload(screen.getByLabelText("Upload photo"), file);

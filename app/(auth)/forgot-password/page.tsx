@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AuthCard } from "@/features/auth/AuthCard";
 import { ForgotPasswordForm } from "@/features/auth/ForgotPasswordForm";
 
-export const metadata: Metadata = { title: "Reset your password · QuickQReate" };
+export const metadata: Metadata = { title: "Reset your password" };
 
 export default function ForgotPasswordPage() {
   return (

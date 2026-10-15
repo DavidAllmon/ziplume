@@ -809,7 +809,7 @@ describe("power tools", () => {
     const [{ created }] = (await asJay<{ created: { key: string; prefix: string; id: string } }>(
       "select public.create_api_key('CI') as created",
     )) as [{ created: { key: string; prefix: string; id: string } }];
-    expect(created.key).toMatch(/^qq_[0-9a-f]{48}$/);
+    expect(created.key).toMatch(/^zl_[0-9a-f]{48}$/);
     expect(created.prefix).toBe(created.key.slice(0, 10));
     await expect(asJay("select key_hash from public.api_keys")).rejects.toThrow(
       /permission denied/,
@@ -828,6 +828,20 @@ describe("power tools", () => {
     expect(await owner("qq_wrong")).toBeNull();
     await asJay("delete from public.api_keys where id = $1", [created.id]);
     expect(await owner(created.key)).toBeNull();
+  });
+
+  it("old qq_ keys still resolve to their owner", async () => {
+    const oldKey = `qq_${"b".repeat(48)}`;
+    await asService(
+      `insert into public.api_keys (user_id, name, prefix, key_hash)
+       values ($1, 'Before Ziplume', left($2, 10), encode(extensions.digest($2, 'sha256'), 'hex'))`,
+      [JAY, oldKey],
+    );
+    const [{ u }] = (await asService<{ u: string | null }>("select public.api_key_user($1) as u", [
+      oldKey,
+    ])) as [{ u: string | null }];
+    expect(u).toBe(JAY);
+    await asService("delete from public.api_keys where name = 'Before Ziplume'");
   });
 
   it("API functions only reach the key owner's codes", async () => {
@@ -1194,6 +1208,26 @@ describe("email invites", () => {
     await expect(record(asVera, mine!.id)).rejects.toThrow(/all the invite emails it can today/);
     await asService("delete from public.invite_sends where sent_at < now() - interval '2 hours'");
     await record(asVera, mine!.id);
+  });
+
+  it("name Ziplume when the whole site has sent its daily invites", async () => {
+    const VAL = "3f3f3f3f-3f3f-4f3f-8f3f-3f3f3f3f3f3f";
+    await db.query("insert into auth.users (id, email) values ($1, 'val@example.com')", [VAL]);
+    const asVal = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", VAL, sql, params);
+    await asService(
+      "insert into public.invite_sends (owner_id) select $1 from generate_series(1, 200)",
+      [UMA],
+    );
+    try {
+      const [invite] = await asVal<{ id: string }>(
+        "insert into public.team_invites (email, role) values ('wyn@example.com', 'viewer') returning id",
+      );
+      await expect(record(asVal, invite!.id)).rejects.toThrow(
+        /Ziplume has sent all the invite emails it can today/,
+      );
+    } finally {
+      await asService("delete from public.invite_sends where owner_id = $1", [UMA]);
+    }
   });
 });
 

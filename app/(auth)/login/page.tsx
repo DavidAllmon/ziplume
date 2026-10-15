@@ -5,7 +5,7 @@ import { AuthCard } from "@/features/auth/AuthCard";
 import { LoginForm } from "@/features/auth/LoginForm";
 import { safeNext } from "@/features/auth/redirects";
 
-export const metadata: Metadata = { title: "Sign in · QuickQReate" };
+export const metadata: Metadata = { title: "Sign in" };
 
 const ERRORS: Record<string, string> = {
   link: "That link has expired or was already used. Sign in, or request a new one.",
@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const error = typeof params.error === "string" ? ERRORS[params.error] : undefined;
   return (
     <AuthCard
-      title="Sign in to QuickQReate"
+      title="Sign in to Ziplume"
       description="Manage your codes, edit where they point and see who scans them."
       footer={
         <>

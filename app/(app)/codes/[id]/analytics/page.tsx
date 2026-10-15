@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { AnalyticsView } from "@/features/analytics/AnalyticsView";
 import { requireUser } from "@/lib/auth/server";
 
-export const metadata: Metadata = { title: "Analytics · QuickQReate" };
+export const metadata: Metadata = { title: "Analytics" };
 
 export default async function AnalyticsPage({
   params,
@@ -32,8 +32,8 @@ export default async function AnalyticsPage({
           No analytics for static codes
         </h1>
         <p className="text-fg-muted">
-          “{code.name}” encodes its content directly, so scans never pass through QuickQReate.
-          Create a trackable Link code to see scans and change where it points later.
+          “{code.name}” encodes its content directly, so scans never pass through Ziplume. Create a
+          trackable Link code to see scans and change where it points later.
         </p>
         <div className="flex flex-wrap justify-center gap-2">
           <Link href={`/codes/${code.id}`} className={buttonClasses("outline", "md")}>

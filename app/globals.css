@@ -10,64 +10,112 @@
 :root {
   color-scheme: light;
   --bg: #ffffff;
-  --surface: #fcfcfd;
-  --surface-2: #f2f4f7;
-  --border: #eaecf0;
-  --field-border: #848d9c;
-  --fg: #101828;
-  --fg-muted: #475467;
-  --fg-subtle: #667085;
-  --primary: #101828;
-  --primary-hover: #344054;
+  --surface: #f7f9fc;
+  --surface-2: #edf1f7;
+  --border: #dce3ed;
+  --field-border: #7a8699;
+  --fg: #0a1330;
+  --fg-muted: #45506a;
+  --fg-subtle: #5d6880;
+  --primary: #0a1330;
+  --primary-hover: #1e2a55;
   --primary-fg: #ffffff;
-  --primary-soft: #eff4ff;
-  --primary-soft-fg: #1d4ed8;
-  --link: #1d4ed8;
-  --ring: #1d4ed8;
+  --primary-soft: #e0f7ff;
+  --primary-soft-fg: #075a73;
+  --link: #0b6e8c;
+  --ring: #0b6e8c;
   --success: #05603a;
   --success-soft: #dcfae6;
   --warning: #93370d;
   --warning-soft: #fef0c7;
   --danger: #912018;
   --danger-soft: #fee4e2;
-  --neutral: #344054;
-  --neutral-soft: #eaecf0;
-  --selection: #d1e0ff;
-  --logo-ring: #4f46e5;
+  --neutral: #45506a;
+  --neutral-soft: #e9eef5;
+  --selection: #cdeffa;
+  /* The logo: viewfinder corners, the Z's bars and its scan beam (with a soft glow). */
+  --logo-corners: #45506a;
+  --logo-bars: #0a1330;
+  --logo-beam: #0b9cc4;
+  --logo-glow: #5ce1ff;
   /* Chart series, validated for color-blind separation against the surface. */
-  --chart-1: #1d4ed8;
-  --shadow-color: 220 43% 11%;
+  --chart-1: #5b45e0;
+  --shadow-color: 226 66% 11%;
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0c0d0f;
-  --surface: #131417;
-  --surface-2: #1b1d21;
-  --border: #2a2d33;
-  --field-border: #6b7280;
-  --fg: #f5f6f7;
-  --fg-muted: #c3c7cf;
-  --fg-subtle: #9aa0aa;
-  --primary: #f5f6f7;
-  --primary-hover: #d0d5dd;
-  --primary-fg: #101828;
-  --primary-soft: #172554;
-  --primary-soft-fg: #bfdbfe;
-  --link: #60a5fa;
-  --ring: #60a5fa;
+  --bg: #070b1a;
+  --surface: #0d1428;
+  --surface-2: #141d36;
+  --border: #232e4d;
+  --field-border: #66728c;
+  --fg: #e6eefa;
+  --fg-muted: #a9b6cc;
+  --fg-subtle: #8592ab;
+  --primary: #5ce1ff;
+  --primary-hover: #8aebff;
+  --primary-fg: #04101f;
+  --primary-soft: #0b2b3a;
+  --primary-soft-fg: #9fefff;
+  --link: #7fe9ff;
+  --ring: #7fe9ff;
   --success: #47cd89;
   --success-soft: #053321;
   --warning: #fdb022;
   --warning-soft: #4e1d09;
   --danger: #f97066;
   --danger-soft: #55160c;
-  --neutral: #d0d5dd;
-  --neutral-soft: #2a2d33;
-  --selection: #1e3a8a;
-  --logo-ring: #818cf8;
-  --chart-1: #60a5fa;
-  --shadow-color: 228 30% 2%;
+  --neutral: #c3ccdb;
+  --neutral-soft: #232e4d;
+  --selection: #12406b;
+  --logo-corners: #a9b6cc;
+  --logo-bars: #e6eefa;
+  --logo-beam: #5ce1ff;
+  --logo-glow: #5ce1ff;
+  --chart-1: #a99bff;
+  --shadow-color: 228 60% 2%;
+}
+
+/* The navy sidebar: everything inside it reads these instead of the page's palette, so its
+   links, switcher, Create button and menus need no colors of their own. */
+[data-surface="sidebar"] {
+  color-scheme: dark;
+  --bg: #0a1330;
+  --surface: #0a1330;
+  --surface-2: #16224a;
+  --border: #232e4d;
+  --field-border: #7c8aa8;
+  --fg: #e6eefa;
+  --fg-muted: #a9b6cc;
+  --fg-subtle: #8592ab;
+  --primary: #5ce1ff;
+  --primary-hover: #8aebff;
+  --primary-fg: #04101f;
+  --primary-soft: #0b2b3a;
+  --primary-soft-fg: #9fefff;
+  --link: #7fe9ff;
+  --ring: #7fe9ff;
+  --success: #47cd89;
+  --success-soft: #053321;
+  --warning: #fdb022;
+  --warning-soft: #4e1d09;
+  --danger: #f97066;
+  --danger-soft: #55160c;
+  --neutral: #c3ccdb;
+  --neutral-soft: #232e4d;
+  --selection: #12406b;
+  --logo-corners: #a9b6cc;
+  --logo-bars: #e6eefa;
+  --logo-beam: #5ce1ff;
+  --logo-glow: #5ce1ff;
+}
+
+/* In dark mode the sidebar matches the panels instead of navy. */
+[data-theme="dark"] [data-surface="sidebar"] {
+  --bg: #0d1428;
+  --surface: #0d1428;
+  --surface-2: #141d36;
 }
 
 @theme inline {
@@ -96,9 +144,11 @@
   --color-neutral-soft: var(--neutral-soft);
   --color-chart-1: var(--chart-1);
 
-  /* Inter only (spec §5); "display" keeps working for headings. */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* IBM Plex Sans for text, Archivo (a little wide) for headings, IBM Plex Mono for links and keys. */
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-display--font-variation-settings: "wdth" 112;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --radius-field: 0.5rem;
   --radius-control: 0.5rem;
@@ -135,6 +185,17 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+}
+
+/* Small wide capitals for labels, in the wordmark's style. */
+@utility eyebrow {
+  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  font-variation-settings: "wdth" 125;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 /* Checkerboard behind transparent QR previews. */

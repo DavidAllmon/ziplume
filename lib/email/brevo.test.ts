@@ -18,7 +18,7 @@ describe("Brevo email", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("posts the message from the QuickQReate sender", async () => {
+  it("posts the message from the Ziplume sender", async () => {
     const fetcher = ok();
     const result = await sendEmail(
       { ...message, replyTo: { email: "david@example.com", name: "David" } },
@@ -30,7 +30,7 @@ describe("Brevo email", () => {
     expect(init?.method).toBe("POST");
     expect(init?.headers).toMatchObject({ "api-key": "key-123" });
     expect(JSON.parse(String(init?.body))).toEqual({
-      sender: { name: "QuickQReate", email: "no-reply@techitdave.com" },
+      sender: { name: "Ziplume", email: "no-reply@techitdave.com" },
       to: [{ email: "sam@cafe.com" }],
       subject: "Hi",
       htmlContent: "<p>Hi</p>",

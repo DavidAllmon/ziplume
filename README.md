@@ -1,18 +1,18 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="public/brand/logo-lockup-dark.png" />
-    <img src="public/brand/logo-lockup.png" alt="QuickQReate" width="320" />
+    <img src="public/brand/logo-lockup.png" alt="Ziplume" width="320" />
   </picture>
 </p>
 
 <p align="center">
-  <strong>Create beautiful, scannable QR codes in seconds.</strong><br />
-  Links, Wi-Fi, contacts, email, phone and SMS, plus editable dynamic codes with scan analytics.<br />
+  <strong>Make it. Link it. Share it.</strong><br />
+  QR codes, short links, and simple sharing tools: links, Wi-Fi, contacts, email, phone and SMS, plus trackable codes with scan analytics.<br />
   Completely free, with no limits.
 </p>
 
 <p align="center">
-  <a href="https://qr.techitdave.com"><strong>Open QuickQReate →</strong></a>
+  <a href="https://qr.techitdave.com"><strong>Open Ziplume →</strong></a>
   &nbsp;·&nbsp;
   <a href="https://buymeacoffee.com/davidallmon">Buy me a coffee</a>
 </p>
@@ -28,12 +28,12 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/desktop-dark.png" />
-    <img src="docs/screenshots/desktop-light.png" alt="QuickQReate on desktop: a Wi-Fi form on the left and a live, verified QR code preview with download options on the right" width="860" />
+    <img src="docs/screenshots/desktop-light.png" alt="Ziplume on desktop: a Wi-Fi form on the left and a live, verified QR code preview with download options on the right" width="860" />
   </picture>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/mobile-light.png" alt="QuickQReate on a phone with the live preview bar at the bottom" width="260" />
+  <img src="docs/screenshots/mobile-light.png" alt="Ziplume on a phone with the live preview bar at the bottom" width="260" />
   &nbsp;
   <img src="docs/screenshots/mobile-sheet-dark.png" alt="The mobile preview sheet in dark mode" width="260" />
 </p>
@@ -142,7 +142,7 @@ e2e/                    Playwright tests that download codes and decode them wit
 
 ## Deployment
 
-QuickQReate runs as a Next.js server from the `Dockerfile` (standalone output, health check at `/api/health`). Production is a Coolify application at `https://qr.techitdave.com` that redeploys on every push to `main`. GitHub Actions runs lint, formatting, type checks, unit and end-to-end tests on every push and pull request.
+Ziplume runs as a Next.js server from the `Dockerfile` (standalone output, health check at `/api/health`). Production is a Coolify application at `https://qr.techitdave.com` that redeploys on every push to `main`. GitHub Actions runs lint, formatting, type checks, unit and end-to-end tests on every push and pull request.
 
 The one-time setup (Supabase project, Brevo email, Google sign-in, DNS and Coolify) is in [docs/accounts-setup.md](docs/accounts-setup.md). The old GitHub Pages address becomes a redirect by running the CI workflow manually with `redirect_to` set to the new URL.
 

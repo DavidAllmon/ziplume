@@ -35,7 +35,7 @@ export function BulkListCard({
   function downloadTemplate() {
     saveBlob(
       new Blob([templateCsv(type)], { type: "text/csv;charset=utf-8" }),
-      `quickqreate-${type}-template.csv`,
+      `ziplume-${type}-template.csv`,
     );
   }
 

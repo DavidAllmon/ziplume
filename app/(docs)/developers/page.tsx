@@ -5,9 +5,8 @@ import type { ReactNode } from "react";
 import { accountsEnabled, SITE_URL } from "@/lib/env";
 
 export const metadata: Metadata = {
-  title: "Developers · QuickQReate",
-  description:
-    "Create, update and track QR codes from your own code with the free QuickQReate API.",
+  title: "Developers",
+  description: "Create, update and track QR codes from your own code with the free Ziplume API.",
 };
 
 const BASE = `${SITE_URL}/api/v1`;
@@ -75,13 +74,13 @@ export default function DevelopersPage() {
     <>
       <h1>Developers</h1>
       <p>
-        The QuickQReate API lets your own scripts and apps create codes, change where dynamic codes
+        The Ziplume API lets your own scripts and apps create codes, change where dynamic codes
         point, and read their scan analytics. Like everything else here, it’s free.
       </p>
       {!accountsEnabled && (
         <p className="rounded-control bg-warning-soft px-4 py-3 text-sm">
-          The API is part of the account version of QuickQReate and isn’t available on this copy of
-          the site.
+          The API is part of the account version of Ziplume and isn’t available on this copy of the
+          site.
         </p>
       )}
 
@@ -91,7 +90,7 @@ export default function DevelopersPage() {
         once, so store it somewhere safe, like your app’s secret settings. Send it with every
         request:
       </p>
-      <Code>{`Authorization: Bearer qq_your_key_here`}</Code>
+      <Code>{`Authorization: Bearer zl_your_key_here`}</Code>
       <p>
         A key acts as you, on the codes in your own account. Keep keys on servers: anyone with a key
         can change your codes. You can revoke a key at any time.
@@ -260,7 +259,7 @@ export default function DevelopersPage() {
   "content": {
     "title": "Dave’s Diner",
     "bio": "Breakfast all day",
-    "color": "#4F46E5",
+    "color": "#0A1330",
     "links": [{ "label": "Order online", "url": "https://example.com/order" }],
     "socials": [{ "network": "instagram", "url": "https://instagram.com/example" }]
   }

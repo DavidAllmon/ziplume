@@ -14,12 +14,13 @@ export async function generateMetadata({ params }: PageProps<"/p/[slug]">): Prom
   const { slug } = await params;
   const page = isValidSlug(slug) ? await getPublicPage(slug) : null;
   if (!page || page === "unavailable" || page.locked)
-    return { title: "QuickQReate", robots: { index: false } };
+    // Absolute titles: hosted pages belong to their owners, so the site name is never added.
+    return { title: { absolute: "Ziplume" }, robots: { index: false } };
   const title = pageSummary(page.type, page.content) || PAGE_TYPES[page.type].label;
   return {
-    title,
+    title: { absolute: title },
     robots: { index: false, follow: false },
-    openGraph: { title, siteName: "QuickQReate", type: "website" },
+    openGraph: { title, siteName: "Ziplume", type: "website" },
   };
 }
 

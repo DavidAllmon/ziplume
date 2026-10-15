@@ -1,5 +1,5 @@
 {
-  "name": "quickqreate",
+  "name": "ziplume",
   "version": "2.0.0",
   "private": true,
   "description": "Create beautiful, scannable QR codes for links, Wi-Fi, contacts and more. Runs entirely in your browser.",
@@ -25,7 +25,9 @@
     "brand": "node scripts/build-brand-assets.mjs"
   },
   "dependencies": {
-    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource-variable/ibm-plex-sans": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
     "@headlessui/react": "^2.2.10",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.3",

@@ -18,7 +18,7 @@ import { sanitizeDesign } from "../state/sanitize";
 import { QUICK_STYLES } from "../state/templates";
 import type { DesignState, GeneratorAction } from "../state/types";
 
-const SAMPLE = "QuickQReate";
+const SAMPLE = "Ziplume";
 
 function StylePreview({ design }: { design: DesignState }) {
   const options: RenderOptions = useMemo(() => ({ ...design, data: SAMPLE, size: 240 }), [design]);

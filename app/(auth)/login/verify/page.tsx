@@ -6,7 +6,7 @@ import { MfaChallengeForm } from "@/features/auth/MfaChallengeForm";
 import { safeNext } from "@/features/auth/redirects";
 import { getServerSupabase } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Two-step verification · QuickQReate" };
+export const metadata: Metadata = { title: "Two-step verification" };
 
 export default async function VerifyPage({ searchParams }: PageProps<"/login/verify">) {
   const params = await searchParams;

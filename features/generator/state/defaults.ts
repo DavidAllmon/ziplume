@@ -5,11 +5,11 @@ import { PAGE_TYPE_IDS, QR_TYPE_IDS, type ContentValues } from "@/lib/qr/types";
 import type { DesignState, ExportSettings, GeneratorState } from "./types";
 
 export const DEFAULT_DESIGN: DesignState = {
-  fgColor: "#0F172A",
+  fgColor: "#0A1330",
   bgColor: "#FFFFFF",
   transparent: false,
   gradientType: "none",
-  gradientColor: "#4F46E5",
+  gradientColor: "#0B6E8C",
   gradientAngle: 45,
   cornerColor: null,
   cornerDotColor: null,
@@ -23,7 +23,7 @@ export const DEFAULT_DESIGN: DesignState = {
   logoClearSpace: true,
   frame: "none",
   frameText: "SCAN ME",
-  frameColor: "#0F172A",
+  frameColor: "#0A1330",
 };
 
 export const MAX_FRAME_TEXT = 28;
@@ -58,11 +58,11 @@ export const GRADIENT_PRESETS = [
   { name: "Ocean", from: "#0C4A6E", to: "#0F766E" },
   { name: "Sunset", from: "#9A3412", to: "#86198F" },
   { name: "Forest", from: "#14532D", to: "#3F6212" },
-  { name: "Midnight", from: "#0F172A", to: "#4338CA" },
+  { name: "Ziplume", from: "#0A1330", to: "#0B6E8C" },
 ] as const;
 
 export const COLOR_PRESETS = [
-  { name: "Ink", fg: "#0F172A", bg: "#FFFFFF" },
+  { name: "Navy", fg: "#0A1330", bg: "#FFFFFF" },
   { name: "Indigo", fg: "#3730A3", bg: "#FFFFFF" },
   { name: "Forest", fg: "#14532D", bg: "#F0FDF4" },
   { name: "Ocean", fg: "#0C4A6E", bg: "#F0F9FF" },

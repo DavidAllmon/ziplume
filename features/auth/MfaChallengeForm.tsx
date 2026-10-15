@@ -49,7 +49,7 @@ export function MfaChallengeForm({ next }: { next: string }) {
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <Field
           label="6-digit code"
-          hint="Open your authenticator app and enter the code for QuickQReate."
+          hint="Open your authenticator app and enter the code for Ziplume."
         >
           {(control) => (
             <TextInput

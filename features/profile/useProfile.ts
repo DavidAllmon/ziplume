@@ -9,7 +9,7 @@ export interface Profile {
   avatar_url: string | null;
 }
 
-const EVENT = "quickqreate:profile";
+const EVENT = "ziplume:profile";
 
 /** Tells every useProfile() on the page that the profile changed (a new name or photo). */
 export function announceProfile(patch: Partial<Profile>) {

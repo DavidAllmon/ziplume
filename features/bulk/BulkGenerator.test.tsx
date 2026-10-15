@@ -44,7 +44,7 @@ describe("BulkGenerator (public)", () => {
       expect(downloadZip).toHaveBeenCalledWith(
         [expect.objectContaining({ label: "Menu", content: "https://example.com/menu" })],
         "png",
-        "quickqreate-url-codes.zip",
+        "ziplume-url-codes.zip",
         expect.any(Function),
       ),
     );
