@@ -37,6 +37,7 @@ export function WifiForm({ values, onChange }: FormProps<"wifi">) {
             placeholder="HomeNet"
             value={values.ssid}
             onChange={(event) => onChange("ssid", event.target.value)}
+            data-field="ssid"
             onBlur={() => touch("ssid")}
           />
         )}
@@ -68,6 +69,7 @@ export function WifiForm({ values, onChange }: FormProps<"wifi">) {
                 className="pr-12"
                 value={values.password}
                 onChange={(event) => onChange("password", event.target.value)}
+                data-field="password"
                 onBlur={() => touch("password")}
               />
               <IconButton

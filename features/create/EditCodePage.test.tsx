@@ -34,11 +34,13 @@ function renderPage(row: QrCodeRow = savedRow()) {
   );
 }
 
-const preview = () => within(screen.getByRole("complementary", { name: "Preview" }));
-const saveButton = () => preview().getByRole("button", { name: "Save changes" });
+const bar = () => within(screen.getByRole("region", { name: "Code" }));
+const saveButton = () => bar().getByRole("button", { name: "Save changes" });
 
 beforeEach(() => {
   push.mockReset();
+  // Tabs keep the open tab in the address; start every test on a clean one.
+  window.history.replaceState(null, "", "/");
   replace.mockReset();
   refresh.mockReset();
   vi.mocked(updateCodeWithSettings).mockReset();
@@ -98,12 +100,11 @@ describe("EditCodePage", () => {
       error: "That link ending is already taken. Try another.",
     });
     renderPage();
+    await user.click(screen.getByRole("tab", { name: "Settings" }));
     await user.clear(screen.getByLabelText("Short link ending"));
     await user.type(screen.getByLabelText("Short link ending"), "TAKEN");
     await user.click(saveButton());
-    expect(await preview().findByRole("alert")).toHaveTextContent(
-      "That link ending is already taken",
-    );
+    expect(await bar().findByRole("alert")).toHaveTextContent("That link ending is already taken");
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -111,7 +112,7 @@ describe("EditCodePage", () => {
     const user = userEvent.setup();
     renderPage();
     await user.type(screen.getByLabelText("Code name"), " 2");
-    await user.click(preview().getByRole("button", { name: "Discard changes" }));
+    await user.click(bar().getByRole("button", { name: "Discard changes" }));
     expect(screen.getByLabelText("Code name")).toHaveValue("Spring menu");
     expect(saveButton()).toBeDisabled();
   });
@@ -120,6 +121,7 @@ describe("EditCodePage", () => {
     const user = userEvent.setup();
     vi.mocked(updateCodeWithSettings).mockResolvedValue({ ok: true, value: savedRow() });
     renderPage(savedRow({ has_password: true }));
+    await user.click(screen.getByRole("tab", { name: "Settings" }));
     await user.click(screen.getByRole("button", { name: "Remove password" }));
     await user.click(saveButton());
     expect(updateCodeWithSettings).toHaveBeenCalledWith("c1", {}, { action: "clear" });
@@ -132,6 +134,7 @@ describe("EditCodePage", () => {
       savedRow({ design: { logo: `data:image/png;base64,${"A".repeat(250_000)}` } as never }),
     );
     // Only a changed design is sent, so change a color.
+    await user.click(screen.getByRole("tab", { name: "QR code" }));
     await user.click(screen.getByRole("button", { name: /^Colors/ }));
     await user.clear(screen.getByLabelText("Background"));
     // The field keeps its "#" when cleared.
@@ -140,5 +143,16 @@ describe("EditCodePage", () => {
     expect(
       await screen.findByText("Changes saved. The logo was too large to store and was left out."),
     ).toBeInTheDocument();
+  });
+
+  it("switching tabs with unsaved changes doesn't ask to leave", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.type(screen.getByLabelText("Code name"), " 2");
+    await user.click(screen.getByRole("tab", { name: "QR code" }));
+    await user.click(screen.getByRole("tab", { name: "Settings" }));
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe("#settings");
+    expect(screen.getByLabelText("Code name")).toHaveValue("Spring menu 2");
   });
 });

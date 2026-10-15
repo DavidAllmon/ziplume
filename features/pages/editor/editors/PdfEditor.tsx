@@ -3,7 +3,7 @@
 import { type PdfPage } from "@/lib/pages/types";
 
 import { AreaField, MediaField, TextField, ToggleField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function PdfEditor({
   page,
@@ -16,6 +16,7 @@ export function PdfEditor({
       <MediaField
         label="PDF"
         kind="pdf"
+        field="file"
         value={page.file}
         onChange={(file) =>
           set({ file, title: page.title || file?.name.replace(/\.pdf$/i, "") || "" })
@@ -35,7 +36,6 @@ export function PdfEditor({
         checked={page.direct}
         onChange={(direct) => set({ direct })}
       />
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

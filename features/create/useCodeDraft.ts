@@ -26,10 +26,12 @@ import {
   createReducer,
   initialCreateState,
   isTrackable,
-  settingsProblem,
+  settingsErrors,
   type CreateDefaults,
   type CreateState,
+  type SettingsErrors,
 } from "./state";
+import type { Problem } from "./tabs";
 
 /** Trackable links redirect, so they can only point at web pages (the database checks this too). */
 const WEB_ADDRESS = /^https?:\/\//i;
@@ -118,20 +120,39 @@ export function useCodeDraft(
     staticType && values ? filenameLabelFor(staticType, values) : summary,
     "png",
   );
-  const firstError = Object.values(errors)[0] ?? null;
-  /** Why the code can't be created yet, or null when it's ready. */
-  const blocker =
+  const firstErrorPath = Object.keys(errors)[0] ?? null;
+  const settingsProblems: SettingsErrors = trackable
+    ? settingsErrors(settings, { requireSlug: options.requireSlug })
+    : {};
+  const settingsPath = (Object.keys(settingsProblems)[0] ?? null) as keyof SettingsErrors | null;
+  /** Why the code can't be created yet, and where to fix it; null when it's ready. */
+  const problem: Problem | null =
     staticType && !encoded
-      ? info.emptyHint
+      ? { message: info.emptyHint, tab: "content", field: null }
       : !isValid
-        ? (firstError ?? info.emptyHint)
+        ? {
+            message: (firstErrorPath && errors[firstErrorPath]) || info.emptyHint,
+            tab: "content",
+            field: firstErrorPath,
+          }
         : trackable && activeType === "url" && !WEB_ADDRESS.test(normalizeUrl(code.content.url.url))
-          ? "Trackable links need a web address (http or https). Turn off Trackable for other links."
+          ? {
+              message:
+                "Trackable links need a web address (http or https). Turn off Trackable for other links.",
+              tab: "content",
+              field: null,
+            }
           : !measurement.fits
-            ? "Too much content for a QR code"
-            : trackable
-              ? settingsProblem(settings, { requireSlug: options.requireSlug })
+            ? { message: "Too much content for a QR code", tab: "content", field: null }
+            : settingsPath
+              ? {
+                  message: settingsProblems[settingsPath]!,
+                  tab: "settings",
+                  field: `settings.${settingsPath}`,
+                }
               : null;
+  /** Why the code can't be created yet, or null when it's ready. */
+  const blocker = problem?.message ?? null;
 
   const codeAction = useCallback(
     (action: GeneratorAction) => dispatch({ type: "code", action }),
@@ -167,6 +188,7 @@ export function useCodeDraft(
     defaultName,
     filename,
     blocker,
+    problem,
   };
 }
 

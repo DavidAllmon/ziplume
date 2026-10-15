@@ -39,6 +39,8 @@ interface PageEditorProps<K extends PageTypeId> {
   page: PageContentMap[K];
   errors: PageErrors;
   onChange: (page: PageContentMap[K]) => void;
+  /** Show every error now, as if each field had been left. */
+  reveal?: boolean;
 }
 
 /** Form for a hosted page; errors show once a field has been visited. */
@@ -47,6 +49,7 @@ export function PageEditor<K extends PageTypeId>({
   page,
   errors,
   onChange,
+  reveal = false,
 }: PageEditorProps<K>) {
   const [touched, setTouched] = useState<ReadonlySet<string>>(() => new Set());
   const touch = useCallback(
@@ -55,10 +58,13 @@ export function PageEditor<K extends PageTypeId>({
     [],
   );
   const errorsApi = useMemo<ErrorsApi>(
-    () => ({ error: (path) => (touched.has(path) ? errors[path] : undefined), touch }),
-    [errors, touched, touch],
+    () => ({
+      error: (path) => (reveal || touched.has(path) ? errors[path] : undefined),
+      touch,
+    }),
+    [errors, touched, touch, reveal],
   );
-  const anyTouched = touched.size > 0;
+  const anyTouched = touched.size > 0 || reveal;
   const set = (patch: object) => {
     if (!anyTouched) touch("*");
     onChange({ ...page, ...patch } as PageContentMap[K]);

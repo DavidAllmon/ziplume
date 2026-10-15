@@ -38,6 +38,7 @@ export function LocationForm({ values, onChange }: FormProps<"location">) {
               placeholder="Eiffel Tower, Paris"
               value={values.query}
               onChange={(event) => onChange("query", event.target.value)}
+              data-field="query"
               onBlur={() => touch("query")}
             />
           )}
@@ -52,6 +53,7 @@ export function LocationForm({ values, onChange }: FormProps<"location">) {
                 placeholder="48.8584"
                 value={values.latitude}
                 onChange={(event) => onChange("latitude", event.target.value)}
+                data-field="latitude"
                 onBlur={() => touch("latitude")}
               />
             )}
@@ -64,6 +66,7 @@ export function LocationForm({ values, onChange }: FormProps<"location">) {
                 placeholder="2.2945"
                 value={values.longitude}
                 onChange={(event) => onChange("longitude", event.target.value)}
+                data-field="longitude"
                 onBlur={() => touch("longitude")}
               />
             )}

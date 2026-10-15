@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { CreatePage } from "@/features/create/CreatePage";
+import { TypeGallery } from "@/features/create/gallery/TypeGallery";
 import { requireUser } from "@/lib/auth/server";
 import { isPageType, isStaticType, type CodeTypeId } from "@/lib/qr/types";
 
@@ -22,7 +23,8 @@ export default async function NewCodePage({ searchParams }: PageProps<"/codes/ne
     .order("name");
   // Only one of your own folders counts; anything else starts outside any folder.
   const folder = (folders ?? []).find((f) => f.id === folderParam) ?? null;
-  const initialType = typeParam && isCodeType(typeParam) ? typeParam : "url";
+  const initialType = typeParam && isCodeType(typeParam) ? typeParam : null;
+  if (!initialType) return <TypeGallery userId={user.id} folderId={folder?.id ?? null} />;
 
   return (
     <CreatePage
@@ -32,6 +34,7 @@ export default async function NewCodePage({ searchParams }: PageProps<"/codes/ne
       folders={folders ?? []}
       initialType={initialType}
       initialFolderId={folder?.id ?? null}
+      resume={params.resume === "1"}
     />
   );
 }

@@ -54,9 +54,13 @@ function renderPage(props: Partial<CreatePageProps> = {}) {
 
 /** The desktop preview column (the phone bar repeats some of it). */
 const preview = () => within(screen.getByRole("complementary", { name: "Preview" }));
+/** The top bar: name, Create, and what's missing. */
+const bar = () => within(screen.getByRole("region", { name: "Code" }));
 
 beforeEach(() => {
   window.localStorage.clear();
+  // Tabs keep the open tab in the address; start every test on a clean one.
+  window.history.replaceState(null, "", "/");
   push.mockReset();
   vi.mocked(createCodeWithSettings).mockReset();
 });
@@ -64,7 +68,7 @@ beforeEach(() => {
 describe("CreatePage", () => {
   it("starts clean, with the type and folder from the address", () => {
     renderPage({ initialType: "wifi", initialFolderId: "f1" });
-    expect(screen.getByRole("radio", { name: /Join a Wi-Fi network/ })).toBeChecked();
+    expect(screen.getByRole("heading", { level: 1, name: "New Wi-Fi" })).toBeInTheDocument();
     expect(screen.getByLabelText("Folder")).toHaveValue("f1");
     expect(screen.getByLabelText("Code name")).toHaveValue("");
     expect(screen.getByLabelText(/Code password/)).toBeDisabled();
@@ -74,11 +78,12 @@ describe("CreatePage", () => {
     const user = userEvent.setup();
     vi.mocked(createCodeWithSettings).mockResolvedValue({ ok: true, value: created });
     renderPage();
-    const create = preview().getByRole("button", { name: "Create code" });
+    const create = bar().getByRole("button", { name: "Create code" });
     expect(create).toBeDisabled();
-    expect(preview().getByText("Add a link to start")).toBeInTheDocument();
+    expect(bar().getByText(/Add a link to start/)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText("Website address"), "https://example.com/menu");
+    await user.click(screen.getByRole("tab", { name: "Settings" }));
     await user.type(screen.getByLabelText(/Code password/), "open sesame");
     await user.click(create);
 
@@ -101,8 +106,8 @@ describe("CreatePage", () => {
     vi.mocked(createCodeWithSettings).mockReturnValue(answer.promise);
     renderPage();
     await user.type(screen.getByLabelText("Website address"), "https://example.com");
-    await user.click(preview().getByRole("button", { name: "Create code" }));
-    const pending = preview().getByRole("button", { name: /Creating/ });
+    await user.click(bar().getByRole("button", { name: "Create code" }));
+    const pending = bar().getByRole("button", { name: /Creating/ });
     expect(pending).toBeDisabled();
     await user.click(pending);
     expect(createCodeWithSettings).toHaveBeenCalledTimes(1);
@@ -118,16 +123,16 @@ describe("CreatePage", () => {
     });
     renderPage();
     await user.type(screen.getByLabelText("Website address"), "https://example.com");
-    await user.click(preview().getByRole("button", { name: "Create code" }));
-    expect(await preview().findByRole("alert")).toHaveTextContent(
+    await user.click(bar().getByRole("button", { name: "Create code" }));
+    expect(await bar().findByRole("alert")).toHaveTextContent(
       "That link ending is already taken. Try another.",
     );
     expect(push).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Website address")).toHaveValue("https://example.com");
-    expect(preview().getByRole("button", { name: "Create code" })).toBeEnabled();
+    expect(bar().getByRole("button", { name: "Create code" })).toBeEnabled();
     // The reason stays next to Create (a toast fades and is cut short on phones) until the next edit.
     await user.type(screen.getByLabelText("Website address"), "/x");
-    expect(preview().queryByRole("alert")).toBeNull();
+    expect(bar().queryByRole("alert")).toBeNull();
   });
 
   it("says when the logo was too large to keep", async () => {
@@ -146,7 +151,7 @@ describe("CreatePage", () => {
     saveDraft(USER, withLogo);
     renderPage();
     await user.click(await screen.findByRole("button", { name: "Resume" }));
-    await user.click(preview().getByRole("button", { name: "Create code" }));
+    await user.click(bar().getByRole("button", { name: "Create code" }));
     expect(
       await screen.findByText("Code created. The logo was too large to store and was left out."),
     ).toBeInTheDocument();
@@ -190,6 +195,39 @@ describe("CreatePage", () => {
     expect(screen.queryByText(/unfinished code/)).toBeNull();
     expect(window.localStorage.getItem("ziplume:draft:v2:user-1")).toBeNull();
     expect(screen.getByLabelText("Code name")).toHaveValue("");
+  });
+
+  it("opens an unfinished code straight away from the gallery's Continue", async () => {
+    const old = createReducer(
+      createReducer(initialCreateState({ type: "url", folderId: "gone" }), {
+        type: "code",
+        action: { type: "setField", qrType: "url", field: "url", value: "https://example.com/old" },
+      }),
+      { type: "code", action: { type: "setName", name: "Old poster" } },
+    );
+    saveDraft(USER, old);
+    renderPage({ initialFolderId: "f1", resume: true });
+    expect(await screen.findByLabelText("Website address")).toHaveValue("https://example.com/old");
+    expect(screen.getByLabelText("Code name")).toHaveValue("Old poster");
+    // The draft's folder is gone, so it goes in the folder the page was opened for.
+    expect(screen.getByLabelText("Folder")).toHaveValue("f1");
+    expect(screen.queryByText(/unfinished code/)).toBeNull();
+  });
+
+  it("opens fresh when Continue finds nothing to resume", async () => {
+    renderPage({ resume: true });
+    expect(await screen.findByLabelText("Website address")).toHaveValue("");
+    expect(screen.queryByText(/unfinished code/)).toBeNull();
+  });
+
+  it("lands on Content when switching a contact page to a card takes the Look tab away", async () => {
+    const user = userEvent.setup();
+    renderPage({ initialType: "vcard" });
+    await user.click(screen.getByRole("tab", { name: "Look" }));
+    await user.click(screen.getByRole("tab", { name: "Content" }));
+    await user.click(screen.getByRole("radio", { name: /Save straight to phone/ }));
+    expect(screen.queryByRole("tab", { name: "Look" })).toBeNull();
+    expect(screen.getByRole("tab", { name: "Content" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("offers Download without saving for static codes only", () => {

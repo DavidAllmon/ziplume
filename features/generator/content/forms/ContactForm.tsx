@@ -76,6 +76,7 @@ export function ContactForm({ values, onChange }: FormProps<"contact">) {
               {...input}
               value={values[name]}
               onChange={(event) => onChange(name, event.target.value)}
+              data-field={name}
               onBlur={() => touch(name)}
             />
           )}

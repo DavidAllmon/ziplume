@@ -7,7 +7,6 @@ import { mailHref, safeHref, socialHref, telHref, videoEmbed } from "./urls";
 /** Problems keyed by field path, e.g. "title" or "links.2.url". Empty = ready to save. */
 export type PageErrors = Record<string, string>;
 
-const REQUIRED = "This field is required";
 const URL_MESSAGE = "Enter a web address, like example.com";
 
 const checkUrl = (errors: PageErrors, path: string, value: string) => {
@@ -27,13 +26,14 @@ const LOCAL_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors } = {
   links: (p) => {
     const errors: PageErrors = {};
-    if (!p.title.trim()) errors.title = REQUIRED;
+    if (!p.title.trim()) errors.title = "Add a title";
     const filled = p.links.filter((l) => l.label.trim() || l.url.trim());
     if (!filled.length && !p.socials.some((s) => s.url.trim())) {
       errors["links.0.url"] = "Add at least one link";
     }
     p.links.forEach((l, i) => {
-      if (l.label.trim() && !l.url.trim()) errors[`links.${i}.url`] = REQUIRED;
+      if (l.label.trim() && !l.url.trim())
+        errors[`links.${i}.url`] = `Add the link for “${l.label.trim()}”`;
       checkUrl(errors, `links.${i}.url`, l.url);
     });
     checkSocials(errors, p.socials);
@@ -58,12 +58,13 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
   },
   business: (p) => {
     const errors: PageErrors = {};
-    if (!p.name.trim()) errors.name = REQUIRED;
+    if (!p.name.trim()) errors.name = "Add the business name";
     if (p.phone.trim() && !telHref(p.phone)) errors.phone = "Enter a valid phone number";
     if (p.email.trim() && !mailHref(p.email)) errors.email = "Enter a valid email";
     checkUrl(errors, "website", p.website);
     p.buttons.forEach((b, i) => {
-      if (b.label.trim() && !b.url.trim()) errors[`buttons.${i}.url`] = REQUIRED;
+      if (b.label.trim() && !b.url.trim())
+        errors[`buttons.${i}.url`] = `Add the link for “${b.label.trim()}”`;
       checkUrl(errors, `buttons.${i}.url`, b.url);
     });
     p.hours.forEach((h, i) => {
@@ -74,7 +75,7 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
   },
   menu: (p) => {
     const errors: PageErrors = {};
-    if (!p.name.trim()) errors.name = REQUIRED;
+    if (!p.name.trim()) errors.name = "Add the restaurant name";
     const items = p.sections.flatMap((s) => s.items).filter((item) => item.name.trim());
     if (!items.length) errors["sections.0.items.0.name"] = "Add at least one dish or drink";
     return errors;
@@ -84,15 +85,15 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     if (!p.offer.trim() && !p.headline.trim()) errors.offer = "Add the offer, like 20% off";
     if (p.validUntil && !/^\d{4}-\d{2}-\d{2}$/.test(p.validUntil))
       errors.validUntil = "Pick a date";
-    if (p.buttonLabel.trim() && !p.buttonUrl.trim()) errors.buttonUrl = REQUIRED;
+    if (p.buttonLabel.trim() && !p.buttonUrl.trim()) errors.buttonUrl = "Add the button’s link";
     checkUrl(errors, "buttonUrl", p.buttonUrl);
     return errors;
   },
   event: (p) => {
     const errors: PageErrors = {};
-    if (!p.title.trim()) errors.title = REQUIRED;
-    if (!LOCAL_DATE_TIME.test(p.start)) errors.start = "Pick a start date and time";
-    if (p.end && !LOCAL_DATE_TIME.test(p.end)) errors.end = "Pick an end date and time";
+    if (!p.title.trim()) errors.title = "Add the event name";
+    if (!LOCAL_DATE_TIME.test(p.start)) errors.start = "Pick when the event starts";
+    if (p.end && !LOCAL_DATE_TIME.test(p.end)) errors.end = "Pick when the event ends";
     if (!isTimeZone(p.timeZone)) errors.timeZone = "Pick a time zone";
     if (!errors.start && !errors.end && p.end && p.end <= p.start)
       errors.end = "The end must be after the start";
@@ -101,15 +102,15 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
       !errors.timeZone &&
       Number.isNaN(zonedTimeToUtc(p.start, p.timeZone).getTime())
     ) {
-      errors.start = "Pick a start date and time";
+      errors.start = "Pick when the event starts";
     }
     checkUrl(errors, "ticketUrl", p.ticketUrl);
     return errors;
   },
   feedback: (p) => {
     const errors: PageErrors = {};
-    if (!p.business.trim()) errors.business = REQUIRED;
-    if (!p.question.trim()) errors.question = REQUIRED;
+    if (!p.business.trim()) errors.business = "Add the business name";
+    if (!p.question.trim()) errors.question = "Add a question";
     return errors;
   },
   pdf: (p): PageErrors => (p.file ? {} : { file: "Upload a PDF" }),
@@ -127,7 +128,7 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
   },
   app: (p) => {
     const errors: PageErrors = {};
-    if (!p.name.trim()) errors.name = REQUIRED;
+    if (!p.name.trim()) errors.name = "Add the app name";
     if (!p.iosUrl.trim() && !p.androidUrl.trim())
       errors.iosUrl = "Add an App Store or Google Play link";
     checkUrl(errors, "iosUrl", p.iosUrl);

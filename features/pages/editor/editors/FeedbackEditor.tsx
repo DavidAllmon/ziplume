@@ -3,7 +3,7 @@
 import { type FeedbackPage } from "@/lib/pages/types";
 
 import { AreaField, MediaField, TextField, ToggleField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function FeedbackEditor({ page, set, errors }: EditorProps<FeedbackPage>) {
   return (
@@ -48,7 +48,6 @@ export function FeedbackEditor({ page, set, errors }: EditorProps<FeedbackPage>)
       <p className="rounded-control bg-surface-2 px-3.5 py-3 text-sm text-fg-muted">
         Responses appear on this code’s page in My codes.
       </p>
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

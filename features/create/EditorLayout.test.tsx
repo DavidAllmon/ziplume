@@ -1,37 +1,49 @@
 import { render, renderHook, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ContentEditor } from "@/features/generator/content/types";
+import type { CodeTypeId } from "@/lib/qr/types";
 
 import { EditorLayout } from "./EditorLayout";
-import { fromSavedCode } from "./load";
 import { savedRow } from "./fixtures";
+import { fromSavedCode } from "./load";
 import { useCodeDraft } from "./useCodeDraft";
 
-// The content editor this layout builds, as the Content section received it.
+// The content editor this layout builds, as the Content tab received it.
 const seen: { editor: ContentEditor | null } = { editor: null };
 vi.mock("./sections/ContentSection", () => ({
   ContentSection: ({ editor }: { editor: ContentEditor }) => {
     seen.editor = editor;
-    return null;
+    return <p>Content form</p>;
   },
 }));
 vi.mock("@/features/generator/preview/useScanVerification", () => ({
   useScanVerification: () => null,
 }));
-vi.mock("@/features/generator/preview/QrTile", () => ({ QrTile: () => <div /> }));
+vi.mock("@/features/generator/preview/QrTile", () => ({ QrTile: () => <div>QR tile</div> }));
 vi.mock("@/features/generator/preview/QrView", () => ({ QrView: () => null }));
+vi.mock("@/features/generator/preview/PagePreview", () => ({
+  PagePreview: () => <div>Page preview</div>,
+}));
 
-function renderLayout(mode: "create" | "edit", dirty = false) {
-  const initial = fromSavedCode(savedRow());
+afterEach(() => window.history.replaceState(null, "", "/"));
+
+function renderLayout({
+  mode = "create",
+  dirty = false,
+  type = "url",
+}: { mode?: "create" | "edit"; dirty?: boolean; type?: CodeTypeId } = {}) {
+  const initial = mode === "edit" ? fromSavedCode(savedRow()) : undefined;
   const { result } = renderHook(() =>
-    useCodeDraft({ type: "url", folderId: null }, { initial, requireSlug: true }),
+    useCodeDraft({ type, folderId: null }, { initial, requireSlug: mode === "edit" }),
   );
   return render(
     <EditorLayout
       draft={result.current}
       folders={[]}
       mediaOwner="owner-1"
+      back={{ href: "/codes/new", label: "Change type" }}
       controls={{
         mode,
         submitting: false,
@@ -44,27 +56,68 @@ function renderLayout(mode: "create" | "edit", dirty = false) {
   );
 }
 
+const bar = () => within(screen.getByRole("region", { name: "Code" }));
 const preview = () => within(screen.getByRole("complementary", { name: "Preview" }));
+const tabNames = () => screen.getAllByRole("tab").map((tab) => tab.textContent);
 
 describe("EditorLayout", () => {
   it("hands the code owner's space to the content editor", () => {
-    renderLayout("edit");
+    renderLayout({ mode: "edit" });
     expect(seen.editor?.workspace).toEqual({ ownerId: "owner-1" });
   });
 
-  it("says Create in create mode", () => {
-    renderLayout("create");
-    expect(preview().getByRole("button", { name: "Create code" })).toBeEnabled();
+  it("gives hosted pages a Look tab, and other codes none", () => {
+    const { unmount } = renderLayout({ type: "links" });
+    expect(tabNames()).toEqual(["Content", "Look", "QR code", "Settings"]);
+    unmount();
+    renderLayout({ type: "url" });
+    expect(tabNames()).toEqual(["Content", "QR code", "Settings"]);
+  });
+
+  it("opens Content, and keeps the chosen tab in the address", async () => {
+    const user = userEvent.setup();
+    renderLayout({ type: "links" });
+    expect(screen.getByRole("tab", { name: "Content" })).toHaveAttribute("aria-selected", "true");
+    await user.click(screen.getByRole("tab", { name: "Settings" }));
+    expect(window.location.hash).toBe("#settings");
+    expect(screen.getByRole("tabpanel")).toHaveTextContent(/Folder/);
+  });
+
+  it("opens the tab in the address", () => {
+    window.history.replaceState(null, "", "/codes/new?type=links#look");
+    renderLayout({ type: "links" });
+    expect(screen.getByRole("tab", { name: "Look" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "Page look" })).toBeVisible();
+  });
+
+  it("shows the page for Content and Look, and the code for the QR code tab", async () => {
+    const user = userEvent.setup();
+    renderLayout({ type: "links" });
+    expect(preview().getByText("Page preview")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "QR code" }));
+    expect(preview().getByText("QR tile")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Look" }));
+    expect(preview().getByText("Page preview")).toBeInTheDocument();
+  });
+
+  it("says Create in create mode, and what's missing, with Show me opening the tab", async () => {
+    const user = userEvent.setup();
+    renderLayout({ type: "url" });
+    expect(bar().getByRole("button", { name: "Create code" })).toBeDisabled();
+    expect(bar().getByText(/Add a link to start/)).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Settings" }));
+    await user.click(bar().getByRole("button", { name: "Show me" }));
+    expect(screen.getByRole("tab", { name: "Content" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("says Save changes in edit mode, enabled only once something changed", () => {
-    const { unmount } = renderLayout("edit", false);
-    expect(preview().getByRole("button", { name: "Save changes" })).toBeDisabled();
-    expect(preview().queryByRole("button", { name: "Discard changes" })).toBeNull();
+    const { unmount } = renderLayout({ mode: "edit", dirty: false });
+    expect(bar().getByRole("button", { name: "Save changes" })).toBeDisabled();
+    expect(bar().queryByRole("button", { name: "Discard changes" })).toBeNull();
     expect(preview().queryByRole("button", { name: /Download without saving/ })).toBeNull();
     unmount();
-    renderLayout("edit", true);
-    expect(preview().getByRole("button", { name: "Save changes" })).toBeEnabled();
-    expect(preview().getByRole("button", { name: "Discard changes" })).toBeInTheDocument();
+    renderLayout({ mode: "edit", dirty: true });
+    expect(bar().getByRole("button", { name: "Save changes" })).toBeEnabled();
+    expect(bar().getByRole("button", { name: "Discard changes" })).toBeInTheDocument();
   });
 });

@@ -7,11 +7,20 @@ import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { QrTile } from "@/features/generator/preview/QrTile";
 
-import { PreviewColumn, type CreateControls } from "./PreviewColumn";
+import { PreviewColumn, type CreateControls, type PreviewView } from "./PreviewColumn";
 import type { CodeDraft } from "./useCodeDraft";
 
 /** Phones: a small live preview above the bottom tabs; tap it for the full preview. */
-export function CreateMobileBar({ draft, ...controls }: { draft: CodeDraft } & CreateControls) {
+export function CreateMobileBar({
+  draft,
+  view,
+  onViewChange,
+  ...controls
+}: {
+  draft: CodeDraft;
+  view: PreviewView;
+  onViewChange: (view: PreviewView) => void;
+} & CreateControls) {
   const [open, setOpen] = useState(false);
   const { renderOptions, summary, info, blocker } = draft;
   const { mode, submitting, onSubmit, error, dirty = false } = controls;
@@ -67,7 +76,7 @@ export function CreateMobileBar({ draft, ...controls }: { draft: CodeDraft } & C
       </div>
       <Sheet open={open} onClose={() => setOpen(false)} title="Preview">
         <div className="pt-2">
-          <PreviewColumn draft={draft} {...controls} />
+          <PreviewColumn draft={draft} view={view} onViewChange={onViewChange} mode={mode} />
         </div>
       </Sheet>
     </>

@@ -4,7 +4,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { type VideoPage } from "@/lib/pages/types";
 
 import { AreaField, MediaField, TextField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function VideoEditor({
   page,
@@ -39,6 +39,7 @@ export function VideoEditor({
         <MediaField
           label="Video"
           kind="video"
+          field="file"
           value={page.file}
           onChange={(file) => set({ file })}
           hint="MP4, WebM or MOV, up to 50 MB."
@@ -51,7 +52,6 @@ export function VideoEditor({
         value={page.description}
         onChange={(description) => set({ description })}
       />
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

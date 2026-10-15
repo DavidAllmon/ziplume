@@ -225,3 +225,38 @@ describe("downloads", () => {
     expect(vcf).toContain("X-SOCIALPROFILE;TYPE=github:https://github.com/ada\r\n");
   });
 });
+
+describe("validatePage names what's missing", () => {
+  it("says which field to fill in", () => {
+    expect(
+      validatePage("links", {
+        ...PAGE_DEFAULTS.links(),
+        links: [{ label: "Buy me a coffee", url: "" }],
+      }),
+    ).toMatchObject({ title: "Add a title", "links.0.url": "Add the link for “Buy me a coffee”" });
+    expect(validatePage("business", PAGE_DEFAULTS.business())).toMatchObject({
+      name: "Add the business name",
+    });
+    expect(validatePage("menu", PAGE_DEFAULTS.menu())).toMatchObject({
+      name: "Add the restaurant name",
+    });
+    expect(validatePage("event", PAGE_DEFAULTS.event())).toMatchObject({
+      title: "Add the event name",
+      start: "Pick when the event starts",
+    });
+    expect(
+      validatePage("feedback", { ...PAGE_DEFAULTS.feedback(), business: "", question: "" }),
+    ).toMatchObject({ business: "Add the business name", question: "Add a question" });
+    expect(validatePage("app", PAGE_DEFAULTS.app())).toMatchObject({ name: "Add the app name" });
+    expect(
+      validatePage("coupon", { ...PAGE_DEFAULTS.coupon(), offer: "20% off", buttonLabel: "Shop" }),
+    ).toMatchObject({ buttonUrl: "Add the button’s link" });
+    expect(
+      validatePage("business", {
+        ...PAGE_DEFAULTS.business(),
+        name: "Cafe",
+        buttons: [{ label: "Order", url: "" }],
+      }),
+    ).toMatchObject({ "buttons.0.url": "Add the link for “Order”" });
+  });
+});

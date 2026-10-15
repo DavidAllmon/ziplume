@@ -82,6 +82,7 @@ export function TextField({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onBlur={() => path && errors?.touch(path)}
+          data-field={path}
         />
       )}
     </Field>
@@ -193,6 +194,8 @@ interface MediaFieldProps {
   maxSide?: number;
   round?: boolean;
   error?: string;
+  /** Marks the file input for "Show me". */
+  field?: string;
 }
 
 /** Upload, preview, replace and remove one file. */
@@ -205,6 +208,7 @@ export function MediaField({
   maxSide,
   round,
   error,
+  field,
 }: MediaFieldProps) {
   const inputId = useId();
   const ownerId = useContext(MediaOwnerContext);
@@ -267,6 +271,7 @@ export function MediaField({
                 id={inputId}
                 type="file"
                 accept={ACCEPT[kind]}
+                data-field={field}
                 className="sr-only"
                 disabled={busy}
                 onChange={(event) => {
@@ -299,11 +304,14 @@ export function ImagesField({
   onChange,
   max,
   error,
+  field,
 }: {
   value: Media[];
   onChange: (value: Media[]) => void;
   max: number;
   error?: string;
+  /** Marks the file input for "Show me". */
+  field?: string;
 }) {
   const inputId = useId();
   const ownerId = useContext(MediaOwnerContext);
@@ -383,6 +391,7 @@ export function ImagesField({
             id={inputId}
             type="file"
             multiple
+            data-field={field}
             accept={ACCEPT.image}
             className="sr-only"
             disabled={busy > 0}
@@ -666,7 +675,12 @@ export function TimeZoneField({
   return (
     <Field label="Time zone" error={error}>
       {(control) => (
-        <Select {...control} value={value} onChange={(event) => onChange(event.target.value)}>
+        <Select
+          {...control}
+          data-field="timeZone"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        >
           {!value && <option value="">Choose…</option>}
           {zones.map((zone) => (
             <option key={zone} value={zone}>

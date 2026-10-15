@@ -1,6 +1,6 @@
 "use client";
 
-import { isPageType } from "@/lib/qr/types";
+import { isPageType, type QrTypeId } from "@/lib/qr/types";
 
 import type { ContentEditor } from "./types";
 import { ContactForm } from "./forms/ContactForm";
@@ -14,14 +14,31 @@ import { UrlForm } from "./forms/UrlForm";
 import { WhatsAppForm } from "./forms/WhatsAppForm";
 import { WifiForm } from "./forms/WifiForm";
 import { HostedPageForm } from "./HostedPageForm";
+import { RevealErrorsContext } from "./RevealErrors";
 
 export function ContentForm({ generator }: { generator: ContentEditor }) {
   const { state, setField } = generator;
   const { activeType, content } = state;
   if (isPageType(activeType)) return <HostedPageForm generator={generator} type={activeType} />;
   const onChange = (field: string, value: string | boolean) => setField(activeType, field, value);
+  return (
+    <RevealErrorsContext value={generator.revealErrors ?? false}>
+      <StaticForm type={activeType} content={content} onChange={onChange} />
+    </RevealErrorsContext>
+  );
+}
+
+function StaticForm({
+  type,
+  content,
+  onChange,
+}: {
+  type: QrTypeId;
+  content: ContentEditor["state"]["content"];
+  onChange: (field: string, value: string | boolean) => void;
+}) {
   // key resets per-form UI state (touched fields, password visibility) when switching types.
-  switch (activeType) {
+  switch (type) {
     case "url":
       return <UrlForm key="url" values={content.url} onChange={onChange} />;
     case "text":

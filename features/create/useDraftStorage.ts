@@ -24,11 +24,14 @@ export function useDraftStorage({
   state,
   defaults,
   onRestore,
+  startOwned = false,
 }: {
   userId: string;
   state: CreateState;
   defaults: CreateDefaults;
   onRestore: (state: CreateState) => void;
+  /** The page already opened the draft (Continue from the gallery): don't offer it again. */
+  startOwned?: boolean;
 }) {
   const raw = useSyncExternalStore(
     subscribe,
@@ -36,7 +39,7 @@ export function useDraftStorage({
     () => null,
   );
   /** This page owns the draft slot: it saved a draft, or the person chose Resume or Discard. */
-  const [owned, setOwned] = useState(false);
+  const [owned, setOwned] = useState(startOwned);
   /** The code was created; stop saving. */
   const [done, setDone] = useState(false);
   const offer: StoredDraft | null = useMemo(

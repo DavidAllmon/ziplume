@@ -22,6 +22,7 @@ export function EmailForm({ values, onChange }: FormProps<"email">) {
             placeholder="hello@example.com"
             value={values.to}
             onChange={(event) => onChange("to", event.target.value)}
+            data-field="to"
             onBlur={() => touch("to")}
           />
         )}

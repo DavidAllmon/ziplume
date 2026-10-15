@@ -6,6 +6,7 @@ import Link from "next/link";
 import { buttonClasses } from "@/components/ui/Button";
 import { useSession } from "@/features/auth/useSession";
 import { MediaOwnerContext } from "@/features/pages/editor/MediaOwner";
+import { AccentField } from "@/features/pages/editor/fields";
 import { PageEditor } from "@/features/pages/editor/PageEditor";
 import { accountsEnabled } from "@/lib/env";
 import { PAGE_TYPES, type PageContentMap } from "@/lib/pages/types";
@@ -72,15 +73,28 @@ export function HostedPageForm({
     );
   }
 
+  const page = generator.state.pages[type];
   return (
     <MediaOwnerContext value={generator.workspace?.ownerId ?? null}>
-      <PageEditor
-        key={type}
-        type={type}
-        page={generator.state.pages[type]}
-        errors={generator.pageErrors}
-        onChange={(page) => generator.setPage(type, page as PageContentMap[PageTypeId])}
-      />
+      <div className="flex flex-col gap-5">
+        <PageEditor
+          key={type}
+          type={type}
+          page={page}
+          errors={generator.pageErrors}
+          reveal={generator.revealErrors ?? false}
+          onChange={(next) => generator.setPage(type, next as PageContentMap[PageTypeId])}
+        />
+        {/* The Create editor has a Look tab for this; the home page doesn't. */}
+        {!generator.pageColorInLook && (
+          <div className="border-t border-border pt-5">
+            <AccentField
+              value={page.color}
+              onChange={(color) => generator.setPage(type, { ...page, color })}
+            />
+          </div>
+        )}
+      </div>
     </MediaOwnerContext>
   );
 }

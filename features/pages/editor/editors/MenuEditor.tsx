@@ -3,7 +3,7 @@
 import { LIMITS, type MenuPage } from "@/lib/pages/types";
 
 import { AreaField, ListField, MediaField, TextField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
   return (
@@ -107,7 +107,6 @@ export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
         onChange={(note) => set({ note })}
         placeholder="Prices include tax. Ask us about allergens."
       />
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

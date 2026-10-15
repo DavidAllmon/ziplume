@@ -1,7 +1,6 @@
 "use client";
 
-import { Download, Loader2, Plus, Save } from "lucide-react";
-import { useId, useState } from "react";
+import { Download } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -26,21 +25,23 @@ export interface CreateControls {
   onDiscard?: () => void;
 }
 
-/** The live code (or page), its scan check and the one Create (or Save changes) button. */
+/** What the preview shows for a hosted page: the page, or its QR code. */
+export type PreviewView = "code" | "page";
+
+/** The live page (or code), its scan check, and Download for codes that don't need saving. */
 export function PreviewColumn({
   draft,
+  view,
+  onViewChange,
   mode,
-  submitting,
-  onSubmit,
-  error,
-  dirty = false,
-  onDiscard,
-}: { draft: CodeDraft } & CreateControls) {
-  const editing = mode === "edit";
+}: {
+  draft: CodeDraft;
+  view: PreviewView;
+  onViewChange: (view: PreviewView) => void;
+  mode: "create" | "edit";
+}) {
   const { state, renderOptions, summary, info, report, blocker, pageType, trackable, previewSlug } =
     draft;
-  const [view, setView] = useState<"code" | "page">("code");
-  const reasonId = useId();
   const { download, busy } = useExport({
     options: renderOptions,
     format: "png",
@@ -54,10 +55,10 @@ export function PreviewColumn({
           aria-label="Preview"
           size="touch"
           value={view}
-          onChange={setView}
+          onChange={onViewChange}
           options={[
-            { value: "code", label: "QR code" },
             { value: "page", label: "Page" },
+            { value: "code", label: "QR code" },
           ]}
         />
       )}
@@ -81,54 +82,16 @@ export function PreviewColumn({
         )}
       </div>
       <ScanIssues report={report} />
-      <div className="flex flex-col gap-2">
+      {!trackable && mode === "create" && (
         <Button
-          onClick={onSubmit}
-          disabled={blocker !== null || submitting || (editing && !dirty)}
-          aria-describedby={blocker ? reasonId : undefined}
+          variant="ghost"
+          onClick={() => void download()}
+          disabled={blocker !== null || busy !== null}
           className="w-full"
         >
-          {submitting ? (
-            <Loader2 aria-hidden className="animate-spin" />
-          ) : editing ? (
-            <Save aria-hidden />
-          ) : (
-            <Plus aria-hidden />
-          )}
-          {submitting
-            ? editing
-              ? "Saving…"
-              : "Creating…"
-            : editing
-              ? "Save changes"
-              : "Create code"}
+          <Download aria-hidden /> Download without saving
         </Button>
-        {editing && dirty && !submitting && onDiscard && (
-          <Button variant="ghost" onClick={onDiscard} className="w-full">
-            Discard changes
-          </Button>
-        )}
-        {blocker && (
-          <p id={reasonId} className="text-center text-sm text-fg-muted">
-            {blocker}
-          </p>
-        )}
-        {error && (
-          <p role="alert" className="text-center text-sm text-danger">
-            {error}
-          </p>
-        )}
-        {!trackable && !editing && (
-          <Button
-            variant="ghost"
-            onClick={() => void download()}
-            disabled={blocker !== null || busy !== null}
-            className="w-full"
-          >
-            <Download aria-hidden /> Download without saving
-          </Button>
-        )}
-      </div>
+      )}
     </div>
   );
 }

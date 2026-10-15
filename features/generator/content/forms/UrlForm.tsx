@@ -27,6 +27,7 @@ export function UrlForm({ values, onChange }: FormProps<"url">) {
           placeholder="example.com/menu"
           value={values.url}
           onChange={(event) => onChange("url", event.target.value)}
+          data-field="url"
           onBlur={() => touch("url")}
         />
       )}

@@ -3,7 +3,7 @@
 import { LIMITS, type ImagesPage } from "@/lib/pages/types";
 
 import { AreaField, ImagesField, TextField } from "../fields";
-import { Appearance, type EditorProps } from "./shared";
+import type { EditorProps } from "./shared";
 
 export function ImagesEditor({
   page,
@@ -29,9 +29,9 @@ export function ImagesEditor({
         value={page.images}
         onChange={(images) => set({ images })}
         max={LIMITS.images}
+        field="images"
         error={touched ? errors.error("images") : undefined}
       />
-      <Appearance color={page.color} set={set} />
     </>
   );
 }

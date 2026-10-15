@@ -97,6 +97,25 @@ describe("PageEditor", () => {
     expect(editors).toHaveLength(PAGE_TYPE_IDS.length);
   });
 
+  it("shows every error at once when asked to reveal them", () => {
+    const errors = { title: "Add a title", "links.0.url": "Add at least one link" };
+    const { rerender } = render(
+      <PageEditor type="links" page={PAGE_DEFAULTS.links()} errors={errors} onChange={vi.fn()} />,
+    );
+    expect(screen.queryByText("Add a title")).toBeNull();
+    rerender(
+      <PageEditor
+        type="links"
+        page={PAGE_DEFAULTS.links()}
+        errors={errors}
+        onChange={vi.fn()}
+        reveal
+      />,
+    );
+    expect(screen.getByText("Add a title")).toBeInTheDocument();
+    expect(screen.getByLabelText("Title")).toHaveAttribute("data-field", "title");
+  });
+
   it.each(PAGE_TYPE_IDS)("%s shows all of its fields", (type) => {
     render(<PageEditor type={type} page={PAGE_DEFAULTS[type]()} errors={{}} onChange={vi.fn()} />);
     const missing = LABELS[type].filter(
