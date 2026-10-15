@@ -1,38 +1,171 @@
 import { Briefcase, Globe, type LucideIcon } from "lucide-react";
+import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
-import { textColorOn } from "@/lib/qr/frame";
+import type { PageLook } from "@/lib/pages/look";
 import { SOCIAL_ICONS } from "@/lib/pages/social-icons.data";
 import type { Media, SocialItem, SocialNetwork } from "@/lib/pages/types";
 import { mediaUrl, socialHref } from "@/lib/pages/urls";
 
-// Building blocks shared by every hosted page. Pages are mobile-first, a single centered
-// column, with the owner's accent color on the header and primary buttons.
+import { resolveLook } from "./look/resolve";
 
-export function PageShell({
-  color,
+// Building blocks shared by every hosted page: the frame that paints the page's look, its header,
+// cards and buttons. One centered column, at most 560px wide.
+
+/** A hosted page's frame: its wallpaper and look, one centered column, and the footer. */
+export function PageFrame({
+  look,
+  preview = false,
   children,
-  header,
-  className,
 }: {
-  color: string;
+  look: PageLook;
+  preview?: boolean;
   children: ReactNode;
-  /** Content of the colored header band. */
-  header?: ReactNode;
-  className?: string;
 }) {
-  const style = { "--page-accent": color, "--page-accent-fg": textColorOn(color) } as CSSProperties;
+  const resolved = resolveLook(look);
+  // The public page's main landmark; in the editor's preview it's just part of the editor.
+  const Root = preview ? "div" : "main";
+  const style = {
+    ...resolved.vars,
+    background: resolved.background,
+    colorScheme: resolved.colorScheme,
+  } as CSSProperties;
   return (
     // A container: the page lays out by its own width, so the editor's device preview matches a
     // real screen of that size.
-    <div style={style} className={cn("@container min-h-full bg-bg", className)}>
-      <div className="h-36 bg-[var(--page-accent)] @min-[40rem]:h-44" aria-hidden={!header}>
-        {header}
-      </div>
-      <main className="relative mx-auto -mt-24 flex max-w-lg flex-col gap-4 px-4 pb-10">
+    <Root
+      style={style}
+      data-page-frame
+      className="@container flex min-h-full flex-col font-page-body text-fg"
+    >
+      <div
+        data-page-column
+        className="mx-auto flex w-full max-w-[560px] flex-1 flex-col gap-4 px-4 pt-8 pb-6 @min-[40rem]:pt-14"
+      >
         {children}
-      </main>
+      </div>
+      <footer className="flex justify-center px-4 pt-2 pb-8">
+        {preview ? (
+          <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-fg-muted">
+            Made with Ziplume
+          </span>
+        ) : (
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-fg-muted underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-(--ring)"
+          >
+            Made with Ziplume · free QR codes
+          </Link>
+        )}
+      </footer>
+    </Root>
+  );
+}
+
+/**
+ * The top of a page: Classic (the image centered above the title), Hero (the image across the
+ * top, fading into the wallpaper; Classic when there's no image) or Banner (Coupon and Event).
+ * The title is the page's one h1.
+ */
+export function PageHeader({
+  look,
+  layout,
+  image,
+  imageAlt,
+  art = false,
+  large = false,
+  title,
+  sub,
+  eyebrow,
+  badge,
+}: {
+  look: PageLook;
+  layout: "classic" | "hero" | "banner";
+  image: Media | null;
+  imageAlt: string;
+  /** Square art (Audio's cover, a logo, App's icon) instead of the look's circle or rounded shape. */
+  art?: boolean;
+  /** A larger Classic image (Audio's cover art). */
+  large?: boolean;
+  title: ReactNode;
+  sub?: ReactNode;
+  eyebrow?: ReactNode;
+  /** Business Hero: the logo overlapping the cover. */
+  badge?: Media | null;
+}) {
+  const drawn = layout === "hero" && !image ? "classic" : layout;
+  const heading = (
+    <div className="flex flex-col items-center gap-1 text-center">
+      {eyebrow && (
+        <p className="text-sm font-semibold tracking-wide text-fg-muted uppercase">{eyebrow}</p>
+      )}
+      <h1 className="font-page-heading text-3xl font-bold tracking-tight text-balance text-fg">
+        {title}
+      </h1>
+      {sub && <p className="text-[15px] text-balance text-fg-muted">{sub}</p>}
+    </div>
+  );
+  if (drawn === "banner") {
+    return (
+      <div data-header="banner" className="flex flex-col gap-4">
+        {image && (
+          <MediaImage
+            media={image}
+            alt={imageAlt}
+            eager
+            className="aspect-[16/9] w-full rounded-(--pg-radius) object-cover"
+          />
+        )}
+        {heading}
+      </div>
+    );
+  }
+  if (drawn === "hero" && image) {
+    return (
+      // Reaches the column's edges and top: the column's own padding.
+      <div
+        data-header="hero"
+        className="-mx-4 -mt-8 flex flex-col items-center gap-4 @min-[40rem]:-mt-14"
+      >
+        <div className="relative aspect-[16/10] w-full overflow-hidden @min-[40rem]:aspect-[16/7]">
+          <MediaImage media={image} alt={imageAlt} eager className="size-full object-cover" />
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_55%,var(--bg))]"
+          />
+        </div>
+        {badge && (
+          <MediaImage
+            media={badge}
+            alt=""
+            eager
+            className="relative -mt-16 size-24 rounded-(--pg-radius) border-4 border-(--bg) bg-(--bg) object-contain"
+          />
+        )}
+        <div className="px-4">{heading}</div>
+      </div>
+    );
+  }
+  return (
+    <div data-header="classic" className="flex flex-col items-center gap-4">
+      {image && (
+        <MediaImage
+          media={image}
+          alt={imageAlt}
+          eager
+          className={cn(
+            large ? "size-56" : "size-28",
+            "shrink-0 object-cover shadow-card",
+            art
+              ? "rounded-(--pg-radius)"
+              : look.shape === "circle"
+                ? "rounded-full"
+                : "rounded-3xl",
+          )}
+        />
+      )}
+      {heading}
     </div>
   );
 }
@@ -41,7 +174,7 @@ export function PageCard({ children, className }: { children: ReactNode; classNa
   return (
     <section
       className={cn(
-        "rounded-[1.5rem] border border-border bg-surface p-5 shadow-card @min-[40rem]:p-6",
+        "rounded-(--pg-radius) border border-border bg-surface p-5 shadow-card @min-[40rem]:p-6",
         className,
       )}
     >
@@ -76,57 +209,17 @@ export function MediaImage({
   );
 }
 
-export function Avatar({
-  media,
-  name,
-  size = "lg",
-}: {
-  media: Media | null;
-  name: string;
-  size?: "md" | "lg";
-}) {
-  const box = size === "lg" ? "size-28" : "size-20";
-  if (media) {
-    return (
-      <MediaImage
-        media={media}
-        alt={name ? `${name}` : "Profile picture"}
-        eager
-        className={cn(
-          box,
-          "shrink-0 rounded-full border-4 border-surface bg-surface object-cover shadow-card",
-        )}
-      />
-    );
-  }
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join("");
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        box,
-        "grid shrink-0 place-items-center rounded-full border-4 border-surface bg-[var(--page-accent)] font-display text-3xl font-bold text-[var(--page-accent-fg)] shadow-card",
-      )}
-    >
-      {initials || "?"}
-    </span>
-  );
-}
-
 const buttonBase =
-  "flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-center text-[15px] font-semibold transition-[filter,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--page-accent)] active:scale-[0.99] [&_svg]:size-5 [&_svg]:shrink-0";
+  "flex min-h-12 w-full items-center justify-center gap-2 rounded-(--pg-btn-radius) border-2 px-5 py-3 text-center font-page-heading text-[15px] font-semibold transition-[filter,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring) active:scale-[0.99] [&_svg]:size-5 [&_svg]:shrink-0";
 
 export const pageButton = {
+  /** The look's button: its color, style, shape and shadow. */
   primary: cn(
     buttonBase,
-    "bg-[var(--page-accent)] text-[var(--page-accent-fg)] hover:brightness-110",
+    "border-(--pg-btn-border) bg-(--pg-btn-bg) text-(--pg-btn-fg) shadow-(--pg-btn-shadow) hover:brightness-110",
   ),
-  secondary: cn(buttonBase, "border border-border bg-surface text-fg hover:bg-surface-2"),
+  /** Quieter actions (Calendar, Download): the card's color. */
+  secondary: cn(buttonBase, "border-border bg-surface text-fg hover:bg-surface-2"),
 };
 
 /** A link button; renders a disabled look in the editor preview (no navigation). */
@@ -189,13 +282,14 @@ export function SocialIcon({ network, className }: { network: SocialNetwork; cla
   return <Icon aria-hidden className={className} />;
 }
 
-export function SocialLinks({ socials, preview }: { socials: SocialItem[]; preview?: boolean }) {
+/** The page's social icons, under the header or at the end (the look says which). */
+export function SocialRow({ socials, preview }: { socials: SocialItem[]; preview?: boolean }) {
   const items = socials
     .map((s) => ({ ...s, href: socialHref(s.network, s.url) }))
     .filter((s): s is SocialItem & { href: string } => s.href !== null);
   if (!items.length) return null;
   return (
-    <ul className="flex flex-wrap justify-center gap-2">
+    <ul data-socials className="flex flex-wrap justify-center gap-2">
       {items.map((s, i) => (
         <li key={`${s.network}-${i}`}>
           <a
@@ -204,7 +298,7 @@ export function SocialLinks({ socials, preview }: { socials: SocialItem[]; previ
             rel="noopener noreferrer"
             aria-label={socialLabel(s.network)}
             title={socialLabel(s.network)}
-            className="grid size-11 place-items-center rounded-full border border-border bg-surface text-fg transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--page-accent)]"
+            className="grid size-11 place-items-center rounded-full border border-border bg-surface text-fg transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring)"
           >
             <SocialIcon network={s.network} className="size-5" />
           </a>
@@ -228,17 +322,6 @@ export function Prose({ text, className }: { text: string; className?: string })
           {p}
         </p>
       ))}
-    </div>
-  );
-}
-
-export function Heading({ children, sub }: { children: ReactNode; sub?: ReactNode }) {
-  return (
-    <div className="flex flex-col items-center gap-1 text-center">
-      <h1 className="font-display text-2xl font-bold tracking-tight text-balance text-fg">
-        {children}
-      </h1>
-      {sub && <p className="text-[15px] text-balance text-fg-muted">{sub}</p>}
     </div>
   );
 }
