@@ -1,9 +1,9 @@
 # Accounts, dynamic codes and analytics: setup
 
-This is the one-time setup that connects QuickQReate to the self-hosted Supabase at
+This is the one-time setup that connects Ziplume (formerly QuickQReate) to the self-hosted Supabase at
 `studio.techitdave.com`, Brevo email, Google sign-in and Coolify hosting.
 
-The app code works without any of it: with no Supabase variables set, QuickQReate runs as
+The app code works without any of it: with no Supabase variables set, Ziplume runs as
 the free static generator and hides sign-in. Every step below needs either a browser session
 or an owner credential, so the owner does them. Never commit or paste keys; they go into
 Coolify's environment variables, the Supabase project settings, or the Claude Code cloud
@@ -34,7 +34,7 @@ environment's secrets.
 | Coolify app | TechitDave Infrastructure → production → QuickQReate (`4gko88co580xlr70qkda3jhx`), Dockerfile build, `https://qr.techitdave.com` |
 | Health check | `GET http://127.0.0.1:3000/api/health` (use `127.0.0.1`, not `localhost`: the image has busybox `wget` only, and `localhost` resolves to IPv6) |
 | DNS | Cloudflare `qr` A `152.44.42.29`, DNS only |
-| Email | Brevo SMTP relay, sender `QuickQReate <no-reply@techitdave.com>` (verified, techitdave.com DKIM/DMARC) |
+| Email | Brevo SMTP relay, sender `Ziplume <no-reply@techitdave.com>` (verified, techitdave.com DKIM/DMARC) |
 | Google sign-in | Google Cloud project `quickqreate` (External, in production, no logo), web client ID `31907044023-urs4031kmta7apq7rkkn9sa7b606sh92.apps.googleusercontent.com`, redirect `<API URL>/auth/v1/callback` |
 | Auto-deploy | GitHub webhook (push) → Coolify manual GitHub webhook |
 | Backups | Included in the host's daily backup with an off-server copy that is restored and hash-checked (first receipt: archive `20261014T003300Z`) |
@@ -80,7 +80,7 @@ schema and adds one trigger on `auth.users` to create profiles.
 
 1. **Senders, Domains & Dedicated IPs → Domains**: make sure `techitdave.com` is authenticated
    (Brevo shows DKIM and DMARC records to add in Cloudflare if it is not).
-2. **Senders**: add `no-reply@techitdave.com` with the name **QuickQReate**.
+2. **Senders**: add `no-reply@techitdave.com` with the name **Ziplume**.
 3. **SMTP & API → SMTP**: note the SMTP login and generate an SMTP key named `quickqreate-auth`.
    These go into step 5, nowhere else.
 
@@ -88,7 +88,7 @@ schema and adds one trigger on `auth.users` to create profiles.
 
 In <https://console.cloud.google.com> (any project you own):
 
-1. **APIs & Services → OAuth consent screen**: External; app name **QuickQReate**; support
+1. **APIs & Services → OAuth consent screen**: External; app name **Ziplume**; support
    email; logo (use `public/icons/icon-512.png`); app domain `https://qr.techitdave.com`;
    privacy policy `https://qr.techitdave.com/privacy`; terms `https://qr.techitdave.com/terms`;
    authorized domain `techitdave.com`; scopes `openid`, `email`, `profile`. Publish the app.
@@ -113,7 +113,7 @@ SMTP_PORT=587                                                        [GOTRUE_SMT
 SMTP_USER=<Brevo SMTP login>                                         [GOTRUE_SMTP_USER]
 SMTP_PASS=<Brevo SMTP key>                                           [GOTRUE_SMTP_PASS]
 SMTP_ADMIN_EMAIL=no-reply@techitdave.com                             [GOTRUE_SMTP_ADMIN_EMAIL]
-SMTP_SENDER_NAME=QuickQReate                                         [GOTRUE_SMTP_SENDER_NAME]
+SMTP_SENDER_NAME=Ziplume                                             [GOTRUE_SMTP_SENDER_NAME]
 ```
 
 Google is not in the default `.env`; add these to the **auth** service environment:
@@ -132,10 +132,10 @@ GOTRUE_MAILER_TEMPLATES_CONFIRMATION=https://qr.techitdave.com/email-templates/c
 GOTRUE_MAILER_TEMPLATES_RECOVERY=https://qr.techitdave.com/email-templates/recovery.html
 GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE=https://qr.techitdave.com/email-templates/email-change.html
 GOTRUE_MAILER_TEMPLATES_MAGIC_LINK=https://qr.techitdave.com/email-templates/magic-link.html
-GOTRUE_MAILER_SUBJECTS_CONFIRMATION=Confirm your QuickQReate account
-GOTRUE_MAILER_SUBJECTS_RECOVERY=Reset your QuickQReate password
-GOTRUE_MAILER_SUBJECTS_EMAIL_CHANGE=Confirm your new email for QuickQReate
-GOTRUE_MAILER_SUBJECTS_MAGIC_LINK=Your QuickQReate sign-in link
+GOTRUE_MAILER_SUBJECTS_CONFIRMATION=Confirm your Ziplume account
+GOTRUE_MAILER_SUBJECTS_RECOVERY=Reset your Ziplume password
+GOTRUE_MAILER_SUBJECTS_EMAIL_CHANGE=Confirm your new email for Ziplume
+GOTRUE_MAILER_SUBJECTS_MAGIC_LINK=Your Ziplume sign-in link
 ```
 
 Restart only this project's auth service after changing them. If the panel does not expose
@@ -154,7 +154,7 @@ container is recreated.
 Add `qr` → `A` → `152.44.42.29`.
 
 Recommended: turn the proxy on (orange cloud) for this record and enable
-**Rules → Managed Transforms → Add visitor location headers**. QuickQReate reads
+**Rules → Managed Transforms → Add visitor location headers**. Ziplume reads
 `CF-IPCountry`, `cf-ipcity` and `cf-region` for the country and city in scan analytics.
 With the record DNS-only, analytics still work but show no locations. With the proxy on, set
 SSL/TLS mode to **Full (strict)**.
