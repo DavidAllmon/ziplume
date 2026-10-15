@@ -28,6 +28,15 @@ test.describe("the old address", () => {
       expect([...location.searchParams]).toEqual([...sent.searchParams]);
     }
   });
+
+  test("takes feedback from its own hosted pages", async ({ request }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "host rules don't depend on the viewport");
+    const send = (origin: string) =>
+      request.post("/p/MENU12/feedback", { headers: { ...OLD, origin }, data: { rating: 5 } });
+    // The public suite has no database, so an accepted post ends at "unavailable" (503).
+    expect((await send("https://qr.techitdave.com")).status()).not.toBe(403);
+    expect((await send("https://evil.example")).status()).toBe(403);
+  });
 });
 
 test("the site address and the health check are never forwarded", async ({ request }, testInfo) => {

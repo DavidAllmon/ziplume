@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { scanContext } from "@/lib/dynamic/scan-context";
 import { isValidSlug } from "@/lib/dynamic/slug";
-import { SITE_URL } from "@/lib/env";
+import { isOwnOrigin } from "@/lib/hosts";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getPublicPage } from "@/lib/supabase/public";
 
@@ -19,9 +19,10 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/p/[s
   const { slug } = await params;
   if (!isValidSlug(slug)) return json({ error: "not_found" }, 404);
 
-  // Only accept posts from our own pages.
+  // Only accept posts from our own pages: the site address, or the address this page was opened
+  // on (an old printed code opens hosted pages on the old address).
   const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(SITE_URL).origin && origin !== request.nextUrl.origin) {
+  if (origin && !isOwnOrigin(origin, request.headers.get("host"))) {
     return json({ error: "forbidden" }, 403);
   }
 

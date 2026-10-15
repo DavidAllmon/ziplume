@@ -12,6 +12,7 @@ import {
   unlockToken,
 } from "@/lib/dynamic/unlock";
 import { SITE_URL } from "@/lib/env";
+import { siteFor } from "@/lib/hosts";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { CodeState } from "@/types/supabase";
 
@@ -101,7 +102,8 @@ export async function GET(request: NextRequest, { params }: RouteContext<"/r/[sl
     return passwordPage(slug);
   }
 
-  const target = scanTarget(code, slug, scan.os, SITE_URL);
+  // On an old address, hosted pages open there too, so an unlock cookie and the page agree.
+  const target = scanTarget(code, slug, scan.os, siteFor(request.headers.get("host")));
   return target ? redirect(target) : NOT_FOUND();
 }
 
@@ -143,7 +145,7 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/r/[s
   if (!code) return NOT_FOUND();
   const blocked = stateResponse(code.status);
   if (blocked) return blocked;
-  const target = scanTarget(code, slug, scan.os, SITE_URL);
+  const target = scanTarget(code, slug, scan.os, siteFor(request.headers.get("host")));
   if (!target) return NOT_FOUND();
 
   const response = redirect(target, 303);
