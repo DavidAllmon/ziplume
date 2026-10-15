@@ -141,6 +141,14 @@ describe("AppShell", () => {
     expect(screen.getAllByRole("radio", { name: "Dark theme" }).length).toBeGreaterThan(0);
   });
 
+  it("draws the sidebar in the navy sidebar palette", () => {
+    renderShell();
+    expect(screen.getByRole("complementary", { name: "Sidebar" })).toHaveAttribute(
+      "data-surface",
+      "sidebar",
+    );
+  });
+
   it("puts settings, help, support and sign out under More on phones", async () => {
     renderShell();
     await userEvent.click(screen.getByRole("button", { name: "More" }));

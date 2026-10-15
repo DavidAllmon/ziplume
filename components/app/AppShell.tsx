@@ -164,6 +164,7 @@ export function AppShell({
 
       <aside
         aria-label="Sidebar"
+        data-surface="sidebar"
         className={cn(
           "fixed inset-y-0 left-0 z-40 hidden flex-col gap-3 overflow-y-auto border-r border-border bg-surface px-3 py-4 sm:flex",
           expanded ? "w-64 shadow-pop" : "w-16 lg:w-64",

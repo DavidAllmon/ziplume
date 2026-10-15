@@ -15,7 +15,14 @@ function tokens(selector: string): Record<string, string> {
   ) as Record<string, string>;
 }
 
-const themes = { light: tokens(":root"), dark: tokens('[data-theme="dark"]') };
+const sidebar = tokens('[data-surface="sidebar"]');
+const themes = {
+  light: tokens(":root"),
+  dark: tokens('[data-theme="dark"]'),
+  // The navy sidebar redefines the palette inside it, in both themes.
+  "light sidebar": sidebar,
+  "dark sidebar": { ...sidebar, ...tokens('[data-theme="dark"] [data-surface="sidebar"]') },
+};
 
 // [foreground, background, minimum ratio]
 const TEXT_PAIRS: [string, string, number][] = [
@@ -81,5 +88,25 @@ describe("gradient presets", () => {
         );
       }
     }
+  });
+});
+
+describe("kit C", () => {
+  it("is navy and white in light mode, film-dark in dark mode, with a navy sidebar", () => {
+    expect(themes.light.fg).toBe("#0a1330");
+    expect(themes.light.primary).toBe("#0a1330");
+    expect(themes.dark.bg).toBe("#070b1a");
+    expect(themes.dark.primary).toBe("#5ce1ff");
+    expect(themes["light sidebar"].surface).toBe("#0a1330");
+    expect(themes["dark sidebar"].surface).toBe("#0d1428");
+  });
+
+  it("colors the logo in every palette and drops the old logo ring", () => {
+    for (const palette of Object.values(themes)) {
+      for (const token of ["logo-corners", "logo-bars", "logo-beam", "logo-glow"]) {
+        expect(palette[token], token).toMatch(/^#[0-9a-f]{6}$/);
+      }
+    }
+    expect(css).not.toMatch(/--logo-ring/);
   });
 });
