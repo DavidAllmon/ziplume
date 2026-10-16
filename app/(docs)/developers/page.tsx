@@ -251,10 +251,13 @@ export default function DevelopersPage() {
         <code>pdf</code>, <code>images</code>, <code>video</code>, <code>audio</code> and{" "}
         <code>app</code>) take the same content as their editor in the app. The easiest way to see
         the shape is to make one in the app and fetch it with <code>GET /codes/{"{id}"}</code>.
-        Video pages take a YouTube or Vimeo link in <code>url</code>. Upload images and files in the
-        app first; the API can refer to them but not upload them. A link or button with{" "}
-        <code>&quot;on&quot;: false</code> stays saved but isn’t shown on the page; without it, it’s
-        shown.
+        Video pages take a YouTube or Vimeo link in <code>url</code>. Links may also set{" "}
+        <code>kind</code> (<code>link</code> or <code>header</code>), <code>type</code> (
+        <code>web</code>, <code>email</code>, <code>phone</code> or <code>sms</code>),{" "}
+        <code>featured</code>, and <code>showFrom</code>/<code>showUntil</code> (ISO times). Upload
+        images and files in the app first; the API can refer to them but not upload them. A link or
+        button with <code>&quot;on&quot;: false</code> stays saved but isn’t shown on the page;
+        without it, it’s shown.
       </p>
       <Code>{`{
   "type": "links",
