@@ -28,6 +28,7 @@ export function toNewCode(
   state: CreateState,
   ownerId: string | null,
   name: string,
+  { canBePrivate = false }: { canBePrivate?: boolean } = {},
 ): { input: NewCode; settings: CodeSettingsInput } {
   const { code, settings, folderId } = state;
   const type = code.activeType;
@@ -39,6 +40,8 @@ export function toNewCode(
     qrType: type,
     content: isPageType(type) ? code.pages[type] : code.content[type],
     design: code.design,
+    // Only in a team; a draft from before leaving one can't make a code private.
+    ...(canBePrivate && settings.isPrivate && { isPrivate: true }),
     ...(trackable && {
       dynamic: {
         destination: type === "url" ? taggedDestination(code.content.url.url, settings.utm) : null,
@@ -99,6 +102,9 @@ export function toCodePatch(
 
   if (!same(current.code.design, initial.code.design)) patch.design = current.code.design;
   if (current.folderId !== initial.folderId) patch.folderId = current.folderId;
+  if (current.settings.isPrivate !== initial.settings.isPrivate) {
+    patch.isPrivate = current.settings.isPrivate;
+  }
   if (trackable) {
     if (current.settings.slug !== initial.settings.slug) patch.slug = current.settings.slug;
     if (current.settings.startsAt !== initial.settings.startsAt)

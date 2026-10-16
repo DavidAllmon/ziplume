@@ -22,6 +22,8 @@ export interface CreateSettings {
   slug: string;
   /** Campaign tags added to a Link's address. */
   utm: UtmParams;
+  /** In a team, on your own code: only you can see it. */
+  isPrivate: boolean;
 }
 
 export const DEFAULT_SETTINGS: CreateSettings = {
@@ -31,6 +33,7 @@ export const DEFAULT_SETTINGS: CreateSettings = {
   endsAt: "",
   slug: "",
   utm: { source: "", medium: "", campaign: "" },
+  isPrivate: false,
 };
 
 export interface CreateState {

@@ -7,6 +7,8 @@ import type { ShellTeam } from "./nav";
 
 let pathname = "/codes";
 let search = new URLSearchParams();
+// The folder list loads from Supabase; the tests only need to see whether it's there.
+vi.mock("./FolderNav", () => ({ FolderNav: () => <p>Folder list</p> }));
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
   useSearchParams: () => search,
@@ -109,6 +111,33 @@ describe("AppShell", () => {
       "href",
       "/codes?workspace=t1",
     );
+  });
+
+  it("offers Everyone in the switcher, keeps it in the Codes link, and hides folders there", async () => {
+    search = new URLSearchParams("view=everyone");
+    renderShell();
+    const switcher = screen.getAllByRole("button", { name: /Switch team/ })[0]!;
+    expect(switcher).toHaveAccessibleName("Switch team (showing Everyone’s codes)");
+    expect(hrefs("Codes")).toContain("/codes?view=everyone");
+    expect(screen.queryByText("Folder list")).toBeNull();
+    await userEvent.click(switcher);
+    expect(
+      within(screen.getByRole("menu")).getByRole("menuitem", { name: /Everyone’s codes/ }),
+    ).toHaveAttribute("href", "/codes?view=everyone");
+  });
+
+  it("shows no Everyone to someone on their own", async () => {
+    search = new URLSearchParams("view=everyone");
+    render(
+      <AppShell user={USER} teams={[]}>
+        <h1>Page</h1>
+      </AppShell>,
+    );
+    expect(screen.getAllByText("Folder list").length).toBeGreaterThan(0);
+    await userEvent.click(screen.getAllByRole("button", { name: /Switch team/ })[0]!);
+    expect(
+      within(screen.getByRole("menu")).queryByRole("menuitem", { name: /Everyone/ }),
+    ).toBeNull();
   });
 
   it("expands and collapses the tablet rail", async () => {

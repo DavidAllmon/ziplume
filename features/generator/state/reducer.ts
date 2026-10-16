@@ -122,6 +122,18 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
       };
     }
 
+    case "updatePage":
+      return {
+        ...state,
+        pages: {
+          ...state.pages,
+          [action.pageType]: sanitizePage(
+            action.pageType,
+            action.update(state.pages[action.pageType]),
+          ),
+        },
+      };
+
     case "setName":
       return { ...state, name: action.name.slice(0, MAX_CODE_NAME) };
 

@@ -79,6 +79,22 @@ describe("toNewCode", () => {
     expect(input.content).toBe(state.code.pages.links);
   });
 
+  it("marks a code Private only where Private can be set", () => {
+    const secret = run(withLink, { type: "settings", patch: { isPrivate: true } });
+    expect(toNewCode(secret, null, "Menu", { canBePrivate: true }).input.isPrivate).toBe(true);
+    // Someone who left their team may still have it on in a draft; it isn't sent.
+    expect(toNewCode(secret, null, "Menu").input).not.toHaveProperty("isPrivate");
+    expect(toNewCode(withLink, null, "Menu", { canBePrivate: true }).input).not.toHaveProperty(
+      "isPrivate",
+    );
+    // Codes that work without internet can be private too: it's about who sees them here.
+    const wifi = run(secret, {
+      type: "code",
+      action: { type: "setActiveType", activeType: "wifi" },
+    });
+    expect(toNewCode(wifi, null, "Wi-Fi", { canBePrivate: true }).input.isPrivate).toBe(true);
+  });
+
   it("leaves the owner out for your own codes", () => {
     expect(toNewCode(withLink, null, "Menu").input).not.toHaveProperty("ownerId");
   });
@@ -109,6 +125,13 @@ const keepName = (state: CreateState) => ({ name: state.code.name, removePasswor
 
 describe("toCodePatch", () => {
   const link = () => fromSavedCode(savedRow());
+
+  it("sends Private only when it changed", () => {
+    const initial = link();
+    expect(toCodePatch(initial, initial, keepName(initial)).patch).not.toHaveProperty("isPrivate");
+    const on = run(initial, { type: "settings", patch: { isPrivate: true } });
+    expect(toCodePatch(initial, on, keepName(initial)).patch).toEqual({ isPrivate: true });
+  });
 
   it("finds nothing to save in an untouched code", () => {
     const initial = link();

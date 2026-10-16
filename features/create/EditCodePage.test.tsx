@@ -29,7 +29,13 @@ const CODE_HREF = "/codes/c1";
 function renderPage(row: QrCodeRow = savedRow()) {
   return render(
     <ToastProvider>
-      <EditCodePage code={row} folders={[]} mediaOwner={null} codeHref={CODE_HREF} />
+      <EditCodePage
+        code={row}
+        folders={[]}
+        mediaOwner={null}
+        codeHref={CODE_HREF}
+        canBePrivate={false}
+      />
     </ToastProvider>,
   );
 }

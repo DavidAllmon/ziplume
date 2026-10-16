@@ -108,12 +108,15 @@ export function AppShell({
     ? { ...user, name: profile.display_name?.trim() || null, avatarUrl: profile.avatar_url }
     : user;
   const team = teams.find((t) => t.ownerId === searchParams.get("workspace")) ?? null;
+  // Everyone's codes, in a team (teams spec 5). Folders belong to one person, so none show there.
+  const everyone =
+    pathname === "/codes" && searchParams.get("view") === "everyone" && teams.length > 0;
   // The code editor brings its own bars on phones and keeps the sidebar a rail on tablets.
   const editor = isEditorPage(pathname, searchParams);
   const ownerId = team?.ownerId ?? null;
   // Creating while one of your own folders is open puts the new code in that folder. New codes
   // always go in your own space, so a teammate's folder doesn't count.
-  const folderId = pathname === "/codes" && !team ? searchParams.get("folder") : null;
+  const folderId = pathname === "/codes" && !team && !everyone ? searchParams.get("folder") : null;
   // The tablet rail stays open only on the page it was opened on: any navigation closes it.
   const here = `${pathname}?${searchParams.toString()}`;
   const [openedAt, setOpenedAt] = useState<string | null>(null);
@@ -133,7 +136,7 @@ export function AppShell({
     return () => document.removeEventListener("keydown", onKey);
   }, [expanded]);
 
-  const codesHref = withWorkspace("/codes", ownerId);
+  const codesHref = everyone ? "/codes?view=everyone" : withWorkspace("/codes", ownerId);
   const main: NavItem[] = [
     { href: codesHref, label: "Codes", icon: QrCode },
     { href: "/team", label: "Team", icon: Users },
@@ -201,18 +204,26 @@ export function AppShell({
           </button>
         </div>
 
-        <WorkspaceSwitcher user={me} teams={teams} current={team} collapsed={!expanded} />
+        <WorkspaceSwitcher
+          user={me}
+          teams={teams}
+          current={team}
+          everyone={everyone}
+          collapsed={!expanded}
+        />
         <CreateButton folderId={folderId} collapsed={!expanded} onNavigate={collapse} />
 
         <nav aria-label="Main" className="flex flex-col gap-0.5">
           {sideLink(main[0]!)}
-          <FolderNav
-            ownerId={team?.ownerId ?? user.id}
-            teamId={ownerId}
-            canEdit={!team}
-            expanded={expanded}
-            onNavigate={collapse}
-          />
+          {!everyone && (
+            <FolderNav
+              ownerId={team?.ownerId ?? user.id}
+              teamId={ownerId}
+              canEdit={!team}
+              expanded={expanded}
+              onNavigate={collapse}
+            />
+          )}
           {main.slice(1).map(sideLink)}
         </nav>
 
@@ -240,7 +251,7 @@ export function AppShell({
             <LogoMark className="size-7" />
           </Link>
           <div className="min-w-0 flex-1">
-            <WorkspaceSwitcher user={me} teams={teams} current={team} />
+            <WorkspaceSwitcher user={me} teams={teams} current={team} everyone={everyone} />
           </div>
         </header>
       )}

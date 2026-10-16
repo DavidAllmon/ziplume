@@ -35,12 +35,14 @@ function renderLayout({
   type = "url",
   savedSlug,
   error = null,
+  canBePrivate = false,
 }: {
   mode?: "create" | "edit";
   dirty?: boolean;
   type?: CodeTypeId;
   savedSlug?: string;
   error?: string | null;
+  canBePrivate?: boolean;
 } = {}) {
   const initial = savedSlug
     ? fromSavedCode(
@@ -57,11 +59,12 @@ function renderLayout({
   const { result } = renderHook(() =>
     useCodeDraft({ type, folderId: null }, { initial, requireSlug: mode === "edit" }),
   );
-  return render(
+  const view = render(
     <EditorLayout
       draft={result.current}
       folders={[]}
       mediaOwner="owner-1"
+      canBePrivate={canBePrivate}
       back={{ href: "/codes/new", label: "Change type" }}
       saved={
         savedSlug
@@ -83,6 +86,8 @@ function renderLayout({
       }}
     />,
   );
+  // The layout renders once; the draft hook keeps the latest state.
+  return Object.assign(view, { draft: result });
 }
 
 const bar = () => within(screen.getByRole("region", { name: "Code" }));
@@ -90,6 +95,19 @@ const preview = () => within(screen.getByRole("complementary", { name: "Preview"
 const tabNames = () => screen.getAllByRole("tab").map((tab) => tab.textContent);
 
 describe("EditorLayout", () => {
+  it("offers Private in Settings only where it can be set", async () => {
+    const user = userEvent.setup();
+    const { unmount, draft } = renderLayout({ canBePrivate: true });
+    await user.click(screen.getByRole("tab", { name: "Settings" }));
+    expect(screen.getByText("Only you can see this code.")).toBeInTheDocument();
+    await user.click(screen.getByRole("switch", { name: /Private/ }));
+    expect(draft.current.state.settings.isPrivate).toBe(true);
+    unmount();
+    renderLayout();
+    await user.click(screen.getByRole("tab", { name: "Settings" }));
+    expect(screen.queryByRole("switch", { name: /Private/ })).toBeNull();
+  });
+
   it("shows a save error on up to two lines in the phone's bottom bar, not cut to one", () => {
     const error = "That short link is already taken. Pick another one in Settings.";
     renderLayout({ error });

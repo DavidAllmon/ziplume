@@ -141,6 +141,8 @@ export default async function globalSetup(config: FullConfig) {
     .insert(
       [
         { user_id: viewerId, name: "Victor note", ...note },
+        // Private: only Victor sees it (teams spec 6).
+        { user_id: viewerId, name: "Victor diary", is_private: true, ...note },
         { user_id: quinnId, name: "Quinn poster", ...note },
         { user_id: rayId, name: "Ray sign", ...note },
         { user_id: skyId, name: "Sky flyer", ...note },

@@ -89,3 +89,10 @@ describe("isEditableType", () => {
     expect(isEditableType("fax")).toBe(false);
   });
 });
+
+describe("fromSavedCode and Private", () => {
+  it("brings back whether the code is private", () => {
+    expect(fromSavedCode(savedRow({ is_private: true })).settings.isPrivate).toBe(true);
+    expect(fromSavedCode(savedRow()).settings.isPrivate).toBe(false);
+  });
+});

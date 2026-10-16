@@ -8,6 +8,7 @@ const WIDTHS = [390, 820, 1280];
 const PAGES = [
   "codes",
   "codes?folder={folder}",
+  "codes?view=everyone",
   "codes/new",
   "codes/new?type=links",
   "codes/new?type=vcard",
@@ -126,7 +127,7 @@ test.describe("signed in as an owner", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Flyers" })).toBeVisible();
   });
 
-  for (const path of ["codes", "codes/new", "team"]) {
+  for (const path of ["codes", "codes?view=everyone", "codes/new", "team"]) {
     test(`/${path} passes axe in dark mode`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: "dark" });
       await page.goto(path);

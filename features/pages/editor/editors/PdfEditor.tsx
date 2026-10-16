@@ -20,8 +20,12 @@ export function PdfEditor({
           kind="pdf"
           field="file"
           value={page.file}
+          // From the latest page: a title typed while the file uploaded stays.
           onChange={(file) =>
-            set({ file, title: page.title || file?.name.replace(/\.pdf$/i, "") || "" })
+            set((latest) => ({
+              file,
+              title: latest.title || file?.name.replace(/\.pdf$/i, "") || "",
+            }))
           }
           hint="Up to 50 MB."
           error={touched ? (errors.error("file") ?? undefined) : undefined}

@@ -58,6 +58,7 @@ export function fromSavedCode(row: QrCodeRow): CreateState {
       endsAt: isoToLocalInput(row.active_until),
       slug: row.slug ?? "",
       utm,
+      isPrivate: row.is_private,
     },
     folderId: row.folder_id,
     styleDesign: code.design,

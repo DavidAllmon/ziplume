@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CreatePage } from "@/features/create/CreatePage";
 import { TypeGallery } from "@/features/create/gallery/TypeGallery";
 import { requireUser } from "@/lib/auth/server";
+import { loadTeam } from "@/lib/teams/server";
 import { isPageType, isStaticType, type CodeTypeId } from "@/lib/qr/types";
 
 export const metadata: Metadata = { title: "Create a code" };
@@ -16,11 +17,10 @@ export default async function NewCodePage({ searchParams }: PageProps<"/codes/ne
   const typeParam = typeof params.type === "string" ? params.type : null;
   const { supabase, user } = await requireUser("/codes/new");
 
-  const { data: folders } = await supabase
-    .from("folders")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("name");
+  const [{ data: folders }, team] = await Promise.all([
+    supabase.from("folders").select("*").eq("user_id", user.id).order("name"),
+    loadTeam(supabase),
+  ]);
   // Only one of your own folders counts; anything else starts outside any folder.
   const folder = (folders ?? []).find((f) => f.id === folderParam) ?? null;
   const initialType = typeParam && isCodeType(typeParam) ? typeParam : null;
@@ -35,6 +35,7 @@ export default async function NewCodePage({ searchParams }: PageProps<"/codes/ne
       initialType={initialType}
       initialFolderId={folder?.id ?? null}
       resume={params.resume === "1"}
+      inTeam={team.length > 0}
     />
   );
 }

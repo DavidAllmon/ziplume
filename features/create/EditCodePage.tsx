@@ -24,6 +24,8 @@ export interface EditCodePageProps {
   mediaOwner: string | null;
   /** The code's page: where Back and a finished save go. */
   codeHref: string;
+  /** In a team, on your own code: Private can be set. */
+  canBePrivate: boolean;
 }
 
 /** The Create editor, opened on a saved code. */
@@ -44,7 +46,7 @@ export function EditCodePage(props: EditCodePageProps) {
   return <EditForm {...props} />;
 }
 
-function EditForm({ code, folders, mediaOwner, codeHref }: EditCodePageProps) {
+function EditForm({ code, folders, mediaOwner, codeHref, canBePrivate }: EditCodePageProps) {
   const router = useRouter();
   const toast = useToast();
   const initial = useMemo(() => fromSavedCode(code), [code]);
@@ -100,6 +102,7 @@ function EditForm({ code, folders, mediaOwner, codeHref }: EditCodePageProps) {
       draft={draft}
       folders={folders}
       mediaOwner={mediaOwner}
+      canBePrivate={canBePrivate}
       controls={{
         mode: "edit",
         submitting: saving,

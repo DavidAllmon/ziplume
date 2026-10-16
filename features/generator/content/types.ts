@@ -13,6 +13,11 @@ export interface ContentEditor {
   state: Pick<GeneratorState, "activeType" | "content" | "pages">;
   setField: (qrType: QrTypeId, field: string, value: string | boolean) => void;
   setPage: (type: PageTypeId, content: PageContentMap[PageTypeId]) => void;
+  /** Changes a page from its latest content (uploads that finish later keep newer edits). */
+  updatePage: (
+    type: PageTypeId,
+    update: (page: PageContentMap[PageTypeId]) => PageContentMap[PageTypeId],
+  ) => void;
   pageErrors: Record<string, string>;
   /** Hosted-page media is stored in this workspace; null = the signed-in person's own. */
   workspace: { ownerId: string } | null;

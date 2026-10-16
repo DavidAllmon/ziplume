@@ -14,6 +14,7 @@ import { copyToMyCodes } from "@/features/codes/duplicate";
 import { moveCodes } from "@/features/folders/api";
 import { MoveDialog } from "@/features/folders/MoveDialog";
 import { cn } from "@/lib/cn";
+import type { TeamPerson } from "@/lib/teams/access";
 import type { FolderRow, QrCodeRow } from "@/types/supabase";
 
 import { CodeRow, LIST_COLUMNS } from "./CodeRow";
@@ -44,14 +45,16 @@ const QUICK_STARTS = [
 interface CodesViewProps {
   userId: string;
   codes: QrCodeRow[];
+  /** The folders of the people shown; a code moves only into its own maker's. */
   folders: FolderRow[];
   /** The folder being shown, or null for all codes. */
   folder: FolderRow | null;
-  /** Whose codes these are: you, or a team owner. */
-  ownerId: string;
-  /** The team being viewed (for links), or null for your own codes. */
-  teamId: string | null;
-  canEdit: boolean;
+  /** Whose codes: your own, one teammate's, or everyone's in the team. */
+  scope: "self" | "person" | "everyone";
+  /** Owners and editors may change teammates' codes; viewers change only their own. */
+  canEditOthers: boolean;
+  /** Everyone in the team (empty on your own), for "Created by" and the Private label. */
+  team: TeamPerson[];
   /** Scans in the last 30 days, by code id. */
   recentScans: Record<string, number>;
 }
@@ -62,8 +65,9 @@ export function CodesView({
   codes: initialCodes,
   folders,
   folder,
-  teamId,
-  canEdit,
+  scope,
+  canEditOthers,
+  team,
   recentScans,
 }: CodesViewProps) {
   const router = useRouter();
@@ -79,11 +83,21 @@ export function CodesView({
   /** A bulk change in progress, e.g. "Pausing 100 of 200…"; null when idle. */
   const [busy, setBusy] = useState<string | null>(null);
 
+  const mine = (code: QrCodeRow) => code.user_id === userId;
+  const canEdit = (code: QrCodeRow) => mine(code) || canEditOthers;
+  /** A teammate's code opens inside their codes (?workspace=); yours needs nothing. */
+  const workspaceOf = (code: QrCodeRow) => (mine(code) ? null : code.user_id);
+  const inTeam = team.length > 0;
+  const creatorOf = (code: QrCodeRow) =>
+    scope === "everyone" ? (team.find((person) => person.userId === code.user_id) ?? null) : null;
+
   const visible = useMemo(
     () => sortCodes(filterCodes(codes, filters), sort, recentScans),
     [codes, filters, sort, recentScans],
   );
   const selected = codes.filter((code) => selectedIds.has(code.id));
+  const allEditable = selected.every(canEdit);
+  const oneOwner = new Set(selected.map((code) => code.user_id)).size === 1;
   const allVisibleSelected = visible.length > 0 && visible.every((c) => selectedIds.has(c.id));
   const filtered =
     filters.query.trim() !== "" || filters.type !== "all" || filters.status !== "all";
@@ -180,15 +194,15 @@ export function CodesView({
   }
 
   async function duplicate(code: QrCodeRow) {
-    // A teammate's code is copied into your own codes, so it doesn't join this list.
-    const result = await copyToMyCodes(code, { fromTeammate: Boolean(teamId) });
+    // A teammate's code is copied into your own codes.
+    const fromTeammate = !mine(code);
+    const result = await copyToMyCodes(code, { fromTeammate });
     if (!result.ok) return toast(result.error, "error");
-    if (teamId) {
-      toast(`Copied “${code.name}” to your codes`);
-    } else {
-      setCodes((current) => [result.value, ...current]);
-      toast(`Duplicated as “${result.value.name}”`);
-    }
+    // The copy joins the list when the list shows your codes: yours, or Everyone's.
+    if (scope !== "person") setCodes((current) => [result.value, ...current]);
+    toast(
+      fromTeammate ? `Copied “${code.name}” to your codes` : `Duplicated as “${result.value.name}”`,
+    );
     changed();
   }
 
@@ -214,13 +228,13 @@ export function CodesView({
         <FolderOpen aria-hidden className="size-8 text-fg-muted" />
         <h2 className="text-lg font-semibold text-fg">This folder is empty</h2>
         <p className="max-w-md text-sm text-fg-muted">
-          {canEdit && !teamId
+          {scope === "self"
             ? "Create a code here, or use “Move to folder” on any code to add it."
             : "Codes added to this folder will show up here."}
         </p>
-        {canEdit && !teamId && (
+        {scope === "self" && (
           <Link
-            href={newCodeHref({ folderId: folder.id, ownerId: teamId })}
+            href={newCodeHref({ folderId: folder.id, ownerId: null })}
             className={buttonClasses("outline", "md")}
           >
             <Plus aria-hidden /> Create a code here
@@ -230,10 +244,10 @@ export function CodesView({
     ) : (
       <div className="flex flex-col items-center gap-4 rounded-card border border-dashed border-field-border px-6 py-12 text-center">
         <h2 className="text-lg font-semibold text-fg">
-          {teamId ? "No codes here yet" : "Create your first QR code"}
+          {scope === "self" ? "Create your first QR code" : "No codes here yet"}
         </h2>
         {/* New codes go in your own space, so a teammate's empty list offers no create links. */}
-        {canEdit && !teamId ? (
+        {scope === "self" ? (
           <>
             <p className="max-w-md text-sm text-fg-muted">
               Pick what it should open. You can change everything later.
@@ -242,7 +256,7 @@ export function CodesView({
               {QUICK_STARTS.map(({ type, label, hint, icon: Icon }) => (
                 <li key={type}>
                   <Link
-                    href={newCodeHref({ type, ownerId: teamId })}
+                    href={newCodeHref({ type, ownerId: null })}
                     className="flex min-h-11 flex-col items-center gap-1 rounded-control border border-border bg-surface px-4 py-4 text-center focus-ring hover:bg-surface-2"
                   >
                     <Icon aria-hidden className="size-5 text-fg-muted" />
@@ -252,10 +266,7 @@ export function CodesView({
                 </li>
               ))}
             </ul>
-            <Link
-              href={newCodeHref({ ownerId: teamId })}
-              className={buttonClasses("outline", "md")}
-            >
+            <Link href={newCodeHref({ ownerId: null })} className={buttonClasses("outline", "md")}>
               <Plus aria-hidden /> Other types
             </Link>
           </>
@@ -314,8 +325,10 @@ export function CodesView({
             <CodeTile
               key={code.id}
               code={code}
-              canEdit={canEdit}
-              teamId={teamId}
+              canEdit={canEdit(code)}
+              teamId={workspaceOf(code)}
+              creator={creatorOf(code)}
+              isPrivate={inTeam && mine(code) && code.is_private}
               scans={recentScans[code.id] ?? 0}
               selected={selectedIds.has(code.id)}
               onSelect={select}
@@ -346,8 +359,10 @@ export function CodesView({
               <CodeRow
                 key={code.id}
                 code={code}
-                canEdit={canEdit}
-                teamId={teamId}
+                canEdit={canEdit(code)}
+                teamId={workspaceOf(code)}
+                creator={creatorOf(code)}
+                isPrivate={inTeam && mine(code) && code.is_private}
                 scans={recentScans[code.id] ?? 0}
                 selected={selectedIds.has(code.id)}
                 onSelect={select}
@@ -361,7 +376,8 @@ export function CodesView({
       {selected.length > 0 && (
         <SelectionBar
           selected={selected}
-          canEdit={canEdit}
+          canEdit={allEditable}
+          canMove={oneOwner}
           busy={busy}
           onMove={() => setToMove(selected)}
           onSetPaused={(paused) => void setPaused(selected, paused)}
@@ -391,7 +407,7 @@ export function CodesView({
       <MoveDialog
         open={toMove !== null}
         count={toMove?.length ?? 0}
-        folders={folders}
+        folders={folders.filter((f) => f.user_id === toMove?.[0]?.user_id)}
         current={
           toMove && toMove.every((code) => code.folder_id === toMove[0]?.folder_id)
             ? (toMove[0]?.folder_id ?? null)

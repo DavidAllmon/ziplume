@@ -36,7 +36,13 @@ afterEach(() => {
 const renderPage = (initialType: "links" | "url" | "wifi") =>
   render(
     <ToastProvider>
-      <CreatePage userId="user-1" folders={[]} initialType={initialType} initialFolderId={null} />
+      <CreatePage
+        userId="user-1"
+        folders={[]}
+        initialType={initialType}
+        initialFolderId={null}
+        inTeam={false}
+      />
     </ToastProvider>,
   );
 const bar = () => within(screen.getByRole("region", { name: "Code" }));

@@ -193,6 +193,12 @@ export function useGenerator() {
     [],
   );
 
+  const updatePage = useCallback(
+    (type: PageTypeId, update: (page: PageContentMap[PageTypeId]) => PageContentMap[PageTypeId]) =>
+      dispatch({ type: "updatePage", pageType: type, update }),
+    [],
+  );
+
   const setName = useCallback((name: string) => dispatch({ type: "setName", name }), []);
 
   return {
@@ -200,6 +206,7 @@ export function useGenerator() {
     dispatch,
     setField,
     setPage,
+    updatePage,
     setName,
     pageType,
     pageErrors: pageType ? errors : {},

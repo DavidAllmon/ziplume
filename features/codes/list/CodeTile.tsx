@@ -9,7 +9,7 @@ import { formatCount } from "@/features/dashboard/format";
 import { QrTile } from "@/features/generator/preview/QrTile";
 
 import { CodeActions } from "./CodeActions";
-import type { CodeItemProps } from "./CodeRow";
+import { CreatedBy, PrivateBadge, type CodeItemProps } from "./CodeRow";
 import { listStatus } from "./filters";
 import { StatusPill } from "./StatusPill";
 
@@ -21,6 +21,8 @@ export function CodeTile({
   scans,
   selected,
   onSelect,
+  creator,
+  isPrivate,
   ...on
 }: CodeItemProps) {
   const href = withWorkspace(`/codes/${code.id}`, teamId);
@@ -63,8 +65,10 @@ export function CodeTile({
           {code.has_password && (
             <Lock aria-label="Password protected" className="size-3.5 shrink-0 text-fg-muted" />
           )}
+          {isPrivate && <PrivateBadge />}
         </p>
         <p className="truncate text-sm text-fg-muted">{codeTypeLabel(code)}</p>
+        {creator && <CreatedBy person={creator} />}
       </div>
       <div className="flex items-center justify-between gap-2">
         <StatusPill status={listStatus(code)} />

@@ -6,6 +6,7 @@ import { avatarColors, initialsOf, trustedAvatarUrl } from "@/lib/avatar";
 import { cn } from "@/lib/cn";
 
 const SIZES = {
+  xs: "size-5 text-[10px]",
   sm: "size-8 text-[13px]",
   md: "size-9 text-sm",
   lg: "size-16 text-xl",

@@ -1896,3 +1896,71 @@ describe("update_code", () => {
     }
   });
 });
+
+describe("private codes from the editor", () => {
+  const ABE = "4a4a4a4a-4a4a-4a4a-8a4a-4a4a4a4a4a4a"; // owner
+  const CAL = "4b4b4b4b-4b4b-4b4b-8b4b-4b4b4b4b4b4b"; // editor on Abe's team
+  const asAbe = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", ABE, sql, params);
+  const asCal = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", CAL, sql, params);
+  const CREATE = "select * from public.create_code($1::jsonb, $2)";
+  const UPDATE = "select * from public.update_code($1::uuid, $2::jsonb, $3, $4)";
+  const note = (name: string, extra: Record<string, unknown> = {}) =>
+    JSON.stringify({ name, qr_type: "text", content: { text: "hi" }, ...extra });
+  const seenByAbe = async (id: string) =>
+    (await asAbe<{ id: string }>("select id from public.qr_codes where id = $1", [id])).length;
+
+  beforeAll(async () => {
+    await db.query(
+      "insert into auth.users (id, email) values ($1, 'abe@example.com'), ($2, 'cal@example.com')",
+      [ABE, CAL],
+    );
+    await asService(
+      "insert into public.team_members (owner_id, member_id, role) values ($1, $2, 'editor')",
+      [ABE, CAL],
+    );
+  });
+
+  it("creates a private code that only its maker sees", async () => {
+    const [made] = await asCal<{ id: string; is_private: boolean }>(CREATE, [
+      note("Cal diary", { is_private: true }),
+      null,
+    ]);
+    expect(made!.is_private).toBe(true);
+    expect(await seenByAbe(made!.id)).toBe(0);
+  });
+
+  it("creates a shared code when Private is left out", async () => {
+    const [made] = await asCal<{ id: string; is_private: boolean }>(CREATE, [
+      note("Cal flyer"),
+      null,
+    ]);
+    expect(made!.is_private).toBe(false);
+    expect(await seenByAbe(made!.id)).toBe(1);
+  });
+
+  it("turns Private on and off in an update, with the other changes", async () => {
+    const [made] = await asCal<{ id: string }>(CREATE, [note("Cal poster"), null]);
+    const [hidden] = await asCal<{ is_private: boolean; name: string }>(UPDATE, [
+      made!.id,
+      JSON.stringify({ is_private: true, name: "Cal poster v2" }),
+      null,
+      "keep",
+    ]);
+    expect(hidden).toMatchObject({ is_private: true, name: "Cal poster v2" });
+    expect(await seenByAbe(made!.id)).toBe(0);
+    await asCal(UPDATE, [made!.id, JSON.stringify({ is_private: false }), null, "keep"]);
+    expect(await seenByAbe(made!.id)).toBe(1);
+  });
+
+  it("won't let a teammate make someone else's code private", async () => {
+    const [made] = await asCal<{ id: string }>(CREATE, [note("Cal sign"), null]);
+    await expect(
+      asAbe(UPDATE, [made!.id, JSON.stringify({ is_private: true }), null, "keep"]),
+    ).rejects.toThrow(/row-level security|Not allowed/);
+    const [row] = await asService<{ is_private: boolean }>(
+      "select is_private from public.qr_codes where id = $1",
+      [made!.id],
+    );
+    expect(row!.is_private).toBe(false);
+  });
+});

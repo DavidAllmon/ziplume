@@ -32,6 +32,9 @@ export function ImagesEditor({
         <ImagesField
           value={page.images}
           onChange={(images) => set({ images })}
+          onAdd={(media) =>
+            set((latest) => ({ images: [...latest.images, media].slice(0, LIMITS.images) }))
+          }
           max={LIMITS.images}
           field="images"
           error={touched ? errors.error("images") : undefined}

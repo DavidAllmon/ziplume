@@ -5,7 +5,8 @@ import { withWorkspace } from "@/components/app/nav";
 import { EditCodePage } from "@/features/create/EditCodePage";
 import { isEditableType } from "@/features/create/load";
 import { requireUser } from "@/lib/auth/server";
-import { personAccess } from "@/lib/teams/server";
+import { accessTo } from "@/lib/teams/access";
+import { loadTeam } from "@/lib/teams/server";
 
 export const metadata: Metadata = { title: "Edit code" };
 
@@ -25,10 +26,11 @@ export default async function EditCodeRoute({
     redirect(withWorkspace(`/codes/${id}/edit`, code.user_id));
   }
   const codeHref = withWorkspace(`/codes/${id}`, own ? null : code.user_id);
-  const [access, { data: folders }] = await Promise.all([
-    personAccess(supabase, user.id, code.user_id),
+  const [team, { data: folders }] = await Promise.all([
+    loadTeam(supabase),
     supabase.from("folders").select("*").eq("user_id", code.user_id).order("name"),
   ]);
+  const access = accessTo(team, user.id, code.user_id);
   if (!access?.canEdit || !isEditableType(code.qr_type)) redirect(codeHref);
   return (
     <EditCodePage
@@ -36,6 +38,7 @@ export default async function EditCodeRoute({
       folders={folders ?? []}
       mediaOwner={own ? null : code.user_id}
       codeHref={codeHref}
+      canBePrivate={own && team.length > 0}
     />
   );
 }

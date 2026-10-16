@@ -23,6 +23,7 @@ const editorFor = (type: CodeTypeId): ContentEditor => ({
   state: { ...initialState(), activeType: type },
   setField: vi.fn(),
   setPage: vi.fn(),
+  updatePage: vi.fn(),
   pageErrors: {},
   workspace: null,
 });

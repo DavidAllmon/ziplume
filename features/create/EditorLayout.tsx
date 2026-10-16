@@ -20,6 +20,7 @@ import { FolderSection } from "./sections/FolderSection";
 import { MediaOwnerContext } from "@/features/pages/editor/MediaOwner";
 
 import { LookSection } from "./sections/LookSection";
+import { PrivateSection } from "./sections/PrivateSection";
 import { SettingsSection, type SavedSettings } from "./sections/SettingsSection";
 import { TAB_LABELS, tabsFor, type EditorTab } from "./tabs";
 import type { CodeDraft } from "./useCodeDraft";
@@ -37,6 +38,7 @@ export function EditorLayout({
   controls,
   saved,
   back,
+  canBePrivate = false,
 }: {
   draft: CodeDraft;
   folders: FolderRow[];
@@ -47,6 +49,8 @@ export function EditorLayout({
   saved?: SavedSettings;
   /** Where the top bar's back arrow goes, and what it's called. */
   back: { href: string; label: string };
+  /** In a team, on your own code: offer Private in Settings. */
+  canBePrivate?: boolean;
 }) {
   const { state, dispatch, codeAction, pageType, problem } = draft;
   const editing = controls.mode === "edit";
@@ -86,6 +90,7 @@ export function EditorLayout({
     state: state.code,
     setField: draft.setField,
     setPage: draft.setPage,
+    updatePage: draft.updatePage,
     pageErrors: draft.pageErrors,
     workspace: mediaOwner ? { ownerId: mediaOwner } : null,
     revealErrors,
@@ -131,6 +136,12 @@ export function EditorLayout({
           onChange={(patch) => dispatch({ type: "settings", patch })}
           saved={saved}
         />
+        {canBePrivate && (
+          <PrivateSection
+            isPrivate={state.settings.isPrivate}
+            onChange={(isPrivate) => dispatch({ type: "settings", patch: { isPrivate } })}
+          />
+        )}
         <FolderSection
           folderId={state.folderId}
           folders={folders}

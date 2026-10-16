@@ -33,6 +33,21 @@ describe("generatorReducer", () => {
     expect(state.pages.links.color).toBe("#BE123C");
   });
 
+  it("changes a page from its latest content", () => {
+    let state = initialState();
+    state = reduce(state, {
+      type: "setPage",
+      pageType: "links",
+      content: { ...state.pages.links, title: "Latest" },
+    });
+    state = reduce(state, {
+      type: "updatePage",
+      pageType: "links",
+      update: (page) => ({ ...page, bio: "Hi" }),
+    });
+    expect(state.pages.links).toMatchObject({ title: "Latest", bio: "Hi" });
+  });
+
   it("ignores unknown fields", () => {
     const state = initialState();
     expect(reduce(state, { type: "setField", qrType: "url", field: "nope", value: "x" })).toBe(

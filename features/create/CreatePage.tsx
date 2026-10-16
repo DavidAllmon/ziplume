@@ -25,6 +25,8 @@ export interface CreatePageProps {
   initialFolderId: string | null;
   /** Opened from the gallery's Continue: start from the unfinished code. */
   resume?: boolean;
+  /** In a team: Private can be set. */
+  inTeam: boolean;
 }
 
 /** A saved folder that's gone (or in another workspace) falls back to the page's folder. */
@@ -57,6 +59,7 @@ function CreateEditor({
   initialType,
   initialFolderId,
   resume = false,
+  inTeam,
 }: CreatePageProps) {
   const router = useRouter();
   const toast = useToast();
@@ -94,7 +97,7 @@ function CreateEditor({
     inFlight.current = true;
     setCreating(true);
     const name = state.code.name.trim() || draft.defaultName;
-    const { input, settings } = toNewCode(state, null, name);
+    const { input, settings } = toNewCode(state, null, name, { canBePrivate: inTeam });
     const result = await createCodeWithSettings(input, settings);
     if (!result.ok) {
       inFlight.current = false;
@@ -132,6 +135,7 @@ function CreateEditor({
         draft={draft}
         folders={folders}
         mediaOwner={null}
+        canBePrivate={inTeam}
         controls={controls}
         back={{
           href: newCodeHref({ folderId: initialFolderId, ownerId: null }),
