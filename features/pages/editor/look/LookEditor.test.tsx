@@ -50,6 +50,14 @@ function slowUpload() {
 }
 
 describe("LookEditor", () => {
+  it("sets the social icons' style and size", async () => {
+    const user = userEvent.setup();
+    render(<Harness type="links" initial={PAGE_DEFAULTS.links()} />);
+    const card = within(screen.getByRole("region", { name: "Social icons" }));
+    await user.click(card.getByRole("radio", { name: "Brand colors" }));
+    await user.click(card.getByRole("radio", { name: "Large" }));
+    expect(look()).toMatchObject({ socialStyle: "brand", socialSize: "large" });
+  });
   it("shows the cards in the spec's order", () => {
     render(<Harness type="links" initial={PAGE_DEFAULTS.links()} />);
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
@@ -274,9 +282,11 @@ describe("LookEditor", () => {
     const user = userEvent.setup();
     render(<Harness type="links" initial={PAGE_DEFAULTS.links()} />);
     await user.click(screen.getByRole("radio", { name: "Elegant" }));
-    await user.click(screen.getByRole("radio", { name: "Square" }));
-    await user.click(screen.getByRole("radio", { name: "Outline" }));
-    await user.click(screen.getByRole("radio", { name: "Hard" }));
+    // "Outline" is also a social icon style; these are the Buttons card's.
+    const buttons = within(screen.getByRole("region", { name: "Buttons" }));
+    await user.click(buttons.getByRole("radio", { name: "Square" }));
+    await user.click(buttons.getByRole("radio", { name: "Outline" }));
+    await user.click(buttons.getByRole("radio", { name: "Hard" }));
     expect(look()).toMatchObject({
       font: "elegant",
       button: { shape: "square", style: "outline", shadow: "hard" },

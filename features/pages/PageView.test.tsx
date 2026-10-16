@@ -27,6 +27,21 @@ const view = (type: Parameters<typeof PageView>[0]["type"], content: object, pre
   );
 
 describe("PageView", () => {
+  it("draws social icons in the look's style and size, keeping a 44px target", () => {
+    const content = {
+      ...PAGE_DEFAULTS.links(),
+      title: "Hi",
+      socials: [{ network: "facebook", url: "me" }],
+      look: { ...themeLook("paper", "links"), socialStyle: "brand", socialSize: "small" },
+    };
+    const { container } = view("links", content, false);
+    const link = container.querySelector<HTMLElement>("[data-socials] a")!;
+    expect(link.className).toContain("size-11");
+    const mark = link.querySelector<HTMLElement>("[data-social-mark]")!;
+    expect(mark.className).toContain("size-9");
+    expect(mark.style.backgroundColor).toBe("rgb(8, 102, 255)");
+    expect(mark.style.color).toBe("rgb(255, 255, 255)");
+  });
   it("puts a Share button on every public page, and links addresses in its text", () => {
     for (const type of PAGE_TYPE_IDS) {
       const { unmount } = view(type, PAGE_DEFAULTS[type](), false);

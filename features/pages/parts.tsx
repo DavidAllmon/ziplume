@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
 import type { PageLook } from "@/lib/pages/look";
+import { BRAND_COLORS, brandGlyph } from "@/lib/pages/social-brands";
 import { SOCIAL_ICONS } from "@/lib/pages/social-icons.data";
 import type { Media, SocialItem, SocialNetwork } from "@/lib/pages/types";
 import { mediaUrl, socialHref } from "@/lib/pages/urls";
@@ -311,28 +312,64 @@ export function SocialIcon({ network, className }: { network: SocialNetwork; cla
   return <Icon aria-hidden className={className} />;
 }
 
-/** The page's social icons, under the header or at the end (the look says which). */
-export function SocialRow({ socials, preview }: { socials: SocialItem[]; preview?: boolean }) {
+/** The page's social icons, under the header or at the end, in the look's style and size. */
+const MARK = { small: "size-9", medium: "size-11", large: "size-14" } as const;
+const GLYPH = { small: "size-4", medium: "size-5", large: "size-6" } as const;
+
+export function SocialRow({
+  socials,
+  look,
+  preview,
+}: {
+  socials: SocialItem[];
+  look: PageLook;
+  preview?: boolean;
+}) {
   const items = socials
     .map((s) => ({ ...s, href: socialHref(s.network, s.url) }))
     .filter((s): s is SocialItem & { href: string } => s.href !== null);
   if (!items.length) return null;
+  const size = look.socialSize;
   return (
-    <ul data-socials className="flex flex-wrap justify-center gap-2">
-      {items.map((s, i) => (
-        <li key={`${s.network}-${i}`}>
-          <a
-            href={preview ? undefined : s.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={socialLabel(s.network)}
-            title={socialLabel(s.network)}
-            className="grid size-11 place-items-center rounded-full border border-border bg-surface text-fg transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring)"
-          >
-            <SocialIcon network={s.network} className="size-5" />
-          </a>
-        </li>
-      ))}
+    <ul
+      data-socials
+      className={cn("flex flex-wrap justify-center", size === "large" ? "gap-3" : "gap-2")}
+    >
+      {items.map((s, i) => {
+        const brand = look.socialStyle === "brand" ? BRAND_COLORS[s.network] : undefined;
+        // A network with no brand color (Website) is drawn filled instead.
+        const style = look.socialStyle === "brand" && !brand ? "filled" : look.socialStyle;
+        return (
+          <li key={`${s.network}-${i}`}>
+            <a
+              href={preview ? undefined : s.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={socialLabel(s.network)}
+              title={socialLabel(s.network)}
+              className={cn(
+                "grid place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring)",
+                size === "large" ? "size-14" : "size-11",
+              )}
+            >
+              <span
+                data-social-mark
+                className={cn(
+                  "grid place-items-center rounded-full transition-colors",
+                  MARK[size],
+                  style === "outline" &&
+                    "border border-border bg-surface text-fg hover:bg-surface-2",
+                  style === "filled" && "bg-fg text-(--bg)",
+                  style === "plain" && "text-fg",
+                )}
+                style={brand ? { backgroundColor: brand, color: brandGlyph(brand) } : undefined}
+              >
+                <SocialIcon network={s.network} className={GLYPH[size]} />
+              </span>
+            </a>
+          </li>
+        );
+      })}
     </ul>
   );
 }

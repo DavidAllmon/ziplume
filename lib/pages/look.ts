@@ -43,6 +43,9 @@ export interface PageLook {
     text: string;
   };
   socials: "top" | "bottom";
+  /** How the social icons look (spec item 5). */
+  socialStyle: "outline" | "filled" | "plain" | "brand";
+  socialSize: "small" | "medium" | "large";
 }
 
 /** A change to a look: the new look, or how to make it from the latest one. */
@@ -175,6 +178,8 @@ export function themeLook(theme: ThemeId, type: PageTypeId): PageLook {
     header: "classic",
     shape: "circle",
     socials: socialsFor(type),
+    socialStyle: "outline",
+    socialSize: "medium",
   };
 }
 
@@ -254,6 +259,12 @@ export function sanitizeLook(raw: unknown, fallback: PageLook): PageLook {
       text: hexOrAuto(b.text),
     },
     socials: oneOf(["top", "bottom"] as const, raw.socials, fallback.socials),
+    socialStyle: oneOf(
+      ["outline", "filled", "plain", "brand"] as const,
+      raw.socialStyle,
+      fallback.socialStyle,
+    ),
+    socialSize: oneOf(["small", "medium", "large"] as const, raw.socialSize, fallback.socialSize),
   };
 }
 

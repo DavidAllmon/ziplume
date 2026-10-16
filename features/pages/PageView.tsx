@@ -80,7 +80,7 @@ function LinksView({ page, preview }: ViewProps<LinksPage>) {
     );
   const featuredAt = rows.findIndex(({ link }) => link.kind !== "header" && link.featured);
   const look = page.look;
-  const socials = <SocialRow socials={page.socials} preview={preview} />;
+  const socials = <SocialRow socials={page.socials} look={look} preview={preview} />;
   const anyLinks = rows.some(({ link }) => link.kind !== "header");
   return (
     <PageFrame look={look} preview={preview}>
@@ -180,7 +180,7 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
   const role = [page.jobTitle.trim(), page.company.trim()].filter(Boolean).join(" · ");
   const website = safeHref(page.website);
   const look = page.look;
-  const socials = <SocialRow socials={page.socials} preview={preview} />;
+  const socials = <SocialRow socials={page.socials} look={look} preview={preview} />;
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -264,7 +264,7 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
   const website = safeHref(page.website);
   const look = page.look;
   const hero = look.header === "hero" && page.cover !== null;
-  const socials = <SocialRow socials={page.socials} preview={preview} />;
+  const socials = <SocialRow socials={page.socials} look={look} preview={preview} />;
   const actions = [
     { href: phone, icon: Phone, label: "Call" },
     { href: email, icon: Mail, label: "Email" },
