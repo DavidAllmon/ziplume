@@ -55,6 +55,14 @@ describe("createCodeWithSettings", () => {
     });
   });
 
+  it("sends Private only when it's on", async () => {
+    rpc.mockResolvedValue({ data: row, error: null });
+    await createCodeWithSettings({ ...base, isPrivate: true });
+    expect(rpc.mock.lastCall![1].p_code).toMatchObject({ is_private: true });
+    await createCodeWithSettings(base);
+    expect(rpc.mock.lastCall![1].p_code).not.toHaveProperty("is_private");
+  });
+
   it("sends a static code with no ending, destination or password", async () => {
     rpc.mockResolvedValue({ data: row, error: null });
     await createCodeWithSettings({ ...base, qrType: "text", content: { text: "Hi" } });
@@ -166,6 +174,27 @@ describe("duplicateCode", () => {
     await duplicateCode(teammate, { keepFolder: true });
     expect(insert.mock.calls[1]![0]).toMatchObject({ folder_id: "f-kim" });
   });
+
+  it("copies a private code as private", async () => {
+    const insert = vi.fn((row: Record<string, unknown>) => ({
+      select: () => ({ single: async () => ({ data: { id: "copy", ...row }, error: null }) }),
+    }));
+    from.mockReturnValue({ insert });
+    const mine = {
+      id: "c2",
+      user_id: "me",
+      folder_id: null,
+      name: "Diary",
+      qr_type: "text",
+      content: { text: "hi" },
+      design: {},
+      is_dynamic: false,
+      destination: null,
+      is_private: true,
+    } as unknown as QrCodeRow;
+    await duplicateCode(mine, { keepFolder: true });
+    expect(insert.mock.calls[0]![0]).toMatchObject({ is_private: true });
+  });
 });
 
 describe("updateCodeWithSettings", () => {
@@ -191,6 +220,12 @@ describe("updateCodeWithSettings", () => {
       p_password: null,
       p_password_action: "keep",
     });
+  });
+
+  it("sends a change to Private by column name", async () => {
+    rpc.mockResolvedValue({ data: row, error: null });
+    await updateCodeWithSettings("c1", { isPrivate: false });
+    expect(rpc.mock.lastCall![1].p_patch).toEqual({ is_private: false });
   });
 
   it("sends a new password, or asks to clear it", async () => {

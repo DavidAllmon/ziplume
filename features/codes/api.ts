@@ -35,6 +35,8 @@ export interface NewCode {
    * and an optional chosen ending.
    */
   dynamic?: { destination: string | null; slug?: string };
+  /** Only you can see it (in a team). */
+  isPrivate?: boolean;
 }
 
 export async function createCode(input: NewCode): Promise<Result<QrCodeRow>> {
@@ -54,6 +56,7 @@ export async function createCode(input: NewCode): Promise<Result<QrCodeRow>> {
       .insert({
         ...(input.ownerId && { user_id: input.ownerId }),
         ...(input.folderId && { folder_id: input.folderId }),
+        ...(input.isPrivate && { is_private: true }),
         name: input.name.slice(0, 120),
         qr_type: input.qrType,
         content: (input.dynamic?.destination
@@ -117,6 +120,7 @@ export async function createCodeWithSettings(
       p_code: {
         ...(input.ownerId && { user_id: input.ownerId }),
         ...(input.folderId && { folder_id: input.folderId }),
+        ...(input.isPrivate && { is_private: true }),
         name: input.name.slice(0, 120),
         qr_type: input.qrType,
         content: (input.dynamic?.destination
@@ -254,6 +258,7 @@ export interface CodeUpdate {
   folderId?: string | null;
   activeFrom?: string | null;
   activeUntil?: string | null;
+  isPrivate?: boolean;
 }
 
 /** What happens to a trackable code's password when the editor saves. */
@@ -294,6 +299,7 @@ export async function updateCodeWithSettings(
     ...(changes.folderId !== undefined && { folder_id: changes.folderId }),
     ...(changes.activeFrom !== undefined && { active_from: changes.activeFrom }),
     ...(changes.activeUntil !== undefined && { active_until: changes.activeUntil }),
+    ...(changes.isPrivate !== undefined && { is_private: changes.isPrivate }),
   };
   const { data, error } = await supabase.rpc("update_code", {
     p_id: id,
@@ -364,5 +370,7 @@ export async function duplicateCode(
     content: code.content,
     design: code.design as unknown as DesignState,
     dynamic: code.is_dynamic ? { destination: code.destination } : undefined,
+    // Only its maker sees a private code, so only they can copy it, and the copy stays private.
+    ...(code.is_private && { isPrivate: true }),
   });
 }

@@ -43,10 +43,10 @@ export interface StoredDraft {
 /** The parts of the page a draft keeps, picked one by one so a password can never slip in. */
 function draftBody(state: CreateState) {
   const { activeType, content, pages, design, ecBeforeLogo, name } = state.code;
-  const { trackable, startsAt, endsAt, slug, utm } = state.settings;
+  const { trackable, startsAt, endsAt, slug, utm, isPrivate } = state.settings;
   return {
     code: { activeType, content, pages, design, ecBeforeLogo, name },
-    settings: { trackable, startsAt, endsAt, slug, utm },
+    settings: { trackable, startsAt, endsAt, slug, utm, isPrivate },
     folderId: state.folderId,
     styleDesign: state.styleDesign,
   };
@@ -132,6 +132,7 @@ export function parseDraft(raw: string | null): StoredDraft | null {
       medium: text(utm.medium, 200),
       campaign: text(utm.campaign, 200),
     },
+    isPrivate: settings.isPrivate === true,
   };
   return {
     savedAt: savedAt.toISOString(),

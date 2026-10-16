@@ -40,6 +40,15 @@ describe("drafts", () => {
     expect(draft?.state).toEqual({ ...edited, settings: { ...edited.settings, password: "" } });
   });
 
+  it("keep Private, and treat older drafts as shared", () => {
+    saveDraft(USER, run(edited, { type: "settings", patch: { isPrivate: true } }));
+    expect(parseDraft(rawDraft(USER))?.state.settings.isPrivate).toBe(true);
+    const old = parseDraft(
+      JSON.stringify({ v: 2, savedAt: "2026-10-14T10:00:00Z", settings: { trackable: true } }),
+    );
+    expect(old?.state.settings.isPrivate).toBe(false);
+  });
+
   it("ignore anything that isn't a current draft", () => {
     expect(parseDraft(null)).toBeNull();
     expect(parseDraft("not json")).toBeNull();

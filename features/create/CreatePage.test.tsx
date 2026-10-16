@@ -46,6 +46,7 @@ function renderPage(props: Partial<CreatePageProps> = {}) {
         folders={FOLDERS}
         initialType="url"
         initialFolderId={null}
+        inTeam={false}
         {...props}
       />
     </ToastProvider>,
