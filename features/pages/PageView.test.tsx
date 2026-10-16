@@ -26,6 +26,19 @@ const view = (type: Parameters<typeof PageView>[0]["type"], content: object, pre
   );
 
 describe("PageView", () => {
+  it("puts a Share button on every public page, and links addresses in its text", () => {
+    for (const type of PAGE_TYPE_IDS) {
+      const { unmount } = view(type, PAGE_DEFAULTS[type](), false);
+      expect(screen.getByRole("button", { name: "Share this page" }), type).toBeInTheDocument();
+      unmount();
+    }
+    view(
+      "pdf",
+      { ...PAGE_DEFAULTS.pdf(), title: "Menu", description: "Order at www.example.com" },
+      false,
+    );
+    expect(screen.getByRole("link", { name: "www.example.com" })).toBeInTheDocument();
+  });
   it("shows a video page saved with an upload as a placeholder, never a player", () => {
     const old = {
       ...PAGE_DEFAULTS.video(),
