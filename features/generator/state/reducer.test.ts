@@ -22,7 +22,11 @@ describe("generatorReducer", () => {
     state = reduce(state, {
       type: "setLook",
       pageType: "links",
-      update: (look) => ({ ...look, font: "typewriter", button: { ...look.button, color: "#BE123C" } }),
+      update: (look) => ({
+        ...look,
+        font: "typewriter",
+        button: { ...look.button, color: "#BE123C" },
+      }),
     });
     expect(state.pages.links.title).toBe("Latest");
     expect(state.pages.links.look.font).toBe("typewriter");
