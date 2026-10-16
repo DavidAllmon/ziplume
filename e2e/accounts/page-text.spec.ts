@@ -1,8 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { MAKER } from "./fixtures";
-
-const openTab = (page: Page, name: string) => page.getByRole("tab", { name }).click();
 
 test.describe("page text and files", () => {
   test.use({ storageState: MAKER.state });
