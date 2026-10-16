@@ -1,7 +1,8 @@
-import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
-import { ToastProvider } from "./Toast";
+import { ToastProvider, useToast } from "./Toast";
 
 describe("ToastProvider", () => {
   // The iPhone home-indicator area can't be emulated in the browser tests, so pin it here: with
@@ -12,5 +13,30 @@ describe("ToastProvider", () => {
     expect(stack?.className).toContain(
       "bottom-[calc(max(var(--tabbar-h)+var(--actionbar-h),env(safe-area-inset-bottom))+0.75rem)]",
     );
+  });
+
+  it("offers an action, such as Undo, and closes once it's used", async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    function Show() {
+      const toast = useToast();
+      return (
+        <button
+          type="button"
+          onClick={() => toast("Theme set to Ocean", "success", { label: "Undo", onAction })}
+        >
+          Show
+        </button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Show />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "Show" }));
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Theme set to Ocean")).toBeNull();
   });
 });

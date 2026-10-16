@@ -4,13 +4,21 @@ import { CheckCircle2, CircleAlert } from "lucide-react";
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 
 type Tone = "success" | "error";
+/** A button on the toast, such as Undo. */
+export interface ToastAction {
+  label: string;
+  onAction: () => void;
+}
 interface ToastMessage {
   id: number;
   message: string;
   tone: Tone;
+  action?: ToastAction;
 }
 
-const ToastContext = createContext<(message: string, tone?: Tone) => void>(() => {});
+const ToastContext = createContext<(message: string, tone?: Tone, action?: ToastAction) => void>(
+  () => {},
+);
 
 export function useToast() {
   return useContext(ToastContext);
@@ -20,11 +28,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const nextId = useRef(0);
 
-  const show = useCallback((message: string, tone: Tone = "success") => {
-    const id = ++nextId.current;
-    setToasts((current) => [...current.slice(-2), { id, message, tone }]);
-    window.setTimeout(() => setToasts((current) => current.filter((t) => t.id !== id)), 3500);
-  }, []);
+  const dismiss = useCallback(
+    (id: number) => setToasts((current) => current.filter((t) => t.id !== id)),
+    [],
+  );
+  const show = useCallback(
+    (message: string, tone: Tone = "success", action?: ToastAction) => {
+      const id = ++nextId.current;
+      setToasts((current) => [...current.slice(-2), { id, message, tone, action }]);
+      // A toast with an action stays a little longer, so there's time to use it.
+      window.setTimeout(() => dismiss(id), action ? 6000 : 3500);
+    },
+    [dismiss],
+  );
 
   return (
     <ToastContext.Provider value={show}>
@@ -46,6 +62,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <CircleAlert aria-hidden className="size-4 shrink-0 text-danger-soft" />
             )}
             <span className="truncate">{toast.message}</span>
+            {toast.action && (
+              <button
+                type="button"
+                onClick={() => {
+                  toast.action!.onAction();
+                  dismiss(toast.id);
+                }}
+                className="-mr-1 ml-1 min-h-8 shrink-0 rounded-full px-2 font-semibold text-bg underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bg"
+              >
+                {toast.action.label}
+              </button>
+            )}
           </div>
         ))}
       </div>
