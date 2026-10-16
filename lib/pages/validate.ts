@@ -3,6 +3,7 @@ import { isTimeZone, zonedTimeToUtc } from "@/lib/time/zone";
 
 import { overLimit } from "./sanitize";
 import type { LinkItem, PageContentMap, SocialItem } from "./types";
+import { linkHref } from "./links";
 import { mailHref, safeHref, socialHref, telHref, videoEmbed } from "./urls";
 
 /** Problems keyed by field path, e.g. "title" or "links.2.url". Empty = ready to save. */
@@ -22,25 +23,39 @@ const checkSocials = (errors: PageErrors, socials: SocialItem[]) => {
   });
 };
 
+const checkLink = (errors: PageErrors, path: string, l: LinkItem) => {
+  if (l.kind === "header" || !l.on) return;
+  if (l.label.trim() && !l.url.trim())
+    errors[`${path}.url`] = `Add the link for “${l.label.trim()}”`;
+  else if (l.url.trim() && !linkHref(l)) {
+    errors[`${path}.url`] =
+      l.type === "email"
+        ? "Enter a valid email"
+        : l.type === "phone" || l.type === "sms"
+          ? "Enter a valid phone number"
+          : URL_MESSAGE;
+  }
+  const from = l.showFrom ? Date.parse(l.showFrom) : NaN;
+  const until = l.showUntil ? Date.parse(l.showUntil) : NaN;
+  if (!Number.isNaN(from) && !Number.isNaN(until) && until <= from) {
+    errors[`${path}.showUntil`] = "End after the start";
+  }
+};
+
 const LOCAL_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
 const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors } = {
   links: (p) => {
     const errors: PageErrors = {};
     if (!p.title.trim()) errors.title = "Add a title";
-    const filled = (l: LinkItem) => Boolean(l.label.trim() || l.url.trim());
+    const filled = (l: LinkItem) => l.kind !== "header" && Boolean(l.label.trim() || l.url.trim());
     // A link that's off is parked: it isn't checked and doesn't count.
     if (!p.links.some((l) => l.on && filled(l)) && !p.socials.some((s) => s.url.trim())) {
       errors["links.0.url"] = p.links.some(filled)
         ? "Turn on at least one link"
         : "Add at least one link";
     }
-    p.links.forEach((l, i) => {
-      if (!l.on) return;
-      if (l.label.trim() && !l.url.trim())
-        errors[`links.${i}.url`] = `Add the link for “${l.label.trim()}”`;
-      checkUrl(errors, `links.${i}.url`, l.url);
-    });
+    p.links.forEach((l, i) => checkLink(errors, `links.${i}`, l));
     checkSocials(errors, p.socials);
     return errors;
   },
@@ -67,12 +82,7 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     if (p.phone.trim() && !telHref(p.phone)) errors.phone = "Enter a valid phone number";
     if (p.email.trim() && !mailHref(p.email)) errors.email = "Enter a valid email";
     checkUrl(errors, "website", p.website);
-    p.buttons.forEach((b, i) => {
-      if (!b.on) return;
-      if (b.label.trim() && !b.url.trim())
-        errors[`buttons.${i}.url`] = `Add the link for “${b.label.trim()}”`;
-      checkUrl(errors, `buttons.${i}.url`, b.url);
-    });
+    p.buttons.forEach((b, i) => checkLink(errors, `buttons.${i}`, b));
     p.hours.forEach((h, i) => {
       if (h.open && h.from >= h.to) errors[`hours.${i}`] = "Closing time must be after opening";
     });

@@ -6,7 +6,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { resolveLook } from "@/features/pages/look/resolve";
 import type { LookChange, PageLook } from "@/lib/pages/look";
 
-import { Labeled } from "./Labeled";
+import { Labeled } from "../Labeled";
 import { Swatches } from "./Swatches";
 import { Warnings } from "./Warning";
 

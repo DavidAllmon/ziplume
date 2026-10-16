@@ -65,6 +65,16 @@ describe("themes", () => {
 });
 
 describe("sanitizeLook", () => {
+  it("keeps social icon styles and sizes, and falls back to outline and medium", () => {
+    const base = themeLook("paper", "links");
+    expect(base).toMatchObject({ socialStyle: "outline", socialSize: "medium" });
+    const brand = sanitizeLook({ ...base, socialStyle: "brand", socialSize: "large" }, base);
+    expect(brand).toMatchObject({ socialStyle: "brand", socialSize: "large" });
+    expect(sanitizeLook({ ...base, socialStyle: "neon", socialSize: 9 }, base)).toMatchObject({
+      socialStyle: "outline",
+      socialSize: "medium",
+    });
+  });
   const fallback = themeLook("paper", "links");
 
   it("keeps a valid look", () => {

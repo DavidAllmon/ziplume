@@ -16,11 +16,26 @@ export interface Media {
   height?: number;
 }
 
+export type LinkType = "web" | "email" | "phone" | "sms";
+
 export interface LinkItem {
+  /** The button's text; a header's text. */
   label: string;
+  /** A web address, an email address or a phone number, by `type`. */
   url: string;
   /** Off keeps the link in the editor but not on the page. */
   on: boolean;
+  /** A header is a text-only row between links. */
+  kind: "link" | "header";
+  type: LinkType;
+  /** Auto: a known site's icon, or the type's. */
+  icon: "auto" | "none" | "image";
+  image: Media | null;
+  /** Drawn taller, in the accent color; one per page. */
+  featured: boolean;
+  /** When it shows, as ISO times ("" for no limit). */
+  showFrom: string;
+  showUntil: string;
 }
 
 export const SOCIAL_NETWORKS = [
@@ -250,7 +265,20 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       title: "",
       bio: "",
       avatar: null,
-      links: [{ label: "", url: "", on: true }],
+      links: [
+        {
+          label: "",
+          url: "",
+          on: true,
+          kind: "link",
+          type: "web",
+          icon: "auto",
+          image: null,
+          featured: false,
+          showFrom: "",
+          showUntil: "",
+        },
+      ],
       socials: [],
     }),
   vcard: () =>

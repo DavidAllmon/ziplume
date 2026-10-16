@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
 import type { PageLook } from "@/lib/pages/look";
+import { BRAND_COLORS, brandGlyph } from "@/lib/pages/social-brands";
 import { SOCIAL_ICONS } from "@/lib/pages/social-icons.data";
 import type { Media, SocialItem, SocialNetwork } from "@/lib/pages/types";
 import { mediaUrl, socialHref } from "@/lib/pages/urls";
@@ -217,8 +218,9 @@ export function MediaImage({
   );
 }
 
+// Long words (an email address as a label) break rather than widen the page.
 const buttonBase =
-  "flex min-h-12 w-full items-center justify-center gap-2 rounded-(--pg-btn-radius) border-2 px-5 py-3 text-center font-page-heading text-[15px] font-semibold transition-[filter,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring) active:scale-[0.99] [&_svg]:size-5 [&_svg]:shrink-0";
+  "flex min-h-12 w-full items-center justify-center gap-2 rounded-(--pg-btn-radius) border-2 px-5 py-3 text-center font-page-heading text-[15px] font-semibold [overflow-wrap:anywhere] transition-[filter,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring) active:scale-[0.99] [&_svg]:size-5 [&_svg]:shrink-0";
 
 export const pageButton = {
   /** The look's button: its color, style, shape and shadow. */
@@ -238,18 +240,38 @@ export function PageLink({
   variant = "primary",
   download,
   preview,
+  icon,
+  featured = false,
 }: {
   href: string | null;
   children: ReactNode;
   variant?: "primary" | "secondary";
   download?: boolean | string;
   preview?: boolean;
+  /** A mark at the start of the button; the label stays centered. */
+  icon?: ReactNode;
+  /** The Link list's featured link: taller, ringed in the accent color (spec item 8). */
+  featured?: boolean;
 }) {
   if (!href) return null;
+  const body = icon ? (
+    <span className="grid w-full grid-cols-[1.75rem_1fr_1.75rem] items-center gap-2">
+      {icon}
+      <span className="min-w-0">{children}</span>
+      <span aria-hidden />
+    </span>
+  ) : (
+    children
+  );
+  const classes = cn(
+    pageButton[variant],
+    // An outline, not a ring: the button's shadow variable can't switch it off.
+    featured && "min-h-16 text-lg outline-2 outline-offset-2 outline-(--page-accent)",
+  );
   if (preview) {
     return (
-      <span className={pageButton[variant]} aria-disabled>
-        {children}
+      <span className={classes} aria-disabled data-featured={featured || undefined}>
+        {body}
       </span>
     );
   }
@@ -257,11 +279,12 @@ export function PageLink({
   return (
     <a
       href={href}
-      className={pageButton[variant]}
+      className={classes}
+      data-featured={featured || undefined}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       {...(download ? { download: typeof download === "string" ? download : "" } : {})}
     >
-      {children}
+      {body}
     </a>
   );
 }
@@ -291,28 +314,64 @@ export function SocialIcon({ network, className }: { network: SocialNetwork; cla
   return <Icon aria-hidden className={className} />;
 }
 
-/** The page's social icons, under the header or at the end (the look says which). */
-export function SocialRow({ socials, preview }: { socials: SocialItem[]; preview?: boolean }) {
+/** The page's social icons, under the header or at the end, in the look's style and size. */
+const MARK = { small: "size-9", medium: "size-11", large: "size-14" } as const;
+const GLYPH = { small: "size-4", medium: "size-5", large: "size-6" } as const;
+
+export function SocialRow({
+  socials,
+  look,
+  preview,
+}: {
+  socials: SocialItem[];
+  look: PageLook;
+  preview?: boolean;
+}) {
   const items = socials
     .map((s) => ({ ...s, href: socialHref(s.network, s.url) }))
     .filter((s): s is SocialItem & { href: string } => s.href !== null);
   if (!items.length) return null;
+  const size = look.socialSize;
   return (
-    <ul data-socials className="flex flex-wrap justify-center gap-2">
-      {items.map((s, i) => (
-        <li key={`${s.network}-${i}`}>
-          <a
-            href={preview ? undefined : s.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={socialLabel(s.network)}
-            title={socialLabel(s.network)}
-            className="grid size-11 place-items-center rounded-full border border-border bg-surface text-fg transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring)"
-          >
-            <SocialIcon network={s.network} className="size-5" />
-          </a>
-        </li>
-      ))}
+    <ul
+      data-socials
+      className={cn("flex flex-wrap justify-center", size === "large" ? "gap-3" : "gap-2")}
+    >
+      {items.map((s, i) => {
+        const brand = look.socialStyle === "brand" ? BRAND_COLORS[s.network] : undefined;
+        // A network with no brand color (Website) is drawn filled instead.
+        const style = look.socialStyle === "brand" && !brand ? "filled" : look.socialStyle;
+        return (
+          <li key={`${s.network}-${i}`}>
+            <a
+              href={preview ? undefined : s.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={socialLabel(s.network)}
+              title={socialLabel(s.network)}
+              className={cn(
+                "grid place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring)",
+                size === "large" ? "size-14" : "size-11",
+              )}
+            >
+              <span
+                data-social-mark
+                className={cn(
+                  "grid place-items-center rounded-full transition-colors",
+                  MARK[size],
+                  style === "outline" &&
+                    "border border-border bg-surface text-fg hover:bg-surface-2",
+                  style === "filled" && "bg-fg text-(--bg)",
+                  style === "plain" && "text-fg",
+                )}
+                style={brand ? { backgroundColor: brand, color: brandGlyph(brand) } : undefined}
+              >
+                <SocialIcon network={s.network} className={GLYPH[size]} />
+              </span>
+            </a>
+          </li>
+        );
+      })}
     </ul>
   );
 }

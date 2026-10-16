@@ -9,7 +9,7 @@ import { FONTS } from "@/features/pages/look/fonts";
 import { resolveLook } from "@/features/pages/look/resolve";
 import { FONT_IDS, type LookChange, type PageLook } from "@/lib/pages/look";
 
-import { Labeled } from "./Labeled";
+import { Labeled } from "../Labeled";
 import { Warnings } from "./Warning";
 
 /** The font (spec 6.3) and the text color, Auto or custom. */

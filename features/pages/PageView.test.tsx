@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { newHeader, newLink } from "@/lib/pages/links";
 import { themeLook } from "@/lib/pages/look";
 import { PAGE_DEFAULTS } from "@/lib/pages/types";
 import { PAGE_TYPE_IDS, type PageTypeId } from "@/lib/qr/types";
@@ -26,6 +27,21 @@ const view = (type: Parameters<typeof PageView>[0]["type"], content: object, pre
   );
 
 describe("PageView", () => {
+  it("draws social icons in the look's style and size, keeping a 44px target", () => {
+    const content = {
+      ...PAGE_DEFAULTS.links(),
+      title: "Hi",
+      socials: [{ network: "facebook", url: "me" }],
+      look: { ...themeLook("paper", "links"), socialStyle: "brand", socialSize: "small" },
+    };
+    const { container } = view("links", content, false);
+    const link = container.querySelector<HTMLElement>("[data-socials] a")!;
+    expect(link.className).toContain("size-11");
+    const mark = link.querySelector<HTMLElement>("[data-social-mark]")!;
+    expect(mark.className).toContain("size-9");
+    expect(mark.style.backgroundColor).toBe("rgb(8, 102, 255)");
+    expect(mark.style.color).toBe("rgb(255, 255, 255)");
+  });
   it("puts a Share button on every public page, and links addresses in its text", () => {
     for (const type of PAGE_TYPE_IDS) {
       const { unmount } = view(type, PAGE_DEFAULTS[type](), false);
@@ -213,5 +229,117 @@ describe("PageView details", () => {
     const stars = container.querySelectorAll("svg.lucide-star");
     expect(stars.length).toBe(5);
     for (const star of stars) expect(star.getAttribute("class")).toContain("text-fg-muted");
+  });
+});
+
+describe("Link list extras", () => {
+  it("never shows visitors the editor's hint when every link is outside its schedule", () => {
+    const later = {
+      ...newLink(),
+      label: "Later",
+      url: "a.com",
+      showFrom: "2999-01-01T00:00:00.000Z",
+    };
+    const { unmount } = view(
+      "links",
+      { ...PAGE_DEFAULTS.links(), title: "Hi", links: [later] },
+      false,
+    );
+    expect(screen.queryByText("Links you add appear here.")).toBeNull();
+    unmount();
+    view("links", { ...PAGE_DEFAULTS.links(), title: "Hi", links: [later] }, true);
+    expect(screen.getByText("Links you add appear here.")).toBeInTheDocument();
+  });
+
+  const page = (links: object[]) => ({ ...PAGE_DEFAULTS.links(), title: "Hi", links });
+
+  it("draws headers between links, and skips empty ones", () => {
+    view(
+      "links",
+      page([
+        { ...newHeader(), label: "Shop" },
+        { ...newLink(), label: "Store", url: "shop.com" },
+        { ...newHeader(), label: "  " },
+      ]),
+      false,
+    );
+    expect(screen.getByRole("heading", { level: 2, name: "Shop" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
+  });
+
+  it("links each type to the right address, and draws no button for a bad one", () => {
+    view(
+      "links",
+      page([
+        { ...newLink(), label: "Email us", type: "email", url: "hi@shop.com" },
+        { ...newLink(), label: "Text us", type: "sms", url: "555 010 2030" },
+        { ...newLink(), label: "Broken", type: "phone", url: "letters" },
+      ]),
+      false,
+    );
+    expect(screen.getByRole("link", { name: /Email us/ })).toHaveAttribute(
+      "href",
+      "mailto:hi@shop.com",
+    );
+    expect(screen.getByRole("link", { name: /Text us/ })).toHaveAttribute("href", "sms:5550102030");
+    expect(screen.queryByRole("link", { name: /Broken/ })).toBeNull();
+  });
+
+  it("puts a known site's icon on its link, and none on an unknown one", () => {
+    const { container } = view(
+      "links",
+      page([
+        { ...newLink(), label: "Instagram", url: "instagram.com/me" },
+        { ...newLink(), label: "Blog", url: "example.com" },
+      ]),
+      false,
+    );
+    const links = container.querySelectorAll("nav[aria-label=Links] a");
+    expect(links[0]!.querySelector("[data-link-icon]")).not.toBeNull();
+    expect(links[1]!.querySelector("[data-link-icon]")).toBeNull();
+  });
+
+  it("draws the featured link taller, and only the first one", () => {
+    const { container } = view(
+      "links",
+      page([
+        { ...newLink(), label: "One", url: "a.com", featured: true },
+        { ...newLink(), label: "Two", url: "b.com", featured: true },
+      ]),
+      false,
+    );
+    const links = container.querySelectorAll("nav[aria-label=Links] a");
+    expect(links[0]).toHaveAttribute("data-featured");
+    expect(links[1]).not.toHaveAttribute("data-featured");
+  });
+
+  it("hides a link outside its schedule", () => {
+    view(
+      "links",
+      page([
+        { ...newLink(), label: "Later", url: "a.com", showFrom: "2999-01-01T00:00:00.000Z" },
+        { ...newLink(), label: "Now", url: "b.com" },
+      ]),
+      false,
+    );
+    expect(screen.queryByRole("link", { name: /Later/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /Now/ })).toBeInTheDocument();
+  });
+
+  it("keeps an old saved list exactly as before: no icons, no headers", () => {
+    const { container } = view(
+      "links",
+      {
+        ...PAGE_DEFAULTS.links(),
+        title: "Hi",
+        links: [{ label: "Blog", url: "example.com", on: true }],
+      },
+      false,
+    );
+    expect(container.querySelector("[data-link-icon]")).toBeNull();
+    expect(screen.getByRole("link", { name: "Blog" })).toHaveAttribute(
+      "href",
+      "https://example.com/",
+    );
   });
 });

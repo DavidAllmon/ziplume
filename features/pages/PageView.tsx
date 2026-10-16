@@ -33,10 +33,12 @@ import type {
   VcardPage,
   VideoPage,
 } from "@/lib/pages/types";
+import { isShown, linkHref, linkIcon } from "@/lib/pages/links";
 import { mailHref, mediaUrl, safeHref, telHref, videoEmbed } from "@/lib/pages/urls";
 import type { PageTypeId } from "@/lib/qr/types";
 
 import { CopyCode } from "./CopyCode";
+import { LinkIconMark } from "./LinkIcon";
 import { FeedbackForm } from "./FeedbackForm";
 import {
   EmptyNote,
@@ -68,12 +70,18 @@ interface ViewProps<T> {
 }
 
 function LinksView({ page, preview }: ViewProps<LinksPage>) {
-  const links = page.links
-    .filter((link) => link.on)
-    .map((link) => ({ ...link, href: safeHref(link.url) }))
-    .filter((link) => link.href && (link.label.trim() || link.url.trim()));
+  const now = new Date();
+  const rows = page.links
+    .map((link) => ({ link, href: linkHref(link) }))
+    .filter(({ link, href }) =>
+      link.kind === "header"
+        ? link.label.trim() !== ""
+        : isShown(link, now) && href !== null && (link.label.trim() || link.url.trim()),
+    );
+  const featuredAt = rows.findIndex(({ link }) => link.kind !== "header" && link.featured);
   const look = page.look;
-  const socials = <SocialRow socials={page.socials} preview={preview} />;
+  const socials = <SocialRow socials={page.socials} look={look} preview={preview} />;
+  const anyLinks = rows.some(({ link }) => link.kind !== "header");
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -86,15 +94,33 @@ function LinksView({ page, preview }: ViewProps<LinksPage>) {
       />
       {look.socials === "top" && socials}
       <nav aria-label="Links" className="flex flex-col gap-3">
-        {links.length ? (
-          links.map((link, i) => (
-            <PageLink key={i} href={link.href} preview={preview}>
-              {link.label.trim() || link.url.replace(/^https?:\/\//, "")}
-            </PageLink>
-          ))
-        ) : (
-          <EmptyNote>Links you add appear here.</EmptyNote>
-        )}
+        {anyLinks
+          ? rows.map(({ link, href }, i) => {
+              if (link.kind === "header") {
+                return (
+                  <h2
+                    key={i}
+                    className="mt-3 px-1 text-center font-page-heading text-sm font-semibold tracking-wide text-fg-muted uppercase first:mt-0"
+                  >
+                    {link.label.trim()}
+                  </h2>
+                );
+              }
+              const icon = linkIcon(link);
+              return (
+                <PageLink
+                  key={i}
+                  href={href}
+                  preview={preview}
+                  featured={i === featuredAt}
+                  icon={icon ? <LinkIconMark icon={icon} /> : undefined}
+                >
+                  {link.label.trim() || link.url.replace(/^(https?:\/\/|mailto:|tel:|sms:)/, "")}
+                </PageLink>
+              );
+            })
+          : // The editor's hint; visitors never see it, even when every link is scheduled away.
+            preview && <EmptyNote>Links you add appear here.</EmptyNote>}
       </nav>
       {look.socials === "bottom" && socials}
     </PageFrame>
@@ -153,7 +179,7 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
   const role = [page.jobTitle.trim(), page.company.trim()].filter(Boolean).join(" · ");
   const website = safeHref(page.website);
   const look = page.look;
-  const socials = <SocialRow socials={page.socials} preview={preview} />;
+  const socials = <SocialRow socials={page.socials} look={look} preview={preview} />;
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -237,7 +263,7 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
   const website = safeHref(page.website);
   const look = page.look;
   const hero = look.header === "hero" && page.cover !== null;
-  const socials = <SocialRow socials={page.socials} preview={preview} />;
+  const socials = <SocialRow socials={page.socials} look={look} preview={preview} />;
   const actions = [
     { href: phone, icon: Phone, label: "Call" },
     { href: email, icon: Mail, label: "Email" },
@@ -280,10 +306,10 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
         </PageCard>
       )}
       {page.buttons
-        .filter((b) => b.on && safeHref(b.url))
+        .filter((b) => b.kind !== "header" && b.on && linkHref(b))
         .map((b, i) => (
-          <PageLink key={i} href={safeHref(b.url)} preview={preview}>
-            {b.label.trim() || b.url.replace(/^https?:\/\//, "")}
+          <PageLink key={i} href={linkHref(b)} preview={preview}>
+            {b.label.trim() || b.url.replace(/^(https?:\/\/|mailto:|tel:|sms:)/, "")}
           </PageLink>
         ))}
       {page.about.trim() && (

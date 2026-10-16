@@ -11,6 +11,7 @@ import {
   type MenuPage,
   type PageContentMap,
 } from "@/lib/pages/types";
+import { newLink } from "@/lib/pages/links";
 import { limitAt } from "@/lib/pages/sanitize";
 import { validatePage } from "@/lib/pages/validate";
 import { PAGE_TYPE_IDS, type PageTypeId } from "@/lib/qr/types";
@@ -174,7 +175,7 @@ describe("PageEditor lists", () => {
   const links = (rows: { label: string; url: string }[]): LinksPage => ({
     ...PAGE_DEFAULTS.links(),
     title: "Me",
-    links: rows.map((row) => ({ ...row, on: true })),
+    links: rows.map((row) => ({ ...newLink(), ...row, on: true })),
   });
 
   it("keeps an error on its row when the row moves", async () => {
