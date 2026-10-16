@@ -155,7 +155,8 @@ const httpUrl = (value: unknown): string | null => {
 /** Checks and normalizes content for a type; pages may only use files from the owner's folder. */
 function content(type: CodeTypeId, raw: unknown, userId: string): Invalid | { value: Json } {
   if (isPageType(type)) {
-    const page = sanitizePage(type, raw);
+    // A request without a look gets the type's default theme (spec 6.10).
+    const page = sanitizePage(type, raw, { missingLook: "theme" });
     const errors = validatePage(type, page);
     if (Object.keys(errors).length) return invalid("content isn't valid for this type", errors);
     if (mediaPaths(page).some((path) => !path.startsWith(`${userId}/`))) {
@@ -234,7 +235,10 @@ export function withLinks(code: Record<string, unknown>): Record<string, unknown
   let payload: string | null = null;
   if (code.dynamic && slug) payload = dynamicPayload(slug);
   else if (isStaticType(type)) payload = encodeContent(type, sanitizeContent(type, code.content));
-  return { ...code, short_link: slug && code.dynamic ? shortLink(slug) : null, payload };
+  // Pages always come back with a look, filled in for pages saved before looks, so a client
+  // that sends the content back keeps how the page looks.
+  const content = isPageType(type) ? sanitizePage(type, code.content) : code.content;
+  return { ...code, content, short_link: slug && code.dynamic ? shortLink(slug) : null, payload };
 }
 
 /** Maps database errors to API errors. */

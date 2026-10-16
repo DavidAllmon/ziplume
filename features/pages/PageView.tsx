@@ -39,16 +39,15 @@ import type { PageTypeId } from "@/lib/qr/types";
 import { CopyCode } from "./CopyCode";
 import { FeedbackForm } from "./FeedbackForm";
 import {
-  Avatar,
   EmptyNote,
   fileSize,
-  Heading,
   MediaImage,
   PageCard,
+  PageFrame,
+  PageHeader,
   PageLink,
-  PageShell,
   Prose,
-  SocialLinks,
+  SocialRow,
 } from "./parts";
 
 export interface PageViewProps<K extends PageTypeId = PageTypeId> {
@@ -73,22 +72,23 @@ function LinksView({ page, preview }: ViewProps<LinksPage>) {
     .filter((link) => link.on)
     .map((link) => ({ ...link, href: safeHref(link.url) }))
     .filter((link) => link.href && (link.label.trim() || link.url.trim()));
+  const look = page.look;
+  const socials = <SocialRow socials={page.socials} preview={preview} />;
   return (
-    <PageShell color={page.color}>
-      <div className="flex flex-col items-center gap-4">
-        <Avatar media={page.avatar} name={page.title} />
-        <Heading sub={page.bio || undefined}>{page.title || "Your name"}</Heading>
-        <SocialLinks socials={page.socials} preview={preview} />
-      </div>
+    <PageFrame look={look} preview={preview}>
+      <PageHeader
+        look={look}
+        layout={look.header}
+        image={page.avatar}
+        imageAlt={page.title || "Profile picture"}
+        title={page.title || "Your name"}
+        sub={page.bio || undefined}
+      />
+      {look.socials === "top" && socials}
       <nav aria-label="Links" className="flex flex-col gap-3">
         {links.length ? (
           links.map((link, i) => (
-            <PageLink
-              key={i}
-              href={link.href}
-              variant={i === 0 ? "primary" : "secondary"}
-              preview={preview}
-            >
+            <PageLink key={i} href={link.href} preview={preview}>
               {link.label.trim() || link.url.replace(/^https?:\/\//, "")}
             </PageLink>
           ))
@@ -96,7 +96,8 @@ function LinksView({ page, preview }: ViewProps<LinksPage>) {
           <EmptyNote>Links you add appear here.</EmptyNote>
         )}
       </nav>
-    </PageShell>
+      {look.socials === "bottom" && socials}
+    </PageFrame>
   );
 }
 
@@ -151,12 +152,19 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
     "Your name";
   const role = [page.jobTitle.trim(), page.company.trim()].filter(Boolean).join(" · ");
   const website = safeHref(page.website);
+  const look = page.look;
+  const socials = <SocialRow socials={page.socials} preview={preview} />;
   return (
-    <PageShell color={page.color}>
-      <div className="flex flex-col items-center gap-4">
-        <Avatar media={page.photo} name={name} />
-        <Heading sub={role || undefined}>{name}</Heading>
-      </div>
+    <PageFrame look={look} preview={preview}>
+      <PageHeader
+        look={look}
+        layout={look.header}
+        image={page.photo}
+        imageAlt={name}
+        title={name}
+        sub={role || undefined}
+      />
+      {look.socials === "top" && socials}
       <PageLink href={`/p/${encodeURIComponent(slug)}/contact.vcf`} download preview={preview}>
         <UserPlus aria-hidden /> Save contact
       </PageLink>
@@ -207,8 +215,8 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
           )}
         </ul>
       </PageCard>
-      <SocialLinks socials={page.socials} preview={preview} />
-    </PageShell>
+      {look.socials === "bottom" && socials}
+    </PageFrame>
   );
 }
 
@@ -227,37 +235,35 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
   const phone = telHref(page.phone);
   const email = mailHref(page.email);
   const website = safeHref(page.website);
+  const look = page.look;
+  const hero = look.header === "hero" && page.cover !== null;
+  const socials = <SocialRow socials={page.socials} preview={preview} />;
+  const actions = [
+    { href: phone, icon: Phone, label: "Call" },
+    { href: email, icon: Mail, label: "Email" },
+    {
+      href: page.address.trim() ? mapsHref(page.address) : null,
+      icon: MapPin,
+      label: "Directions",
+    },
+  ].filter((action) => action.href);
   return (
-    <PageShell
-      color={page.color}
-      header={
-        page.cover ? (
-          <MediaImage media={page.cover} alt="" eager className="size-full object-cover" />
-        ) : undefined
-      }
-    >
-      <PageCard className="flex flex-col items-center gap-4 text-center">
-        {page.logo && (
-          <MediaImage
-            media={page.logo}
-            alt={`${page.name} logo`}
-            eager
-            className="-mt-16 size-24 rounded-2xl border-4 border-surface bg-surface object-contain shadow-card"
-          />
-        )}
-        <Heading sub={page.tagline || undefined}>{page.name || "Your business"}</Heading>
-        <div className="grid w-full grid-cols-3 gap-2">
-          {[
-            { href: phone, icon: Phone, label: "Call" },
-            { href: email, icon: Mail, label: "Email" },
-            {
-              href: page.address.trim() ? mapsHref(page.address) : null,
-              icon: MapPin,
-              label: "Directions",
-            },
-          ]
-            .filter((a) => a.href)
-            .map(({ href, icon: Icon, label }) => (
+    <PageFrame look={look} preview={preview}>
+      <PageHeader
+        look={look}
+        layout={hero ? "hero" : "classic"}
+        image={hero ? page.cover : page.logo}
+        imageAlt={hero ? "" : `${page.name} logo`}
+        art={!hero}
+        badge={hero ? page.logo : null}
+        title={page.name || "Your business"}
+        sub={page.tagline || undefined}
+      />
+      {look.socials === "top" && socials}
+      {actions.length > 0 && (
+        <PageCard className="flex flex-col items-center gap-4 text-center">
+          <div className="grid w-full grid-cols-3 gap-2">
+            {actions.map(({ href, icon: Icon, label }) => (
               <a
                 key={label}
                 href={preview ? undefined : href!}
@@ -270,29 +276,25 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
                 {label}
               </a>
             ))}
-        </div>
-      </PageCard>
+          </div>
+        </PageCard>
+      )}
       {page.buttons
         .filter((b) => b.on && safeHref(b.url))
         .map((b, i) => (
-          <PageLink
-            key={i}
-            href={safeHref(b.url)}
-            variant={i === 0 ? "primary" : "secondary"}
-            preview={preview}
-          >
+          <PageLink key={i} href={safeHref(b.url)} preview={preview}>
             {b.label.trim() || b.url.replace(/^https?:\/\//, "")}
           </PageLink>
         ))}
       {page.about.trim() && (
         <PageCard>
-          <h2 className="mb-2 font-display text-lg font-bold text-fg">About</h2>
+          <h2 className="mb-2 font-page-heading text-lg font-bold text-fg">About</h2>
           <Prose text={page.about} />
         </PageCard>
       )}
       {page.showHours && (
         <PageCard>
-          <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-fg">
+          <h2 className="mb-3 flex items-center gap-2 font-page-heading text-lg font-bold text-fg">
             <Clock aria-hidden className="size-5" /> Opening hours
           </h2>
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[15px]">
@@ -331,8 +333,8 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
           </ul>
         </PageCard>
       )}
-      <SocialLinks socials={page.socials} preview={preview} />
-    </PageShell>
+      {look.socials === "bottom" && socials}
+    </PageFrame>
   );
 }
 
@@ -340,19 +342,18 @@ function MenuView({ page, preview }: ViewProps<MenuPage>) {
   const sections = page.sections
     .map((s) => ({ ...s, items: s.items.filter((item) => item.name.trim()) }))
     .filter((s) => s.items.length);
+  const look = page.look;
   return (
-    <PageShell color={page.color}>
-      <PageCard className="flex flex-col items-center gap-3 text-center">
-        {page.logo && (
-          <MediaImage
-            media={page.logo}
-            alt={`${page.name} logo`}
-            eager
-            className="size-20 rounded-2xl object-contain"
-          />
-        )}
-        <Heading sub={page.description || undefined}>{page.name || "Your menu"}</Heading>
-      </PageCard>
+    <PageFrame look={look} preview={preview}>
+      <PageHeader
+        look={look}
+        layout={look.header}
+        image={page.logo}
+        imageAlt={`${page.name} logo`}
+        art
+        title={page.name || "Your menu"}
+        sub={page.description || undefined}
+      />
       {sections.length > 1 && (
         <nav aria-label="Menu sections" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
           {sections.map((s, i) =>
@@ -381,7 +382,7 @@ function MenuView({ page, preview }: ViewProps<MenuPage>) {
           <PageCard key={i}>
             <h2
               id={`section-${i}`}
-              className="mb-3 scroll-mt-4 font-display text-xl font-bold text-fg"
+              className="mb-3 scroll-mt-4 font-page-heading text-xl font-bold text-fg"
             >
               {section.name || "Menu"}
             </h2>
@@ -426,7 +427,7 @@ function MenuView({ page, preview }: ViewProps<MenuPage>) {
         <EmptyNote>Dishes you add appear here.</EmptyNote>
       )}
       {page.note.trim() && <Prose text={page.note} className="px-1 text-center text-sm" />}
-    </PageShell>
+    </PageFrame>
   );
 }
 
@@ -444,29 +445,23 @@ function formatDate(value: string) {
 
 function CouponView({ page, preview }: ViewProps<CouponPage>) {
   const expired = page.validUntil && page.validUntil < new Date().toISOString().slice(0, 10);
+  const look = page.look;
+  const headline = page.headline.trim();
   return (
-    <PageShell color={page.color}>
-      <PageCard className="flex flex-col items-center gap-4 overflow-hidden text-center">
-        {page.image && (
-          <MediaImage
-            media={page.image}
-            alt=""
-            eager
-            className="-mx-6 -mt-6 aspect-[16/9] w-[calc(100%+3rem)] max-w-none object-cover"
-          />
-        )}
-        {page.business.trim() && (
-          <p className="text-sm font-semibold tracking-wide text-fg-muted uppercase">
-            {page.business}
-          </p>
-        )}
-        {page.offer.trim() && (
-          <p className="font-display text-5xl font-bold tracking-tight text-[var(--page-accent)]">
+    <PageFrame look={look} preview={preview}>
+      <PageHeader
+        look={look}
+        layout="banner"
+        image={page.image}
+        imageAlt=""
+        eyebrow={page.business.trim() || undefined}
+        title={headline || page.offer.trim() || "Your offer"}
+      />
+      <PageCard className="flex flex-col items-center gap-4 text-center">
+        {headline && page.offer.trim() && (
+          <p className="font-page-heading text-5xl font-bold tracking-tight text-[var(--page-accent)]">
             {page.offer}
           </p>
-        )}
-        {page.headline.trim() && (
-          <h1 className="font-display text-2xl font-bold text-balance text-fg">{page.headline}</h1>
         )}
         {page.description.trim() && <Prose text={page.description} />}
         {page.code.trim() && (
@@ -487,12 +482,12 @@ function CouponView({ page, preview }: ViewProps<CouponPage>) {
         )}
       </PageCard>
       {page.terms.trim() && (
-        <details className="rounded-2xl border border-border bg-surface px-5 py-3 text-sm text-fg-muted">
+        <details className="rounded-(--pg-radius) border border-border bg-surface px-5 py-3 text-sm text-fg-muted">
           <summary className="cursor-pointer font-semibold text-fg">Terms and conditions</summary>
           <Prose text={page.terms} className="mt-2 text-sm" />
         </details>
       )}
-    </PageShell>
+    </PageFrame>
   );
 }
 
@@ -538,25 +533,18 @@ function eventWhen(page: EventPage): { date: string; time: string | null } | nul
 function EventView({ page, slug, pageUrl, preview }: ViewProps<EventPage>) {
   const when = eventWhen(page);
   const google = googleCalendarUrl(page, pageUrl);
+  const look = page.look;
   return (
-    <PageShell color={page.color}>
-      <PageCard className="flex flex-col gap-4 overflow-hidden">
-        {page.image && (
-          <MediaImage
-            media={page.image}
-            alt=""
-            eager
-            className="-mx-6 -mt-6 aspect-[16/9] w-[calc(100%+3rem)] max-w-none object-cover"
-          />
-        )}
-        {page.organizer.trim() && (
-          <p className="text-sm font-semibold tracking-wide text-fg-muted uppercase">
-            {page.organizer}
-          </p>
-        )}
-        <h1 className="font-display text-3xl font-bold tracking-tight text-balance text-fg">
-          {page.title || "Your event"}
-        </h1>
+    <PageFrame look={look} preview={preview}>
+      <PageHeader
+        look={look}
+        layout="banner"
+        image={page.image}
+        imageAlt=""
+        eyebrow={page.organizer.trim() || undefined}
+        title={page.title || "Your event"}
+      />
+      <PageCard className="flex flex-col gap-4">
         <ul className="flex flex-col gap-3 text-[15px]">
           {when && (
             <li className="flex gap-3">
@@ -609,28 +597,26 @@ function EventView({ page, slug, pageUrl, preview }: ViewProps<EventPage>) {
       </PageCard>
       {page.description.trim() && (
         <PageCard>
-          <h2 className="mb-2 font-display text-lg font-bold text-fg">About this event</h2>
+          <h2 className="mb-2 font-page-heading text-lg font-bold text-fg">About this event</h2>
           <Prose text={page.description} />
         </PageCard>
       )}
-    </PageShell>
+    </PageFrame>
   );
 }
 
 function FeedbackView({ page, slug, preview }: ViewProps<FeedbackPage>) {
+  const look = page.look;
   return (
-    <PageShell color={page.color}>
-      <PageCard className="flex flex-col items-center gap-2 text-center">
-        {page.logo && (
-          <MediaImage
-            media={page.logo}
-            alt={`${page.business} logo`}
-            eager
-            className="size-20 rounded-2xl object-contain"
-          />
-        )}
-        <p className="font-display text-xl font-bold text-fg">{page.business || "Your business"}</p>
-      </PageCard>
+    <PageFrame look={look} preview={preview}>
+      <PageHeader
+        look={look}
+        layout={look.header}
+        image={page.logo}
+        imageAlt={`${page.business} logo`}
+        art
+        title={page.business || "Your business"}
+      />
       <PageCard>
         <FeedbackForm
           slug={slug}
@@ -641,21 +627,27 @@ function FeedbackView({ page, slug, preview }: ViewProps<FeedbackPage>) {
           preview={preview}
         />
       </PageCard>
-    </PageShell>
+    </PageFrame>
   );
 }
 
 function PdfView({ page, preview }: ViewProps<PdfPage>) {
   const href = page.file ? mediaUrl(page.file.path) : null;
+  const look = page.look;
   return (
-    <PageShell color={page.color}>
+    <PageFrame look={look} preview={preview}>
+      <span className="grid size-20 place-items-center self-center rounded-(--pg-radius) bg-[var(--page-accent)] text-[var(--page-accent-fg)]">
+        <FileText aria-hidden className="size-10" />
+      </span>
+      <PageHeader
+        look={look}
+        layout="classic"
+        image={null}
+        imageAlt=""
+        title={page.title || page.file?.name || "Document"}
+        sub={page.description || undefined}
+      />
       <PageCard className="flex flex-col items-center gap-4 text-center">
-        <span className="grid size-20 place-items-center rounded-3xl bg-[var(--page-accent)] text-[var(--page-accent-fg)]">
-          <FileText aria-hidden className="size-10" />
-        </span>
-        <Heading sub={page.description || undefined}>
-          {page.title || page.file?.name || "Document"}
-        </Heading>
         {page.file ? (
           <>
             <PageLink href={href} preview={preview}>
@@ -669,16 +661,22 @@ function PdfView({ page, preview }: ViewProps<PdfPage>) {
           <EmptyNote>Your PDF appears here.</EmptyNote>
         )}
       </PageCard>
-    </PageShell>
+    </PageFrame>
   );
 }
 
 function ImagesView({ page, preview }: ViewProps<ImagesPage>) {
+  const look = page.look;
   return (
-    <PageShell color={page.color}>
-      <PageCard className="flex flex-col gap-2 text-center">
-        <Heading sub={page.description || undefined}>{page.title || "Gallery"}</Heading>
-      </PageCard>
+    <PageFrame look={look} preview={preview}>
+      <PageHeader
+        look={look}
+        layout="classic"
+        image={null}
+        imageAlt=""
+        title={page.title || "Gallery"}
+        sub={page.description || undefined}
+      />
       {page.images.length ? (
         <ul className="grid grid-cols-2 gap-2">
           {page.images.map((image, i) => (
@@ -690,7 +688,7 @@ function ImagesView({ page, preview }: ViewProps<ImagesPage>) {
                 href={preview ? undefined : mediaUrl(image.path)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block overflow-hidden rounded-2xl bg-surface-2"
+                className="block overflow-hidden rounded-(--pg-radius) bg-surface-2"
               >
                 <MediaImage
                   media={image}
@@ -705,7 +703,7 @@ function ImagesView({ page, preview }: ViewProps<ImagesPage>) {
       ) : (
         <EmptyNote>Images you add appear here.</EmptyNote>
       )}
-    </PageShell>
+    </PageFrame>
   );
 }
 
@@ -724,10 +722,19 @@ function StillMedia({ icon }: { icon: ReactNode }) {
 function VideoView({ page, preview }: ViewProps<VideoPage>) {
   const embed = page.source === "link" ? videoEmbed(page.url) : null;
   const link = page.source === "link" && !embed ? safeHref(page.url) : null;
+  const look = page.look;
   return (
-    <PageShell color={page.color}>
+    <PageFrame look={look} preview={preview}>
+      <PageHeader
+        look={look}
+        layout="classic"
+        image={null}
+        imageAlt=""
+        title={page.title || "Video"}
+      />
       <PageCard className="flex flex-col gap-4">
-        <div className="-mx-6 -mt-6 overflow-hidden rounded-t-[1.5rem] bg-black">
+        {/* The player sits inside the card's padding: no overhang on phones. */}
+        <div className="overflow-hidden rounded-(--pg-radius) bg-black">
           {preview && (embed || (page.source === "upload" && page.file)) ? (
             <StillMedia icon={<Play aria-hidden className="size-12" />} />
           ) : embed ? (
@@ -754,7 +761,6 @@ function VideoView({ page, preview }: ViewProps<VideoPage>) {
             </div>
           )}
         </div>
-        <Heading sub={undefined}>{page.title || "Video"}</Heading>
         {page.description.trim() && <Prose text={page.description} />}
         {link && (
           <PageLink href={link} preview={preview}>
@@ -762,28 +768,31 @@ function VideoView({ page, preview }: ViewProps<VideoPage>) {
           </PageLink>
         )}
       </PageCard>
-    </PageShell>
+    </PageFrame>
   );
 }
 
 function AudioView({ page, preview }: ViewProps<AudioPage>) {
   const link = safeHref(page.link);
+  const look = page.look;
   return (
-    <PageShell color={page.color}>
+    <PageFrame look={look} preview={preview}>
+      {!page.cover && (
+        <span className="grid size-56 place-items-center self-center rounded-(--pg-radius) bg-[var(--page-accent)] text-[var(--page-accent-fg)]">
+          <Music aria-hidden className="size-16" />
+        </span>
+      )}
+      <PageHeader
+        look={look}
+        layout={look.header}
+        image={page.cover}
+        imageAlt={`${page.title} cover art`}
+        art
+        large
+        title={page.title || "Audio"}
+        sub={page.artist || undefined}
+      />
       <PageCard className="flex flex-col items-center gap-4 text-center">
-        {page.cover ? (
-          <MediaImage
-            media={page.cover}
-            alt={`${page.title} cover art`}
-            eager
-            className="aspect-square w-full max-w-72 rounded-2xl object-cover shadow-card"
-          />
-        ) : (
-          <span className="grid aspect-square w-full max-w-60 place-items-center rounded-2xl bg-[var(--page-accent)] text-[var(--page-accent-fg)]">
-            <Music aria-hidden className="size-16" />
-          </span>
-        )}
-        <Heading sub={page.artist || undefined}>{page.title || "Audio"}</Heading>
         {page.file &&
           (preview ? (
             <p className="flex items-center gap-2 text-sm font-medium text-fg-muted">
@@ -799,7 +808,7 @@ function AudioView({ page, preview }: ViewProps<AudioPage>) {
         )}
         {page.description.trim() && <Prose text={page.description} />}
       </PageCard>
-    </PageShell>
+    </PageFrame>
   );
 }
 
@@ -807,22 +816,24 @@ function AppView({ page, preview }: ViewProps<AppPage>) {
   const ios = safeHref(page.iosUrl);
   const android = safeHref(page.androidUrl);
   const web = safeHref(page.webUrl);
+  const look = page.look;
   return (
-    <PageShell color={page.color}>
+    <PageFrame look={look} preview={preview}>
+      {!page.icon && (
+        <span className="grid size-24 place-items-center self-center rounded-[1.6rem] bg-[var(--page-accent)] text-[var(--page-accent-fg)]">
+          <Smartphone aria-hidden className="size-12" />
+        </span>
+      )}
+      <PageHeader
+        look={look}
+        layout="classic"
+        image={page.icon}
+        imageAlt={`${page.name} icon`}
+        art
+        title={page.name || "Your app"}
+        sub={page.description || undefined}
+      />
       <PageCard className="flex flex-col items-center gap-4 text-center">
-        {page.icon ? (
-          <MediaImage
-            media={page.icon}
-            alt={`${page.name} icon`}
-            eager
-            className="size-24 rounded-[1.6rem] object-cover shadow-card"
-          />
-        ) : (
-          <span className="grid size-24 place-items-center rounded-[1.6rem] bg-[var(--page-accent)] text-[var(--page-accent-fg)]">
-            <Smartphone aria-hidden className="size-12" />
-          </span>
-        )}
-        <Heading sub={page.description || undefined}>{page.name || "Your app"}</Heading>
         <div className="flex w-full flex-col gap-2">
           <PageLink href={ios} preview={preview}>
             <Download aria-hidden /> Download on the App Store
@@ -835,7 +846,7 @@ function AppView({ page, preview }: ViewProps<AppPage>) {
           </PageLink>
         </div>
       </PageCard>
-    </PageShell>
+    </PageFrame>
   );
 }
 

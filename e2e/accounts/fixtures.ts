@@ -228,4 +228,45 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
 ];
 
 /** A paused Link list: visitors get the "paused" notice. */
+/** Each type's own theme (spec 6.2). */
+const TYPE_THEMES: Record<string, string> = {
+  links: "ziplume",
+  app: "ziplume",
+  vcard: "paper",
+  business: "paper",
+  feedback: "paper",
+  pdf: "paper",
+  menu: "sand",
+  coupon: "sunset",
+  event: "grape",
+  images: "midnight",
+  video: "midnight",
+  audio: "ocean",
+};
+
+/** A Link list in each theme, and each type on its own theme (a look with only a theme). */
+export const LOOK_PAGES: { type: string; slug: string; content: Record<string, unknown> }[] = [
+  ...["ziplume", "paper", "midnight", "ocean", "sunset", "grape", "forest", "blush", "sand"].map(
+    (theme) => ({
+      type: "links",
+      slug: `LOOK-${theme.toUpperCase()}`,
+      content: {
+        title: `Theme ${theme}`,
+        bio: "Every theme stays readable.",
+        links: [
+          { label: "First link", url: "https://example.com/1" },
+          { label: "Second link", url: "https://example.com/2" },
+        ],
+        socials: [{ network: "instagram", url: "@ziplume" }],
+        look: { theme },
+      },
+    }),
+  ),
+  ...PHONE_PAGES.map((page) => ({
+    ...page,
+    slug: page.slug.replace("PHONE-", "TYPE-"),
+    content: { ...page.content, look: { theme: TYPE_THEMES[page.type] } },
+  })),
+];
+
 export const PAUSED_PAGE_SLUG = "PHONE-PAUSED";

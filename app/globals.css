@@ -3,6 +3,15 @@
 /* Dark mode follows the data-theme attribute set by next-themes (system, light or dark). */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* A hosted page's fonts, set from its look on the page's root (features/pages/look). */
+@utility font-page-heading {
+  font-family: var(--pg-heading);
+  font-variation-settings: var(--pg-heading-settings);
+}
+@utility font-page-body {
+  font-family: var(--pg-body);
+}
+
 /* "rail:": the sidebar shows as a narrow icon rail (expand it for labels): below 1024px, or below
    1280px in the code editor, so the form keeps its room. Registered before phone:, which wins
    where both match. */

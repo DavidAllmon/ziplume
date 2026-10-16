@@ -1,22 +1,6 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { LogoMark } from "@/components/brand/Logo";
-
-/** Hosted pages: no app chrome, just a small "made with" footer. */
+/** Hosted pages: no app chrome; each page paints its own wallpaper and footer. */
 export default function HostedPageLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-dvh flex-col bg-bg">
-      <div className="flex flex-1 flex-col">{children}</div>
-      <footer className="flex justify-center px-4 pt-2 pb-8">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-fg-muted focus-ring hover:text-fg"
-        >
-          <LogoMark variant="small" className="size-5" />
-          Made with Ziplume · free QR codes
-        </Link>
-      </footer>
-    </div>
-  );
+  return <div className="flex min-h-dvh flex-col">{children}</div>;
 }

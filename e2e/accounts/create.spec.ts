@@ -134,16 +134,19 @@ test.describe("creating codes", () => {
   test("the page preview lays out at each device's real width", async ({ page }) => {
     await page.goto("codes/new?type=links");
     const preview = page.getByRole("complementary", { name: "Preview" });
-    const band = preview.getByRole("region", { name: "Page preview" }).locator(".h-36").first();
-    // offsetHeight ignores the frame's scale: it's the page's own layout.
-    const height = () => band.evaluate((el) => (el as HTMLElement).offsetHeight);
-    expect(await height()).toBe(144);
+    const column = preview
+      .getByRole("region", { name: "Page preview" })
+      .locator("[data-page-column]");
+    // The column's top padding follows the page's own width (32px, or 56px from 640px up);
+    // computed styles ignore the frame's scale.
+    const top = () => column.evaluate((el) => getComputedStyle(el).paddingTop);
+    expect(await top()).toBe("32px");
     await preview.getByRole("radio", { name: "Tablet" }).click();
-    expect(await height()).toBe(176);
+    expect(await top()).toBe("56px");
     await preview.getByRole("radio", { name: "Desktop" }).click();
-    expect(await height()).toBe(176);
+    expect(await top()).toBe("56px");
     await preview.getByRole("radio", { name: "Phone" }).click();
-    expect(await height()).toBe(144);
+    expect(await top()).toBe("32px");
   });
 
   test("the whole preview stays on a laptop screen while you scroll a long form", async ({

@@ -1,5 +1,6 @@
 import type { PageTypeId } from "@/lib/qr/types";
 
+import { themeLook, TYPE_THEME, type PageLook } from "./look";
 import { SOCIAL_ICONS } from "./social-icons.data";
 
 // Content for hosted pages: what the owner edits and what scanners see at /p/<slug>.
@@ -63,8 +64,10 @@ export interface MenuSection {
 }
 
 interface Themed {
-  /** Accent color for buttons and the header. */
+  /** The button color, kept equal to look.button.color (for API users and older drafts). */
   color: string;
+  /** How the page looks (release 3). */
+  look: PageLook;
 }
 
 export interface LinksPage extends Themed {
@@ -229,118 +232,142 @@ const day = (open: boolean): DayHours => ({ open, from: "09:00", to: "17:00" });
 
 export const DEFAULT_PAGE_COLOR = "#0A1330";
 
+/** A new page of a type: its fields, on the type's theme, with color from the theme's buttons. */
+function withLook<K extends PageTypeId>(type: K, page: Omit<PageContentMap[K], "look">) {
+  const look = themeLook(TYPE_THEME[type], type);
+  return { ...page, color: look.button.color, look } as PageContentMap[K];
+}
+
 export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
-  links: () => ({
-    color: DEFAULT_PAGE_COLOR,
-    title: "",
-    bio: "",
-    avatar: null,
-    links: [{ label: "", url: "", on: true }],
-    socials: [],
-  }),
-  vcard: () => ({
-    color: DEFAULT_PAGE_COLOR,
-    firstName: "",
-    lastName: "",
-    jobTitle: "",
-    company: "",
-    bio: "",
-    photo: null,
-    phones: [{ label: "Mobile", number: "" }],
-    emails: [{ label: "Work", address: "" }],
-    website: "",
-    address: "",
-    socials: [],
-  }),
-  business: () => ({
-    color: DEFAULT_PAGE_COLOR,
-    name: "",
-    tagline: "",
-    about: "",
-    logo: null,
-    cover: null,
-    phone: "",
-    email: "",
-    website: "",
-    address: "",
-    hours: [day(true), day(true), day(true), day(true), day(true), day(false), day(false)],
-    showHours: true,
-    buttons: [],
-    socials: [],
-  }),
-  menu: () => ({
-    color: "#B45309",
-    name: "",
-    description: "",
-    logo: null,
-    currency: "$",
-    sections: [{ name: "Starters", items: [{ name: "", description: "", price: "", tags: "" }] }],
-    note: "",
-  }),
-  coupon: () => ({
-    color: "#BE123C",
-    business: "",
-    headline: "",
-    offer: "",
-    description: "",
-    code: "",
-    validUntil: "",
-    terms: "",
-    buttonLabel: "",
-    buttonUrl: "",
-    image: null,
-  }),
-  event: () => ({
-    color: "#7C3AED",
-    title: "",
-    start: "",
-    end: "",
-    timeZone: "",
-    allDay: false,
-    location: "",
-    description: "",
-    organizer: "",
-    ticketUrl: "",
-    ticketLabel: "Get tickets",
-    image: null,
-  }),
-  feedback: () => ({
-    color: "#0F766E",
-    business: "",
-    logo: null,
-    question: "How was your visit?",
-    allowComment: true,
-    askContact: false,
-    thanks: "Thank you! Your feedback helps us improve.",
-  }),
-  pdf: () => ({ color: DEFAULT_PAGE_COLOR, title: "", description: "", file: null, direct: false }),
-  images: () => ({ color: DEFAULT_PAGE_COLOR, title: "", description: "", images: [] }),
-  video: () => ({
-    color: "#DC2626",
-    title: "",
-    description: "",
-    source: "link",
-    url: "",
-    file: null,
-  }),
-  audio: () => ({
-    color: "#0E7490",
-    title: "",
-    artist: "",
-    description: "",
-    cover: null,
-    file: null,
-    link: "",
-  }),
-  app: () => ({
-    color: DEFAULT_PAGE_COLOR,
-    name: "",
-    description: "",
-    icon: null,
-    iosUrl: "",
-    androidUrl: "",
-    webUrl: "",
-  }),
+  links: () =>
+    withLook("links", {
+      color: DEFAULT_PAGE_COLOR,
+      title: "",
+      bio: "",
+      avatar: null,
+      links: [{ label: "", url: "", on: true }],
+      socials: [],
+    }),
+  vcard: () =>
+    withLook("vcard", {
+      color: DEFAULT_PAGE_COLOR,
+      firstName: "",
+      lastName: "",
+      jobTitle: "",
+      company: "",
+      bio: "",
+      photo: null,
+      phones: [{ label: "Mobile", number: "" }],
+      emails: [{ label: "Work", address: "" }],
+      website: "",
+      address: "",
+      socials: [],
+    }),
+  business: () =>
+    withLook("business", {
+      color: DEFAULT_PAGE_COLOR,
+      name: "",
+      tagline: "",
+      about: "",
+      logo: null,
+      cover: null,
+      phone: "",
+      email: "",
+      website: "",
+      address: "",
+      hours: [day(true), day(true), day(true), day(true), day(true), day(false), day(false)],
+      showHours: true,
+      buttons: [],
+      socials: [],
+    }),
+  menu: () =>
+    withLook("menu", {
+      color: "#B45309",
+      name: "",
+      description: "",
+      logo: null,
+      currency: "$",
+      sections: [{ name: "Starters", items: [{ name: "", description: "", price: "", tags: "" }] }],
+      note: "",
+    }),
+  coupon: () =>
+    withLook("coupon", {
+      color: "#BE123C",
+      business: "",
+      headline: "",
+      offer: "",
+      description: "",
+      code: "",
+      validUntil: "",
+      terms: "",
+      buttonLabel: "",
+      buttonUrl: "",
+      image: null,
+    }),
+  event: () =>
+    withLook("event", {
+      color: "#7C3AED",
+      title: "",
+      start: "",
+      end: "",
+      timeZone: "",
+      allDay: false,
+      location: "",
+      description: "",
+      organizer: "",
+      ticketUrl: "",
+      ticketLabel: "Get tickets",
+      image: null,
+    }),
+  feedback: () =>
+    withLook("feedback", {
+      color: "#0F766E",
+      business: "",
+      logo: null,
+      question: "How was your visit?",
+      allowComment: true,
+      askContact: false,
+      thanks: "Thank you! Your feedback helps us improve.",
+    }),
+  pdf: () =>
+    withLook("pdf", {
+      color: DEFAULT_PAGE_COLOR,
+      title: "",
+      description: "",
+      file: null,
+      direct: false,
+    }),
+  images: () =>
+    withLook("images", { color: DEFAULT_PAGE_COLOR, title: "", description: "", images: [] }),
+  video: () =>
+    withLook("video", {
+      color: "#DC2626",
+      title: "",
+      description: "",
+      source: "link",
+      url: "",
+      file: null,
+    }),
+  audio: () =>
+    withLook("audio", {
+      color: "#0E7490",
+      title: "",
+      artist: "",
+      description: "",
+      cover: null,
+      file: null,
+      link: "",
+    }),
+  app: () =>
+    withLook("app", {
+      color: DEFAULT_PAGE_COLOR,
+      name: "",
+      description: "",
+      icon: null,
+      iosUrl: "",
+      androidUrl: "",
+      webUrl: "",
+    }),
 };
 
 export interface PageTypeInfo {

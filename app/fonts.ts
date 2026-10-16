@@ -36,3 +36,32 @@ export const plexMono = localFont({
   variable: "--font-plex-mono",
   display: "swap",
 });
+
+// Page fonts (release 3). Not preloaded: only pages that use one download it.
+
+/** Page font "Elegant": headings. */
+export const playfair = localFont({
+  src: "../node_modules/@fontsource-variable/playfair-display/files/playfair-display-latin-wght-normal.woff2",
+  variable: "--font-playfair",
+  preload: false,
+  weight: "400 900",
+  display: "swap",
+});
+
+/** Page font "Friendly": headings and text. */
+export const nunito = localFont({
+  src: "../node_modules/@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2",
+  variable: "--font-nunito",
+  preload: false,
+  weight: "200 1000",
+  display: "swap",
+});
+
+/** Page font "Modern": headings. */
+export const bricolage = localFont({
+  src: "../node_modules/@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2",
+  variable: "--font-bricolage",
+  preload: false,
+  weight: "200 800",
+  display: "swap",
+});

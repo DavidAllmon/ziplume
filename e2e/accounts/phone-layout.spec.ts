@@ -268,8 +268,7 @@ test.describe("hosted pages", () => {
   for (const { type, slug } of PHONE_PAGES) {
     test(`a ${type} page ends with its footer`, async ({ page }) => {
       await page.goto(`p/${slug}`);
-      // Not every type has a main heading yet (Feedback gets one in release 3), so wait for the
-      // page's footer.
+      // Wait for the page's footer, which is part of the page itself.
       const footer = page.getByRole("link", { name: /Made with Ziplume/ });
       await expect(footer).toBeVisible();
       await expectNoSidewaysScroll(page);
@@ -287,8 +286,8 @@ test.describe("hosted pages", () => {
   test("the public page still switches layout at 640px of its own width", async ({ page }) => {
     await page.setViewportSize({ width: 700, height: 900 });
     await page.goto(`p/${PHONE_PAGES[0]!.slug}`);
-    const band = page.locator(".h-36").first();
-    expect(await band.evaluate((el) => (el as HTMLElement).offsetHeight)).toBe(176);
+    const column = page.locator("[data-page-column]");
+    expect(await column.evaluate((el) => getComputedStyle(el).paddingTop)).toBe("56px");
   });
 
   test("hosted pages keep pull-to-refresh", async ({ page }) => {
