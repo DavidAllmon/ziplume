@@ -6,6 +6,7 @@ import { useScanVerification } from "@/features/generator/preview/useScanVerific
 import type { GeneratorAction } from "@/features/generator/state/types";
 import { moduleColors } from "@/features/generator/useGenerator";
 import { dynamicPayload, isValidSlug, PREVIEW_SLUG } from "@/lib/dynamic/slug";
+import type { PageLook } from "@/lib/pages/look";
 import type { PageContentMap } from "@/lib/pages/types";
 import { pageSummary, validatePage } from "@/lib/pages/validate";
 import { measure } from "@/lib/qr/capacity";
@@ -168,6 +169,11 @@ export function useCodeDraft(
       codeAction({ type: "setPage", pageType: type, content }),
     [codeAction],
   );
+  const setLook = useCallback(
+    (type: PageTypeId, update: (look: PageLook) => PageLook) =>
+      codeAction({ type: "setLook", pageType: type, update }),
+    [codeAction],
+  );
 
   return {
     state,
@@ -175,6 +181,7 @@ export function useCodeDraft(
     codeAction,
     setField,
     setPage,
+    setLook,
     pageErrors: pageType ? errors : {},
     pageType,
     trackable,

@@ -2,7 +2,7 @@
 
 import { Card, CardHeader } from "@/components/ui/Card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import type { PageLook } from "@/lib/pages/look";
+import type { LookChange, PageLook } from "@/lib/pages/look";
 
 /** Where the social icons sit: under the header or at the bottom. */
 export function SocialsCard({
@@ -10,7 +10,7 @@ export function SocialsCard({
   onLook,
 }: {
   look: PageLook;
-  onLook: (look: PageLook) => void;
+  onLook: (change: LookChange) => void;
 }) {
   return (
     <Card aria-labelledby="look-socials">

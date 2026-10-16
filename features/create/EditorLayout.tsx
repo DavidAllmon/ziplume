@@ -111,7 +111,7 @@ export function EditorLayout({
           <LookSection
             type={pageType}
             page={page}
-            onChange={(next) => draft.setPage(pageType, next)}
+            onLook={(update) => draft.setLook(pageType, update)}
           />
         </MediaOwnerContext>
       ) : null,

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -25,12 +25,29 @@ function Harness<K extends PageTypeId>({ type, initial }: { type: K; initial: Pa
   const [page, setPage] = useState(initial);
   return (
     <ToastProvider>
-      <LookEditor type={type} page={page} onChange={(next) => setPage(next)} />
+      <LookEditor
+        type={type}
+        page={page}
+        onLook={(update) => setPage((p) => ({ ...p, look: update(p.look) }))}
+      />
       <output aria-label="Look">{JSON.stringify(page.look)}</output>
+      {/* An edit on another tab, made while the Look tab is open. */}
+      <button type="button" onClick={() => setPage((p) => ({ ...p, title: "Edited" }))}>
+        Edit title
+      </button>
+      <output aria-label="Title">{"title" in page ? String(page.title) : ""}</output>
     </ToastProvider>
   );
 }
 const look = () => JSON.parse(screen.getByRole("status", { name: "Look" }).textContent!);
+const title = () => screen.getByRole("status", { name: "Title" }).textContent;
+const IMAGE = { path: `${UID}/w.jpg`, name: "w.jpg", type: "image/jpeg", size: 1 };
+/** An upload that finishes when the test says so. */
+function slowUpload() {
+  let finish!: (result: Awaited<ReturnType<typeof uploadMedia>>) => void;
+  vi.mocked(uploadMedia).mockImplementation(() => new Promise((resolve) => (finish = resolve)));
+  return (result: Awaited<ReturnType<typeof uploadMedia>>) => act(async () => finish(result));
+}
 
 describe("LookEditor", () => {
   it("shows the cards in the spec's order", () => {
@@ -52,7 +69,7 @@ describe("LookEditor", () => {
     expect(titles).not.toContain("Social icons");
   });
 
-  it("picks a theme, keeps the header, and undoes the latest pick", async () => {
+  it("picks a theme, keeps the header, and the toast undoes just the latest pick", async () => {
     const user = userEvent.setup();
     const start = {
       ...PAGE_DEFAULTS.links(),
@@ -62,8 +79,38 @@ describe("LookEditor", () => {
     await user.click(screen.getByRole("radio", { name: "Ocean" }));
     expect(look()).toMatchObject({ theme: "ocean", header: "hero" });
     await user.click(screen.getByRole("radio", { name: "Forest" }));
-    await user.click(screen.getAllByRole("button", { name: "Undo" }).at(-1)!);
+    // The second pick's toast replaces the first one.
+    expect(screen.getAllByRole("button", { name: "Undo" })).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Undo" }));
     expect(look().theme).toBe("ocean");
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Ocean" })).toHaveFocus());
+  });
+
+  it("steps back through theme picks from the Theme card, by keyboard too", async () => {
+    const user = userEvent.setup();
+    const custom = { ...themeLook("paper", "links"), font: "typewriter" as const };
+    render(<Harness type="links" initial={{ ...PAGE_DEFAULTS.links(), look: custom }} />);
+    screen.getByRole("radio", { name: "Paper" }).focus();
+    // Arrow keys pick each theme on the way: Midnight, Ocean, Sunset.
+    await user.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
+    expect(look().theme).toBe("sunset");
+    const undo = screen.getByRole("button", { name: "Undo theme" });
+    await user.click(undo);
+    expect(look().theme).toBe("ocean");
+    await user.click(undo);
+    await user.click(undo);
+    expect(look()).toEqual(custom);
+    expect(screen.queryByRole("button", { name: "Undo theme" })).toBeNull();
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Paper" })).toHaveFocus());
+  });
+
+  it("drops Undo once the look is changed another way", async () => {
+    const user = userEvent.setup();
+    render(<Harness type="links" initial={PAGE_DEFAULTS.links()} />);
+    await user.click(screen.getByRole("radio", { name: "Ocean" }));
+    await user.click(screen.getByRole("radio", { name: "Typewriter" }));
+    expect(screen.queryByRole("button", { name: "Undo theme" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
   });
 
   it("resets to the theme", async () => {
@@ -124,6 +171,45 @@ describe("LookEditor", () => {
     await user.upload(fileInput(container), new File(["x"], "w.jpg", { type: "image/jpeg" }));
     expect(look().wallpaper).toEqual(before);
     expect(screen.getByText("That image couldn't be read.")).toBeInTheDocument();
+  });
+
+  it("keeps edits made while a photo uploads", async () => {
+    const user = userEvent.setup();
+    const finish = slowUpload();
+    const { container } = render(<Harness type="links" initial={PAGE_DEFAULTS.links()} />);
+    await user.click(screen.getByRole("radio", { name: "Photo" }));
+    await user.upload(fileInput(container), new File(["x"], "w.jpg", { type: "image/jpeg" }));
+    await user.click(screen.getByRole("radio", { name: "Typewriter" }));
+    await user.click(screen.getByRole("button", { name: "Edit title" }));
+    await finish({ ok: true, media: IMAGE });
+    expect(look()).toMatchObject({
+      font: "typewriter",
+      wallpaper: { kind: "image", image: IMAGE },
+    });
+    expect(title()).toBe("Edited");
+  });
+
+  it("drops a photo still uploading when another wallpaper is picked", async () => {
+    const user = userEvent.setup();
+    const finish = slowUpload();
+    const { container } = render(<Harness type="links" initial={PAGE_DEFAULTS.links()} />);
+    await user.click(screen.getByRole("radio", { name: "Photo" }));
+    await user.upload(fileInput(container), new File(["x"], "w.jpg", { type: "image/jpeg" }));
+    await user.click(screen.getByRole("radio", { name: "Color" }));
+    const solid = look().wallpaper;
+    expect(solid.kind).toBe("solid");
+    await finish({ ok: true, media: IMAGE });
+    expect(look().wallpaper).toEqual(solid);
+  });
+
+  it("undoes only the look, keeping content edited since the theme pick", async () => {
+    const user = userEvent.setup();
+    render(<Harness type="links" initial={PAGE_DEFAULTS.links()} />);
+    await user.click(screen.getByRole("radio", { name: "Ocean" }));
+    await user.click(screen.getByRole("button", { name: "Edit title" }));
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    expect(look().theme).toBe("ziplume");
+    expect(title()).toBe("Edited");
   });
 
   it("only applies a custom color once it's complete", async () => {

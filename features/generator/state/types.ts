@@ -1,3 +1,4 @@
+import type { PageLook } from "@/lib/pages/look";
 import type { PageContentMap } from "@/lib/pages/types";
 import type {
   CodeTypeId,
@@ -67,6 +68,8 @@ export interface GeneratorState {
 export type GeneratorAction =
   | { type: "setActiveType"; activeType: CodeTypeId }
   | { type: "setPage"; pageType: PageTypeId; content: PageContentMap[PageTypeId] }
+  /** Changes a page's look from its latest content, so a late upload or Undo keeps newer edits. */
+  | { type: "setLook"; pageType: PageTypeId; update: (look: PageLook) => PageLook }
   | {
       type: "setField";
       qrType: QrTypeId;

@@ -14,37 +14,67 @@ interface ToastMessage {
   message: string;
   tone: Tone;
   action?: ToastAction;
+  key?: string;
 }
+/** Shows a toast; a later toast with the same `key` replaces it. */
+type Show = (message: string, tone?: Tone, action?: ToastAction, key?: string) => void;
 
-const ToastContext = createContext<(message: string, tone?: Tone, action?: ToastAction) => void>(
-  () => {},
-);
+const ToastContext = createContext<Show>(() => {});
+const DismissContext = createContext<(key: string) => void>(() => {});
 
 export function useToast() {
   return useContext(ToastContext);
 }
 
+/** Closes the toast shown with this key, such as an Undo that no longer applies. */
+export function useDismissToast() {
+  return useContext(DismissContext);
+}
+
+// A toast with an action stays a little longer, so there's time to use it.
+const lifetime = (toast: ToastMessage) => (toast.action ? 6000 : 3500);
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const nextId = useRef(0);
+  const timers = useRef(new Map<number, number>());
 
-  const dismiss = useCallback(
-    (id: number) => setToasts((current) => current.filter((t) => t.id !== id)),
-    [],
-  );
-  const show = useCallback(
-    (message: string, tone: Tone = "success", action?: ToastAction) => {
-      const id = ++nextId.current;
-      setToasts((current) => [...current.slice(-2), { id, message, tone, action }]);
-      // A toast with an action stays a little longer, so there's time to use it.
-      window.setTimeout(() => dismiss(id), action ? 6000 : 3500);
+  const dismiss = useCallback((id: number) => {
+    window.clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+    setToasts((current) => current.filter((t) => t.id !== id));
+  }, []);
+  const schedule = useCallback(
+    (toast: ToastMessage) => {
+      window.clearTimeout(timers.current.get(toast.id));
+      timers.current.set(
+        toast.id,
+        window.setTimeout(() => dismiss(toast.id), lifetime(toast)),
+      );
     },
     [dismiss],
+  );
+  // While the pointer or focus is on a toast it stays, so its action can be reached (WCAG 2.2.1).
+  const hold = (toast: ToastMessage) => window.clearTimeout(timers.current.get(toast.id));
+  const show = useCallback<Show>(
+    (message, tone = "success", action, key) => {
+      const toast = { id: ++nextId.current, message, tone, action, key };
+      setToasts((current) => [
+        ...current.filter((t) => key === undefined || t.key !== key).slice(-2),
+        toast,
+      ]);
+      schedule(toast);
+    },
+    [schedule],
+  );
+  const dismissKey = useCallback(
+    (key: string) => setToasts((current) => current.filter((t) => t.key !== key)),
+    [],
   );
 
   return (
     <ToastContext.Provider value={show}>
-      {children}
+      <DismissContext.Provider value={dismissKey}>{children}</DismissContext.Provider>
       <div
         role="status"
         aria-live="polite"
@@ -54,6 +84,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
+            onMouseEnter={() => hold(toast)}
+            onMouseLeave={(event) => {
+              if (!event.currentTarget.contains(document.activeElement)) schedule(toast);
+            }}
+            onFocus={() => hold(toast)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) schedule(toast);
+            }}
             className="pointer-events-auto flex max-w-sm items-center gap-2 rounded-full border border-border bg-fg px-4 py-2.5 text-sm font-medium text-bg shadow-pop"
           >
             {toast.tone === "success" ? (

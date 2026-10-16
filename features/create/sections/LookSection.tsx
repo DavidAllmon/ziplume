@@ -1,6 +1,7 @@
 "use client";
 
 import { LookEditor } from "@/features/pages/editor/look/LookEditor";
+import type { PageLook } from "@/lib/pages/look";
 import type { PageContentMap } from "@/lib/pages/types";
 import type { PageTypeId } from "@/lib/qr/types";
 
@@ -8,11 +9,11 @@ import type { PageTypeId } from "@/lib/qr/types";
 export function LookSection({
   type,
   page,
-  onChange,
+  onLook,
 }: {
   type: PageTypeId;
   page: PageContentMap[PageTypeId];
-  onChange: (page: PageContentMap[PageTypeId]) => void;
+  onLook: (update: (look: PageLook) => PageLook) => void;
 }) {
-  return <LookEditor type={type} page={page} onChange={onChange} />;
+  return <LookEditor type={type} page={page} onLook={onLook} />;
 }

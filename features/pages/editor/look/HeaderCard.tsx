@@ -3,7 +3,7 @@
 import { Card, CardHeader } from "@/components/ui/Card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { hasShape, heroImage } from "@/features/pages/look/options";
-import type { PageLook } from "@/lib/pages/look";
+import type { LookChange, PageLook } from "@/lib/pages/look";
 import type { PageContentMap } from "@/lib/pages/types";
 import type { PageTypeId } from "@/lib/qr/types";
 
@@ -17,7 +17,7 @@ export function HeaderCard<K extends PageTypeId>({
   type: K;
   page: PageContentMap[K];
   look: PageLook;
-  onLook: (look: PageLook) => void;
+  onLook: (change: LookChange) => void;
 }) {
   const image = heroImage(type, page);
   const classic = look.header === "classic" || !image;

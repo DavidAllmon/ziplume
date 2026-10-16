@@ -4,7 +4,7 @@ import { TriangleAlert } from "lucide-react";
 
 import { fixLook } from "@/features/pages/look/fixes";
 import { lookChecks, type LookCheck } from "@/features/pages/look/resolve";
-import type { PageLook } from "@/lib/pages/look";
+import type { LookChange, PageLook } from "@/lib/pages/look";
 
 const MESSAGES: Record<LookCheck["id"], string> = {
   text: "Text is hard to read on this wallpaper.",
@@ -21,7 +21,7 @@ export function Warning({
 }: {
   look: PageLook;
   id: LookCheck["id"];
-  onLook: (look: PageLook) => void;
+  onLook: (change: LookChange) => void;
   fixLabel: string;
 }) {
   if (!lookChecks(look).some((check) => check.id === id)) return null;

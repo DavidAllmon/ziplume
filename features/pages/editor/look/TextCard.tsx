@@ -7,12 +7,18 @@ import { ColorField } from "@/components/ui/ColorField";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { FONTS } from "@/features/pages/look/fonts";
 import { resolveLook } from "@/features/pages/look/resolve";
-import { FONT_IDS, type PageLook } from "@/lib/pages/look";
+import { FONT_IDS, type LookChange, type PageLook } from "@/lib/pages/look";
 
 import { Warning } from "./Warning";
 
 /** The font (spec 6.3) and the text color, Auto or custom. */
-export function TextCard({ look, onLook }: { look: PageLook; onLook: (look: PageLook) => void }) {
+export function TextCard({
+  look,
+  onLook,
+}: {
+  look: PageLook;
+  onLook: (change: LookChange) => void;
+}) {
   const mode = look.text === "auto" ? "auto" : "custom";
   return (
     <Card aria-labelledby="look-text">

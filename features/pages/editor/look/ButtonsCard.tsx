@@ -4,7 +4,7 @@ import { Card, CardHeader } from "@/components/ui/Card";
 import { ColorField } from "@/components/ui/ColorField";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { resolveLook } from "@/features/pages/look/resolve";
-import type { PageLook } from "@/lib/pages/look";
+import type { LookChange, PageLook } from "@/lib/pages/look";
 
 import { Swatches } from "./Swatches";
 import { Warning } from "./Warning";
@@ -28,7 +28,7 @@ export function ButtonsCard({
   onLook,
 }: {
   look: PageLook;
-  onLook: (look: PageLook) => void;
+  onLook: (change: LookChange) => void;
 }) {
   const b = look.button;
   const set = (patch: Partial<PageLook["button"]>) =>

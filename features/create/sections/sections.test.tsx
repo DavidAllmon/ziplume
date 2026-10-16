@@ -276,17 +276,17 @@ describe("the sections when editing a saved code", () => {
 });
 
 describe("LookSection", () => {
-  it("is the Look tab: picking a theme changes the page's look and color", async () => {
+  it("is the Look tab: picking a theme changes the page's look", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
+    const onLook = vi.fn();
+    const page = PAGE_DEFAULTS.links();
     render(
       <ToastProvider>
-        <LookSection type="links" page={PAGE_DEFAULTS.links()} onChange={onChange} />
+        <LookSection type="links" page={page} onLook={onLook} />
       </ToastProvider>,
     );
     await user.click(screen.getByRole("radio", { name: "Ocean" }));
-    const next = onChange.mock.lastCall![0];
-    expect(next.look.theme).toBe("ocean");
-    expect(next.color).toBe(next.look.button.color);
+    const update = onLook.mock.lastCall![0];
+    expect(update(page.look).theme).toBe("ocean");
   });
 });

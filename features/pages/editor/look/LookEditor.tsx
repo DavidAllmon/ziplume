@@ -1,7 +1,7 @@
 "use client";
 
 import { hasSocials, headerChoice } from "@/features/pages/look/options";
-import type { PageLook } from "@/lib/pages/look";
+import type { LookChange, PageLook } from "@/lib/pages/look";
 import type { PageContentMap } from "@/lib/pages/types";
 import type { PageTypeId } from "@/lib/qr/types";
 
@@ -16,15 +16,15 @@ import { WallpaperCard } from "./WallpaperCard";
 export function LookEditor<K extends PageTypeId>({
   type,
   page,
-  onChange,
+  onLook: change,
 }: {
   type: K;
   page: PageContentMap[K];
-  onChange: (page: PageContentMap[K]) => void;
+  /** Applied to the latest look, so an upload or Undo that lands later keeps newer edits. */
+  onLook: (update: (look: PageLook) => PageLook) => void;
 }) {
   const look = page.look;
-  // color stays equal to the button color (read by API users and older drafts).
-  const onLook = (next: PageLook) => onChange({ ...page, look: next, color: next.button.color });
+  const onLook = (next: LookChange) => change(typeof next === "function" ? next : () => next);
   return (
     <div className="flex flex-col gap-6">
       <ThemeCard look={look} onLook={onLook} />

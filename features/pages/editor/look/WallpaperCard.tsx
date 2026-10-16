@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Upload } from "lucide-react";
-import { useContext, useId, useState } from "react";
+import { useContext, useId, useRef, useState } from "react";
 
 import { Card, CardHeader } from "@/components/ui/Card";
 import { ColorField } from "@/components/ui/ColorField";
@@ -11,7 +11,7 @@ import { MediaOwnerContext } from "@/features/pages/editor/MediaOwner";
 import { ACCEPT, uploadMedia } from "@/features/pages/editor/upload";
 import { averageColor } from "@/features/pages/look/average";
 import { mix } from "@/features/pages/look/resolve";
-import type { PageLook, Wallpaper } from "@/lib/pages/look";
+import type { LookChange, PageLook, Wallpaper } from "@/lib/pages/look";
 
 import { Swatches } from "./Swatches";
 
@@ -38,7 +38,7 @@ export function WallpaperCard({
   onLook,
 }: {
   look: PageLook;
-  onLook: (look: PageLook) => void;
+  onLook: (change: LookChange) => void;
 }) {
   const inputId = useId();
   const ownerId = useContext(MediaOwnerContext);
@@ -47,6 +47,8 @@ export function WallpaperCard({
   const [wantPhoto, setWantPhoto] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  // Counts uploads, so one still running is dropped when another wallpaper is picked.
+  const uploads = useRef(0);
   const kind = wantPhoto ? "image" : w.kind;
   const set = (wallpaper: Wallpaper) => onLook({ ...look, wallpaper });
 
@@ -56,6 +58,8 @@ export function WallpaperCard({
       setWantPhoto(w.kind !== "image");
       return;
     }
+    uploads.current++;
+    setBusy(false);
     setWantPhoto(false);
     const color = mainColor(w);
     if (next === "solid") set({ kind: "solid", color });
@@ -66,19 +70,26 @@ export function WallpaperCard({
 
   async function upload(file: File | undefined) {
     if (!file) return;
+    const run = ++uploads.current;
     setBusy(true);
     setProblem(null);
     const [average, result] = await Promise.all([
       averageColor(file),
       uploadMedia(file, "image", { maxSide: 2400, ownerId }),
     ]);
+    if (run !== uploads.current) return;
     setBusy(false);
     if (!result.ok) {
       setProblem(result.error);
       return;
     }
     setWantPhoto(false);
-    set({ kind: "image", image: result.media, dim: 30, color: average ?? mainColor(w) });
+    const image = result.media;
+    // From the latest look: other changes made while it uploaded stay.
+    onLook((latest) => ({
+      ...latest,
+      wallpaper: { kind: "image", image, dim: 30, color: average ?? mainColor(latest.wallpaper) },
+    }));
   }
 
   return (
