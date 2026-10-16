@@ -112,7 +112,9 @@ export function parseDraft(raw: string | null): StoredDraft | null {
     pages: Object.fromEntries(
       PAGE_TYPE_IDS.map((id) => [
         id,
-        pages[id] === undefined ? fresh.code.pages[id] : sanitizePage(id, pages[id]),
+        pages[id] === undefined
+          ? fresh.code.pages[id]
+          : sanitizePage(id, pages[id], { keepLongText: true }),
       ]),
     ) as unknown as PageContentMap,
     design: sanitizeDesign(code.design),

@@ -48,6 +48,14 @@ describe("generatorReducer", () => {
     expect(state.pages.links).toMatchObject({ title: "Latest", bio: "Hi" });
   });
 
+  it("keeps text over a limit in the editor, so nothing is cut while typing", () => {
+    const state = reduce(initialState(), {
+      type: "updatePage",
+      pageType: "video",
+      update: (page) => ({ ...page, description: "x".repeat(1200) }),
+    });
+    expect(state.pages.video.description).toHaveLength(1200);
+  });
   it("ignores unknown fields", () => {
     const state = initialState();
     expect(reduce(state, { type: "setField", qrType: "url", field: "nope", value: "x" })).toBe(

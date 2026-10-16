@@ -223,7 +223,11 @@ export const LIMITS = {
   images: 24,
   short: 120,
   medium: 300,
+  /** Descriptions and other text of several lines. */
+  text: 1000,
   long: 2000,
+  /** The most the editor holds in one box while it's too long (a guard against huge pastes). */
+  paste: 20000,
 } as const;
 
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;

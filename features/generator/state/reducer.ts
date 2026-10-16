@@ -110,7 +110,10 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
     case "setPage":
       return {
         ...state,
-        pages: { ...state.pages, [action.pageType]: sanitizePage(action.pageType, action.content) },
+        pages: {
+          ...state.pages,
+          [action.pageType]: sanitizePage(action.pageType, action.content, { keepLongText: true }),
+        },
       };
 
     case "setLook": {
@@ -118,7 +121,10 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
       const content = { ...page, look: action.update(page.look) };
       return {
         ...state,
-        pages: { ...state.pages, [action.pageType]: sanitizePage(action.pageType, content) },
+        pages: {
+          ...state.pages,
+          [action.pageType]: sanitizePage(action.pageType, content, { keepLongText: true }),
+        },
       };
     }
 
@@ -127,9 +133,11 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
         ...state,
         pages: {
           ...state.pages,
+          // The editor keeps text over a limit; validation asks to shorten it.
           [action.pageType]: sanitizePage(
             action.pageType,
             action.update(state.pages[action.pageType]),
+            { keepLongText: true },
           ),
         },
       };
