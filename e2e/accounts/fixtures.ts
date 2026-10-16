@@ -112,6 +112,32 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
     },
   },
   {
+    // Every Link list extra: a header, an icon, a featured link, an email link, brand socials.
+    type: "links",
+    slug: "PHONE-EXTRAS",
+    content: {
+      title: "Link extras",
+      bio: "",
+      links: [
+        { label: "Shop", url: "", on: true, kind: "header" },
+        { label: "Instagram", url: "instagram.com/ziplume", on: true, featured: true },
+        { label: "Email us", url: "hi@example.com", on: true, type: "email" },
+        {
+          label: "Later",
+          url: "example.com/later",
+          on: true,
+          showFrom: "2999-01-01T00:00:00.000Z",
+        },
+      ],
+      socials: [
+        { network: "instagram", url: "ziplume" },
+        { network: "snapchat", url: "ziplume" },
+        { network: "website", url: "example.com" },
+      ],
+      look: { theme: "paper", socialStyle: "brand", socialSize: "large" },
+    },
+  },
+  {
     type: "vcard",
     slug: "PHONE-VCARD",
     content: {

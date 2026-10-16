@@ -643,6 +643,8 @@ export function LinksField({
       errors={errors}
       itemLabel={name}
       newItem={newLink}
+      // A new link or header starts at its text, not the type picker above it.
+      newRowFocus="input[data-field$='.label']"
       off={(item) => !item.on}
       adder={
         extras
