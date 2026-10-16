@@ -70,6 +70,12 @@ export type GeneratorAction =
   | { type: "setPage"; pageType: PageTypeId; content: PageContentMap[PageTypeId] }
   /** Changes a page's look from its latest content, so a late upload or Undo keeps newer edits. */
   | { type: "setLook"; pageType: PageTypeId; update: (look: PageLook) => PageLook }
+  /** Changes a page from its latest content, so an upload that finishes later keeps newer edits. */
+  | {
+      type: "updatePage";
+      pageType: PageTypeId;
+      update: (page: PageContentMap[PageTypeId]) => PageContentMap[PageTypeId];
+    }
   | {
       type: "setField";
       qrType: QrTypeId;

@@ -40,7 +40,8 @@ interface PageEditorProps<K extends PageTypeId> {
   type: K;
   page: PageContentMap[K];
   errors: PageErrors;
-  onChange: (page: PageContentMap[K]) => void;
+  /** Applied to the latest page, so an upload that finishes later keeps newer edits. */
+  onUpdate: (update: (page: PageContentMap[K]) => PageContentMap[K]) => void;
   /** Show every error now, as if each field had been left. */
   reveal?: boolean;
   /** Each part of the form is its own card (the Create editor). */
@@ -52,7 +53,7 @@ export function PageEditor<K extends PageTypeId>({
   type,
   page,
   errors,
-  onChange,
+  onUpdate,
   reveal = false,
   cards = false,
 }: PageEditorProps<K>) {
@@ -76,9 +77,15 @@ export function PageEditor<K extends PageTypeId>({
     [errors, touched, touch, reorder, reveal],
   );
   const anyTouched = touched.size > 0 || reveal;
-  const set = (patch: object) => {
+  const set = (patch: object | ((page: PageContentMap[K]) => object)) => {
     if (!anyTouched) touch("*");
-    onChange({ ...page, ...patch } as PageContentMap[K]);
+    onUpdate(
+      (latest) =>
+        ({
+          ...latest,
+          ...(typeof patch === "function" ? patch(latest) : patch),
+        }) as PageContentMap[K],
+    );
   };
   const props = { set, errors: errorsApi };
   // Required-file problems show once the user has started editing.

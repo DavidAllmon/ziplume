@@ -90,6 +90,7 @@ export function EditorLayout({
     state: state.code,
     setField: draft.setField,
     setPage: draft.setPage,
+    updatePage: draft.updatePage,
     pageErrors: draft.pageErrors,
     workspace: mediaOwner ? { ownerId: mediaOwner } : null,
     revealErrors,

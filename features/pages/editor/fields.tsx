@@ -313,12 +313,15 @@ export function MediaField({
 export function ImagesField({
   value,
   onChange,
+  onAdd,
   max,
   error,
   field,
 }: {
   value: Media[];
   onChange: (value: Media[]) => void;
+  /** Adds an uploaded image to the latest list, so moves and removals made meanwhile stay. */
+  onAdd: (media: Media) => void;
   max: number;
   error?: string;
   /** Marks the file input for "Show me". */
@@ -335,14 +338,11 @@ export function ImagesField({
     const chosen = Array.from(files).slice(0, room);
     setProblem(files.length > room ? `You can add up to ${max} images.` : null);
     setBusy(chosen.length);
-    let next = [...value];
     for (const file of chosen) {
       const result = await uploadMedia(file, "image", { ownerId });
       setBusy((n) => n - 1);
-      if (result.ok) {
-        next = [...next, result.media];
-        onChange(next);
-      } else setProblem(result.error);
+      if (result.ok) onAdd(result.media);
+      else setProblem(result.error);
     }
   }
 

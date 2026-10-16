@@ -19,6 +19,7 @@ const editor = (overrides: Partial<ContentEditor> = {}): ContentEditor => ({
   state: { ...initialState(), activeType: "links" },
   setField: vi.fn(),
   setPage: vi.fn(),
+  updatePage: vi.fn(),
   pageErrors: {},
   workspace: null,
   ...overrides,

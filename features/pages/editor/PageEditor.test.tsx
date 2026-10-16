@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -15,6 +15,10 @@ import { validatePage } from "@/lib/pages/validate";
 import { PAGE_TYPE_IDS, type PageTypeId } from "@/lib/qr/types";
 
 import { PageEditor } from "./PageEditor";
+import { uploadMedia } from "./upload";
+
+vi.mock("./upload", async (original) => ({ ...(await original<object>()), uploadMedia: vi.fn() }));
+const UID = "11111111-1111-4111-8111-111111111111";
 
 /** Every field each hosted-page form shows for a new page. Splitting the editor must keep them. */
 const LABELS: Record<PageTypeId, string[]> = {
@@ -108,7 +112,7 @@ describe("PageEditor", () => {
   it("shows every error at once when asked to reveal them", () => {
     const errors = { title: "Add a title", "links.0.url": "Add at least one link" };
     const { rerender } = render(
-      <PageEditor type="links" page={PAGE_DEFAULTS.links()} errors={errors} onChange={vi.fn()} />,
+      <PageEditor type="links" page={PAGE_DEFAULTS.links()} errors={errors} onUpdate={vi.fn()} />,
     );
     expect(screen.queryByText("Add a title")).toBeNull();
     rerender(
@@ -116,7 +120,7 @@ describe("PageEditor", () => {
         type="links"
         page={PAGE_DEFAULTS.links()}
         errors={errors}
-        onChange={vi.fn()}
+        onUpdate={vi.fn()}
         reveal
       />,
     );
@@ -125,7 +129,7 @@ describe("PageEditor", () => {
   });
 
   it.each(PAGE_TYPE_IDS)("%s shows all of its fields", (type) => {
-    render(<PageEditor type={type} page={PAGE_DEFAULTS[type]()} errors={{}} onChange={vi.fn()} />);
+    render(<PageEditor type={type} page={PAGE_DEFAULTS[type]()} errors={{}} onUpdate={vi.fn()} />);
     const missing = LABELS[type].filter(
       (label) => screen.queryAllByText(new RegExp(`^${escape(label)}`)).length === 0,
     );
@@ -136,12 +140,13 @@ describe("PageEditor", () => {
   });
 
   it.each(PAGE_TYPE_IDS)("%s: editing a field changes only that field", (type) => {
-    const onChange = vi.fn();
+    const onUpdate = vi.fn();
     const page = PAGE_DEFAULTS[type]() as unknown as Record<string, unknown>;
-    render(<PageEditor type={type} page={PAGE_DEFAULTS[type]()} errors={{}} onChange={onChange} />);
+    render(<PageEditor type={type} page={PAGE_DEFAULTS[type]()} errors={{}} onUpdate={onUpdate} />);
     fireEvent.change(screen.getAllByRole("textbox")[0]!, { target: { value: "Q" } });
-    expect(onChange).toHaveBeenCalledTimes(1);
-    const next = onChange.mock.calls[0]![0] as Record<string, unknown>;
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    // The update, applied to the page the test rendered.
+    const next = onUpdate.mock.calls[0]![0](page) as Record<string, unknown>;
     expect(Object.keys(next).sort()).toEqual(Object.keys(page).sort());
     const changed = Object.keys(page).filter(
       (key) => JSON.stringify(next[key]) !== JSON.stringify(page[key]),
@@ -154,7 +159,12 @@ describe("PageEditor", () => {
 function LinksForm({ initial }: { initial: LinksPage }) {
   const [page, setPage] = useState(initial);
   return (
-    <PageEditor type="links" page={page} errors={validatePage("links", page)} onChange={setPage} />
+    <PageEditor
+      type="links"
+      page={page}
+      errors={validatePage("links", page)}
+      onUpdate={(update) => setPage((p) => update(p))}
+    />
   );
 }
 
@@ -187,22 +197,16 @@ describe("PageEditor lists", () => {
 
   it("switches a link off and back on", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(
-      <PageEditor
-        type="links"
-        page={links([{ label: "Shop", url: "shop.com" }])}
-        errors={{}}
-        onChange={onChange}
-      />,
-    );
+    const onUpdate = vi.fn();
+    const page = links([{ label: "Shop", url: "shop.com" }]);
+    render(<PageEditor type="links" page={page} errors={{}} onUpdate={onUpdate} />);
     await user.click(screen.getByRole("switch", { name: "Show link “Shop” on the page" }));
-    expect(onChange.mock.lastCall![0].links[0].on).toBe(false);
+    expect(onUpdate.mock.lastCall![0](page).links[0].on).toBe(false);
   });
 
   it("moves a menu section with its dishes", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
+    const onUpdate = vi.fn();
     const dish = (name: string) => ({ name, description: "", price: "", tags: "" });
     const menu: MenuPage = {
       ...PAGE_DEFAULTS.menu(),
@@ -212,10 +216,10 @@ describe("PageEditor lists", () => {
         { name: "Mains", items: [dish("Pie"), dish("Fish")] },
       ],
     };
-    render(<PageEditor type="menu" page={menu} errors={{}} onChange={onChange} />);
+    render(<PageEditor type="menu" page={menu} errors={{}} onUpdate={onUpdate} />);
     await user.click(screen.getByRole("button", { name: "Actions for section “Mains”" }));
     await user.click(screen.getByRole("menuitem", { name: "Move up" }));
-    const next = onChange.mock.lastCall![0] as MenuPage;
+    const next = onUpdate.mock.lastCall![0](menu) as MenuPage;
     expect(next.sections.map((s) => [s.name, s.items.map((d) => d.name)])).toEqual([
       ["Mains", ["Pie", "Fish"]],
       ["Starters", ["Soup"]],
@@ -249,14 +253,14 @@ const CARDS: Record<PageTypeId, string[]> = {
 describe("PageEditor cards", () => {
   it.each(PAGE_TYPE_IDS)("%s: its cards come in the spec's order", (type) => {
     render(
-      <PageEditor type={type} page={PAGE_DEFAULTS[type]()} errors={{}} onChange={vi.fn()} cards />,
+      <PageEditor type={type} page={PAGE_DEFAULTS[type]()} errors={{}} onUpdate={vi.fn()} cards />,
     );
     const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     expect(headings).toEqual(CARDS[type]);
   });
 
   it("draws the parts as sections inside the home page's form", () => {
-    render(<PageEditor type="links" page={PAGE_DEFAULTS.links()} errors={{}} onChange={vi.fn()} />);
+    render(<PageEditor type="links" page={PAGE_DEFAULTS.links()} errors={{}} onUpdate={vi.fn()} />);
     expect(screen.queryAllByRole("heading", { level: 2 })).toHaveLength(0);
     const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
     expect(headings).toEqual(CARDS.links);
@@ -271,7 +275,14 @@ function Stateful<K extends PageTypeId>({
   initial: PageContentMap[K];
 }) {
   const [page, setPage] = useState(initial);
-  return <PageEditor type={type} page={page} errors={{}} onChange={setPage} />;
+  return (
+    <PageEditor
+      type={type}
+      page={page}
+      errors={{}}
+      onUpdate={(update) => setPage((p) => update(p))}
+    />
+  );
 }
 
 describe("PageEditor focus", () => {
@@ -304,5 +315,39 @@ describe("PageEditor focus", () => {
     expect(screen.getAllByLabelText("Number").at(-1)).toHaveFocus();
     await user.click(screen.getByRole("button", { name: "Add email" }));
     expect(screen.getAllByLabelText("Email").at(-1)).toHaveFocus();
+  });
+});
+
+describe("an upload that finishes later", () => {
+  // The harness keeps the page the way the editor's reducer does: each update applies to the
+  // latest page.
+  function Harness({ initial }: { initial: LinksPage }) {
+    const [page, setPage] = useState(initial);
+    return (
+      <>
+        <PageEditor
+          type="links"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+
+  it("keeps what was typed while it uploaded", async () => {
+    const user = userEvent.setup();
+    let finish!: (result: Awaited<ReturnType<typeof uploadMedia>>) => void;
+    vi.mocked(uploadMedia).mockImplementation(() => new Promise((r) => (finish = r)));
+    const { container } = render(<Harness initial={PAGE_DEFAULTS.links()} />);
+    const input = container.querySelector<HTMLInputElement>("input[type=file]")!;
+    await user.upload(input, new File(["x"], "me.png", { type: "image/png" }));
+    await user.type(screen.getByLabelText("Title"), "Edited");
+    const avatar = { path: `${UID}/me.png`, name: "me.png", type: "image/png", size: 1 };
+    await act(async () => finish({ ok: true, media: avatar }));
+    const page = JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+    expect(page.title).toBe("Edited");
+    expect(page.avatar).toEqual(avatar);
   });
 });

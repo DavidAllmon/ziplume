@@ -86,7 +86,12 @@ export function HostedPageForm({
           errors={generator.pageErrors}
           reveal={generator.revealErrors ?? false}
           cards={generator.pageCards ?? false}
-          onChange={(next) => generator.setPage(type, next as PageContentMap[PageTypeId])}
+          onUpdate={(update) =>
+            generator.updatePage(
+              type,
+              update as (page: PageContentMap[PageTypeId]) => PageContentMap[PageTypeId],
+            )
+          }
         />
         {/* The Create editor has a Look tab for this; the home page doesn't. */}
         {!generator.pageColorInLook && (

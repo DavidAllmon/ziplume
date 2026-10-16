@@ -1,11 +1,14 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Media } from "@/lib/pages/types";
 
 import { ImagesField } from "./fields";
+import { uploadMedia } from "./upload";
+
+vi.mock("./upload", async (original) => ({ ...(await original<object>()), uploadMedia: vi.fn() }));
 
 const UID = "11111111-1111-4111-8111-111111111111";
 const image = (name: string): Media => ({
@@ -19,7 +22,12 @@ function Harness() {
   const [images, setImages] = useState([image("a.png"), image("b.png"), image("c.png")]);
   return (
     <>
-      <ImagesField value={images} onChange={setImages} max={24} />
+      <ImagesField
+        value={images}
+        onChange={setImages}
+        onAdd={(media) => setImages((list) => [...list, media])}
+        max={24}
+      />
       <output aria-label="Order">{images.map((m) => m.name).join(",")}</output>
     </>
   );
@@ -66,11 +74,46 @@ describe("ImagesField", () => {
     const user = userEvent.setup();
     function One() {
       const [images, setImages] = useState([image("a.png")]);
-      return <ImagesField value={images} onChange={setImages} max={24} />;
+      return (
+        <ImagesField
+          value={images}
+          onChange={setImages}
+          onAdd={(media) => setImages((list) => [...list, media])}
+          max={24}
+        />
+      );
     }
     const { container } = render(<One />);
     await user.click(screen.getByRole("button", { name: "Actions for image 1" }));
     await user.click(screen.getByRole("menuitem", { name: "Remove" }));
     expect(container.querySelector("input[type=file]")).toHaveFocus();
+  });
+
+  it("adds an image that finishes uploading to the latest list", async () => {
+    const user = userEvent.setup();
+    let finish!: (result: Awaited<ReturnType<typeof uploadMedia>>) => void;
+    vi.mocked(uploadMedia).mockImplementation(() => new Promise((r) => (finish = r)));
+    function Later() {
+      const [images, setImages] = useState([image("a.png"), image("b.png")]);
+      return (
+        <>
+          <ImagesField
+            value={images}
+            onChange={setImages}
+            onAdd={(media) => setImages((list) => [...list, media])}
+            max={24}
+          />
+          <output aria-label="Order">{images.map((m) => m.name).join(",")}</output>
+        </>
+      );
+    }
+    const { container } = render(<Later />);
+    const input = container.querySelector<HTMLInputElement>("input[type=file]")!;
+    await user.upload(input, new File(["x"], "c.png", { type: "image/png" }));
+    // Removed while c.png uploads: it must stay removed.
+    await user.click(screen.getByRole("button", { name: "Actions for image 1" }));
+    await user.click(screen.getByRole("menuitem", { name: "Remove" }));
+    await act(async () => finish({ ok: true, media: image("c.png") }));
+    expect(order().textContent).toBe("b.png,c.png");
   });
 });

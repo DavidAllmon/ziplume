@@ -169,6 +169,11 @@ export function useCodeDraft(
       codeAction({ type: "setPage", pageType: type, content }),
     [codeAction],
   );
+  const updatePage = useCallback(
+    (type: PageTypeId, update: (page: PageContentMap[PageTypeId]) => PageContentMap[PageTypeId]) =>
+      codeAction({ type: "updatePage", pageType: type, update }),
+    [codeAction],
+  );
   const setLook = useCallback(
     (type: PageTypeId, update: (look: PageLook) => PageLook) =>
       codeAction({ type: "setLook", pageType: type, update }),
@@ -181,6 +186,7 @@ export function useCodeDraft(
     codeAction,
     setField,
     setPage,
+    updatePage,
     setLook,
     pageErrors: pageType ? errors : {},
     pageType,
