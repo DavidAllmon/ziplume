@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { accessTo, personLabel, toTeam, type TeamPerson } from "./access";
+import { accessTo, codesScope, firstName, personLabel, toTeam, type TeamPerson } from "./access";
 
 const person = (userId: string, role: TeamPerson["role"], isMe = false): TeamPerson => ({
   userId,
@@ -63,5 +63,44 @@ describe("team access", () => {
         isMe: false,
       },
     ]);
+  });
+});
+
+describe("firstName", () => {
+  it("uses the first word of a name, or the email's name part", () => {
+    expect(firstName({ name: "  Alex  Rivera ", email: "a@example.com" })).toBe("Alex");
+    expect(firstName({ name: null, email: "sam.lee@example.com" })).toBe("sam.lee");
+    expect(firstName({ name: " ", email: "kim@example.com" })).toBe("kim");
+  });
+});
+
+describe("codesScope", () => {
+  const team = [person("kim", "owner"), person("me", "viewer", true)];
+
+  it("shows your own codes on your own, and for anyone you can't see", () => {
+    expect(codesScope([], "me", { workspace: null, view: "everyone" })).toEqual({ kind: "self" });
+    expect(codesScope([], "me", { workspace: "kim", view: null })).toEqual({ kind: "self" });
+    expect(codesScope(team, "me", { workspace: "stranger", view: null })).toEqual({ kind: "self" });
+    expect(codesScope(team, "me", { workspace: "me", view: null })).toEqual({ kind: "self" });
+  });
+
+  it("opens a teammate's codes with what you may do there", () => {
+    expect(codesScope(team, "me", { workspace: "kim", view: null })).toEqual({
+      kind: "person",
+      person: team[0],
+      canEdit: false,
+    });
+  });
+
+  it("shows Everyone, where viewers change only their own codes", () => {
+    expect(codesScope(team, "me", { workspace: null, view: "everyone" })).toEqual({
+      kind: "everyone",
+      canEditOthers: false,
+    });
+    const asOwner = [person("me", "owner", true), person("leo", "viewer")];
+    expect(codesScope(asOwner, "me", { workspace: "leo", view: "everyone" })).toEqual({
+      kind: "everyone",
+      canEditOthers: true,
+    });
   });
 });

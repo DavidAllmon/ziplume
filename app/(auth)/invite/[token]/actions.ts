@@ -10,7 +10,7 @@ export interface AcceptResult {
   error?: string;
 }
 
-/** Joins the workspace an invite is for, then opens it. */
+/** Joins the team an invite is for, then opens your codes with the one-time joined tip. */
 export async function acceptInvite(token: string): Promise<AcceptResult> {
   const supabase = await getServerSupabase();
   const { data: ownerId, error } = await supabase.rpc("accept_invite", { p_token: token });
@@ -34,5 +34,5 @@ export async function acceptInvite(token: string): Promise<AcceptResult> {
     }
     return { error: acceptError(message, names) };
   }
-  redirect(`/codes?workspace=${ownerId}`);
+  redirect("/codes?joined=1");
 }
