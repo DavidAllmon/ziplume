@@ -1,14 +1,25 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { uploadMedia } from "@/features/pages/editor/upload";
 import { themeLook } from "@/lib/pages/look";
 import { PAGE_DEFAULTS, type PageContentMap } from "@/lib/pages/types";
 import type { PageTypeId } from "@/lib/qr/types";
 
 import { LookEditor } from "./LookEditor";
+
+vi.mock("@/features/pages/editor/upload", async (original) => ({
+  ...(await original<object>()),
+  uploadMedia: vi.fn(),
+}));
+vi.mock("@/features/pages/look/average", () => ({ averageColor: vi.fn(async () => "#F3E8D8") }));
+
+const UID = "11111111-1111-4111-8111-111111111111";
+const fileInput = (container: HTMLElement) =>
+  container.querySelector<HTMLInputElement>("input[type=file]")!;
 
 function Harness<K extends PageTypeId>({ type, initial }: { type: K; initial: PageContentMap[K] }) {
   const [page, setPage] = useState(initial);
@@ -73,5 +84,87 @@ describe("LookEditor", () => {
     render(<Harness type="vcard" initial={PAGE_DEFAULTS.vcard()} />);
     await user.click(screen.getByRole("radio", { name: "Under the header" }));
     expect(look().socials).toBe("top");
+  });
+
+  it("switches wallpaper kinds without ever leaving a broken wallpaper", async () => {
+    const user = userEvent.setup();
+    render(
+      <Harness
+        type="links"
+        initial={{ ...PAGE_DEFAULTS.links(), look: themeLook("paper", "links") }}
+      />,
+    );
+    await user.click(screen.getByRole("radio", { name: "Gradient" }));
+    expect(look().wallpaper).toMatchObject({ kind: "gradient", from: "#F6F5F1" });
+    await user.click(screen.getByRole("radio", { name: "Photo" }));
+    // No photo yet: the gradient stays.
+    expect(look().wallpaper.kind).toBe("gradient");
+    await user.click(screen.getByRole("radio", { name: "Color" }));
+    expect(look().wallpaper).toEqual({ kind: "solid", color: "#F6F5F1" });
+  });
+
+  it("uses an uploaded photo with its average color, and darkens it", async () => {
+    const user = userEvent.setup();
+    const image = { path: `${UID}/w.jpg`, name: "w.jpg", type: "image/jpeg", size: 1 };
+    vi.mocked(uploadMedia).mockResolvedValue({ ok: true, media: image });
+    const { container } = render(<Harness type="links" initial={PAGE_DEFAULTS.links()} />);
+    await user.click(screen.getByRole("radio", { name: "Photo" }));
+    await user.upload(fileInput(container), new File(["x"], "w.jpg", { type: "image/jpeg" }));
+    expect(look().wallpaper).toEqual({ kind: "image", image, dim: 30, color: "#F3E8D8" });
+    fireEvent.change(screen.getByLabelText("Darken"), { target: { value: "60" } });
+    expect(look().wallpaper.dim).toBe(60);
+  });
+
+  it("keeps the wallpaper when a photo can't be uploaded, and says why", async () => {
+    const user = userEvent.setup();
+    vi.mocked(uploadMedia).mockResolvedValue({ ok: false, error: "That image couldn't be read." });
+    const { container } = render(<Harness type="links" initial={PAGE_DEFAULTS.links()} />);
+    const before = look().wallpaper;
+    await user.click(screen.getByRole("radio", { name: "Photo" }));
+    await user.upload(fileInput(container), new File(["x"], "w.jpg", { type: "image/jpeg" }));
+    expect(look().wallpaper).toEqual(before);
+    expect(screen.getByText("That image couldn't be read.")).toBeInTheDocument();
+  });
+
+  it("only applies a custom color once it's complete", async () => {
+    const user = userEvent.setup();
+    render(
+      <Harness
+        type="links"
+        initial={{ ...PAGE_DEFAULTS.links(), look: themeLook("paper", "links") }}
+      />,
+    );
+    await user.click(screen.getByRole("radio", { name: "Custom text color" }));
+    const field = screen.getByLabelText("Text color");
+    await user.clear(field);
+    // The field puts the # in itself.
+    await user.type(field, "12");
+    expect(field).toHaveValue("#12");
+    expect(look().text).not.toBe("#12");
+    await user.type(field, "3456");
+    expect(look().text).toBe("#123456");
+  });
+
+  it("warns under a hard-to-read choice and fixes it in one click", async () => {
+    const user = userEvent.setup();
+    const pale = { ...themeLook("paper", "links"), text: "#DDDDDD" };
+    render(<Harness type="links" initial={{ ...PAGE_DEFAULTS.links(), look: pale }} />);
+    expect(screen.getByText(/Text is hard to read on this wallpaper/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Use Auto" }));
+    expect(look().text).toBe("auto");
+    expect(screen.queryByText(/Text is hard to read/)).toBeNull();
+  });
+
+  it("sets the font and every button setting", async () => {
+    const user = userEvent.setup();
+    render(<Harness type="links" initial={PAGE_DEFAULTS.links()} />);
+    await user.click(screen.getByRole("radio", { name: "Elegant" }));
+    await user.click(screen.getByRole("radio", { name: "Square" }));
+    await user.click(screen.getByRole("radio", { name: "Outline" }));
+    await user.click(screen.getByRole("radio", { name: "Hard" }));
+    expect(look()).toMatchObject({
+      font: "elegant",
+      button: { shape: "square", style: "outline", shadow: "hard" },
+    });
   });
 });
