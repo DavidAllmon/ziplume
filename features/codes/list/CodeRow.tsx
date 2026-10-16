@@ -1,13 +1,15 @@
 "use client";
 
-import { Lock } from "lucide-react";
+import { EyeOff, Lock } from "lucide-react";
 import Link from "next/link";
 
 import { withWorkspace } from "@/components/app/nav";
+import { Avatar } from "@/components/ui/Avatar";
 import { codeRenderOptions, codeSummary, codeTypeLabel } from "@/features/dashboard/codeRender";
 import { formatCount, relativeTime } from "@/features/dashboard/format";
 import { QrTile } from "@/features/generator/preview/QrTile";
 import { shortLinkLabel } from "@/lib/env";
+import { firstName, type TeamPerson } from "@/lib/teams/access";
 import type { QrCodeRow } from "@/types/supabase";
 
 import { CodeActions, type CodeActionHandlers } from "./CodeActions";
@@ -25,11 +27,41 @@ export interface CodeItemProps extends CodeActionHandlers {
   scans: number;
   selected: boolean;
   onSelect: (code: QrCodeRow, selected: boolean) => void;
+  /** Who made it, in the Everyone view; null elsewhere. */
+  creator: TeamPerson | null;
+  /** Your own code marked Private, shown while you're in a team. */
+  isPrivate: boolean;
 }
 
 /** The short link for trackable codes, what it encodes for static ones. */
 export const codeDetail = (code: QrCodeRow) =>
   code.is_dynamic && code.slug ? shortLinkLabel(code.slug) : codeSummary(code);
+
+/** A code only its maker can see (teams spec 6). The lock already means a password here. */
+export function PrivateBadge() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-fg-muted">
+      <EyeOff aria-hidden className="size-3" />
+      Private
+    </span>
+  );
+}
+
+/** Who made a code, in the Everyone view (teams spec 5). */
+export function CreatedBy({ person }: { person: TeamPerson }) {
+  return (
+    <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-fg-muted">
+      <Avatar
+        id={person.userId}
+        name={person.name}
+        email={person.email}
+        src={person.avatarUrl}
+        size="xs"
+      />
+      <span className="truncate">Created by {person.isMe ? "you" : firstName(person)}</span>
+    </p>
+  );
+}
 
 /** One code in the list view: a table row on wider screens, a stacked row on phones. */
 export function CodeRow({
@@ -39,6 +71,8 @@ export function CodeRow({
   scans,
   selected,
   onSelect,
+  creator,
+  isPrivate,
   ...on
 }: CodeItemProps) {
   const href = withWorkspace(`/codes/${code.id}`, teamId);
@@ -80,8 +114,10 @@ export function CodeRow({
           {code.has_password && (
             <Lock aria-label="Password protected" className="size-3.5 shrink-0 text-fg-muted" />
           )}
+          {isPrivate && <PrivateBadge />}
         </p>
         <p className="truncate text-sm text-fg-muted">{codeDetail(code)}</p>
+        {creator && <CreatedBy person={creator} />}
         <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-muted md:hidden">
           {codeTypeLabel(code)} <StatusPill status={status} />
           {code.is_dynamic && (

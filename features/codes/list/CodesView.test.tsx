@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { deleteCodes, duplicateCode, setCodesStatus } from "@/features/codes/api";
-import type { QrCodeRow } from "@/types/supabase";
+import type { TeamPerson } from "@/lib/teams/access";
+import type { FolderRow, QrCodeRow } from "@/types/supabase";
 
 import { copyCodeMedia } from "@/features/codes/copyMedia";
 
@@ -73,9 +74,9 @@ function renderView(props: Partial<ComponentProps<typeof CodesView>> = {}) {
         codes={[MENU, FLYER, WIFI]}
         folders={[]}
         folder={null}
-        ownerId="owner"
-        teamId={null}
-        canEdit
+        scope="self"
+        canEditOthers
+        team={[]}
         recentScans={{ menu: 12 }}
         {...props}
       />
@@ -84,6 +85,7 @@ function renderView(props: Partial<ComponentProps<typeof CodesView>> = {}) {
 }
 
 const rowFor = (name: string) => screen.getByRole("listitem", { name });
+const kims = (...codes: QrCodeRow[]) => codes.map((c) => ({ ...c, user_id: "kim" }));
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -168,7 +170,7 @@ describe("CodesView", () => {
   });
 
   it("viewers can open and download but not change codes", async () => {
-    renderView({ canEdit: false });
+    renderView({ scope: "person", canEditOthers: false, codes: kims(MENU, FLYER, WIFI) });
     await userEvent.click(screen.getByRole("button", { name: "Actions for Spring menu" }));
     const menu = screen.getByRole("menu");
     expect(within(menu).getByRole("menuitem", { name: "Open" })).toBeInTheDocument();
@@ -186,7 +188,7 @@ describe("CodesView", () => {
   });
 
   it("editors can open a code in the editor, in its team's codes", async () => {
-    renderView({ teamId: "kim" });
+    renderView({ scope: "person", codes: kims(MENU) });
     await userEvent.click(screen.getAllByRole("button", { name: "Actions for Spring menu" })[0]!);
     expect(screen.getByRole("menuitem", { name: "Edit" })).toHaveAttribute(
       "href",
@@ -200,7 +202,7 @@ describe("CodesView", () => {
       ok: true,
       value: { ...MENU, id: "copy", name: "Copy of Spring menu" },
     });
-    renderView({ teamId: "kim" });
+    renderView({ scope: "person", codes: kims(MENU) });
     await user.click(screen.getAllByRole("button", { name: "Actions for Spring menu" })[0]!);
     await user.click(screen.getByRole("menuitem", { name: /Duplicate/ }));
     expect(duplicateCode).toHaveBeenCalledWith(expect.objectContaining({ name: "Spring menu" }), {
@@ -223,7 +225,7 @@ describe("CodesView", () => {
     });
     vi.mocked(copyCodeMedia).mockResolvedValue({ ok: true, content: { title: "Links (copied)" } });
     vi.mocked(duplicateCode).mockResolvedValue({ ok: true, value: { ...page, id: "copy" } });
-    renderView({ teamId: "kim", codes: [page] });
+    renderView({ scope: "person", codes: kims(page) });
     await user.click(screen.getAllByRole("button", { name: "Actions for Team links" })[0]!);
     await user.click(screen.getByRole("menuitem", { name: /Duplicate/ }));
     expect(copyCodeMedia).toHaveBeenCalledWith("links");
@@ -258,5 +260,120 @@ describe("CodesView", () => {
       "href",
       "/codes/new?folder=f1",
     );
+  });
+});
+
+const TEAM: TeamPerson[] = [
+  {
+    userId: "owner",
+    email: "olivia@example.com",
+    name: "Olivia Owner",
+    avatarUrl: null,
+    role: "viewer",
+    isMe: true,
+  },
+  {
+    userId: "kim",
+    email: "kim@example.com",
+    name: "Kim Lee",
+    avatarUrl: null,
+    role: "owner",
+    isMe: false,
+  },
+];
+const KIM_FLYER = code("kimflyer", { name: "Kim flyer", user_id: "kim" });
+
+describe("CodesView in a team", () => {
+  it("shows who made each code in Everyone, on rows and tiles", async () => {
+    renderView({ scope: "everyone", team: TEAM, codes: [MENU, KIM_FLYER] });
+    expect(within(rowFor("Spring menu")).getByText("Created by you")).toBeInTheDocument();
+    expect(within(rowFor("Kim flyer")).getByText("Created by Kim")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("radio", { name: "Grid view" }));
+    expect(within(rowFor("Kim flyer")).getByText("Created by Kim")).toBeInTheDocument();
+  });
+
+  it("names no maker outside Everyone", () => {
+    renderView({ scope: "self", team: TEAM, codes: [MENU] });
+    expect(screen.queryByText(/Created by/)).toBeNull();
+  });
+
+  it("lets a viewer change their own codes in Everyone, and only look at teammates'", async () => {
+    const user = userEvent.setup();
+    renderView({ scope: "everyone", canEditOthers: false, team: TEAM, codes: [MENU, KIM_FLYER] });
+    await user.click(screen.getByRole("button", { name: "Actions for Spring menu" }));
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toHaveAttribute(
+      "href",
+      "/codes/menu/edit",
+    );
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Actions for Kim flyer" }));
+    expect(screen.queryByRole("menuitem", { name: "Edit" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "Open" })).toHaveAttribute(
+      "href",
+      "/codes/kimflyer?workspace=kim",
+    );
+  });
+
+  it("offers bulk changes only for codes you may change, and Move within one person", async () => {
+    const user = userEvent.setup();
+    const selectBoth = async () => {
+      await user.click(screen.getByRole("checkbox", { name: "Select Spring menu" }));
+      await user.click(screen.getByRole("checkbox", { name: "Select Kim flyer" }));
+      return within(screen.getByRole("region", { name: "Selected codes" }));
+    };
+    const viewer = renderView({
+      scope: "everyone",
+      canEditOthers: false,
+      team: TEAM,
+      codes: [MENU, KIM_FLYER],
+    });
+    let bar = await selectBoth();
+    for (const name of ["Move", "Pause", "Delete"]) {
+      expect(bar.queryByRole("button", { name: new RegExp(name) })).toBeNull();
+    }
+    viewer.unmount();
+    // An owner may change both, but folders belong to one person: no Move across people.
+    renderView({ scope: "everyone", canEditOthers: true, team: TEAM, codes: [MENU, KIM_FLYER] });
+    bar = await selectBoth();
+    expect(bar.getByRole("button", { name: /Delete/ })).toBeInTheDocument();
+    expect(bar.queryByRole("button", { name: /Move/ })).toBeNull();
+  });
+
+  it("moves a teammate's code only into that teammate's folders", async () => {
+    const user = userEvent.setup();
+    const folders = [
+      { id: "f-mine", user_id: "owner", name: "My posters" },
+      { id: "f-kim", user_id: "kim", name: "Kim menus" },
+    ] as FolderRow[];
+    renderView({ scope: "everyone", team: TEAM, codes: [MENU, KIM_FLYER], folders });
+    await user.click(screen.getByRole("button", { name: "Actions for Kim flyer" }));
+    await user.click(screen.getByRole("menuitem", { name: "Move to folder" }));
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByRole("radio", { name: /Kim menus/ })).toBeInTheDocument();
+    expect(dialog.queryByRole("radio", { name: /My posters/ })).toBeNull();
+  });
+
+  it("labels your own private codes while you're in a team", () => {
+    const secret = code("secret", { name: "Secret plan", is_private: true });
+    const inTeam = renderView({ scope: "self", team: TEAM, codes: [secret, MENU] });
+    expect(within(rowFor("Secret plan")).getByText("Private")).toBeInTheDocument();
+    expect(within(rowFor("Spring menu")).queryByText("Private")).toBeNull();
+    inTeam.unmount();
+    // On your own (after leaving a team) the stored flag shows nothing.
+    renderView({ scope: "self", team: [], codes: [secret] });
+    expect(screen.queryByText("Private")).toBeNull();
+  });
+
+  it("adds your copy of a teammate's code to the Everyone list", async () => {
+    const user = userEvent.setup();
+    vi.mocked(duplicateCode).mockResolvedValue({
+      ok: true,
+      value: { ...KIM_FLYER, id: "copy", user_id: "owner", name: "Copy of Kim flyer" },
+    });
+    renderView({ scope: "everyone", team: TEAM, codes: [MENU, KIM_FLYER] });
+    await user.click(screen.getByRole("button", { name: "Actions for Kim flyer" }));
+    await user.click(screen.getByRole("menuitem", { name: /Duplicate/ }));
+    expect(await screen.findByText("Copied “Kim flyer” to your codes")).toBeInTheDocument();
+    expect(rowFor("Copy of Kim flyer")).toBeInTheDocument();
   });
 });

@@ -22,6 +22,7 @@ const ZIP_FORMATS: { value: ExportFormat; label: string }[] = [
 export function SelectionBar({
   selected,
   canEdit,
+  canMove,
   busy,
   onMove,
   onSetPaused,
@@ -30,6 +31,8 @@ export function SelectionBar({
 }: {
   selected: QrCodeRow[];
   canEdit: boolean;
+  /** Every selected code is one person's, so their folders apply. */
+  canMove: boolean;
   /** What's running (e.g. "Pausing 40 of 200…"), or null. Actions wait until it's done. */
   busy: string | null;
   onMove: () => void;
@@ -94,7 +97,7 @@ export function SelectionBar({
           <Download aria-hidden />
           {progress ?? "Download ZIP"}
         </Button>
-        {canEdit && (
+        {canEdit && canMove && (
           <Button variant="outline" onClick={onMove} disabled={busy !== null}>
             <FolderInput aria-hidden /> Move
           </Button>
