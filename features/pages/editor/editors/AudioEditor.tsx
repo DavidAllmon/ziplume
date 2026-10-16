@@ -27,7 +27,7 @@ export function AudioEditor({
               title: latest.title || file?.name.replace(/\.\w+$/, "") || "",
             }))
           }
-          hint="MP3, M4A, WAV or OGG, up to 50 MB."
+          hint="MP3, M4A, WAV or OGG, up to 15 MB."
           error={touched ? errors.error("file") : undefined}
         />
         <TextField

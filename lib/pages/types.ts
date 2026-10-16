@@ -229,7 +229,9 @@ export const LIMITS = {
   paste: 20000,
 } as const;
 
-export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+const MB = 1024 * 1024;
+/** Ziplume is free, so files stay small: images are also resized before they're stored. */
+export const UPLOAD_CAPS = { image: 15 * MB, pdf: 10 * MB, audio: 15 * MB } as const;
 
 const day = (open: boolean): DayHours => ({ open, from: "09:00", to: "17:00" });
 

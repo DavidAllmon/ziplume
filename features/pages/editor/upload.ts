@@ -1,7 +1,7 @@
 "use client";
 
 import { MEDIA_BUCKET } from "@/lib/pages/urls";
-import { MAX_UPLOAD_BYTES, type Media } from "@/lib/pages/types";
+import { UPLOAD_CAPS, type Media } from "@/lib/pages/types";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 export type MediaKind = "image" | "pdf" | "audio";
@@ -48,7 +48,13 @@ export function checkFile(file: File, kind: MediaKind): string | null {
       audio: "Use an MP3, M4A, WAV or OGG audio file.",
     }[kind];
   }
-  if (file.size > MAX_UPLOAD_BYTES) return "Files can be up to 50 MB.";
+  if (file.size > UPLOAD_CAPS[kind]) {
+    return {
+      image: "Images can be up to 15 MB.",
+      pdf: "PDFs can be up to 10 MB.",
+      audio: "Audio files can be up to 15 MB.",
+    }[kind];
+  }
   return null;
 }
 
