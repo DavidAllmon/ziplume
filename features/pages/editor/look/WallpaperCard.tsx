@@ -14,6 +14,7 @@ import { mix } from "@/features/pages/look/resolve";
 import type { LookChange, PageLook, Wallpaper } from "@/lib/pages/look";
 
 import { Swatches } from "./Swatches";
+import { Warnings } from "./Warning";
 
 const COLORS = [
   "#F6F5F1",
@@ -189,6 +190,7 @@ export function WallpaperCard({
             )}
           </>
         )}
+        <Warnings look={look} onLook={onLook} at="wallpaper" />
       </div>
     </Card>
   );

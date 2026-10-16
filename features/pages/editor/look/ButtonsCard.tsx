@@ -7,7 +7,7 @@ import { resolveLook } from "@/features/pages/look/resolve";
 import type { LookChange, PageLook } from "@/lib/pages/look";
 
 import { Swatches } from "./Swatches";
-import { Warning } from "./Warning";
+import { Warnings } from "./Warning";
 
 const COLORS = [
   "#0F172A",
@@ -80,7 +80,7 @@ export function ButtonsCard({
         <div className="max-w-56">
           <ColorField label="Button color" value={b.color} onChange={(color) => set({ color })} />
         </div>
-        <Warning look={look} id="button" onLook={onLook} fixLabel="Make buttons stand out" />
+        <Warnings look={look} onLook={onLook} at="buttonColor" />
         <SegmentedControl
           aria-label="Button text color mode"
           size="touch"
@@ -102,7 +102,7 @@ export function ButtonsCard({
             />
           </div>
         )}
-        <Warning look={look} id="buttonText" onLook={onLook} fixLabel="Use Auto" />
+        <Warnings look={look} onLook={onLook} at="buttonText" />
       </div>
     </Card>
   );

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -239,6 +239,23 @@ describe("LookEditor", () => {
     await user.click(screen.getByRole("button", { name: "Use Auto" }));
     expect(look().text).toBe("auto");
     expect(screen.queryByText(/Text is hard to read/)).toBeNull();
+  });
+
+  it("warns under Wallpaper when Auto text can't read on it, and fixes the wallpaper", async () => {
+    const user = userEvent.setup();
+    const violet = {
+      ...themeLook("paper", "links"),
+      wallpaper: { kind: "solid" as const, color: "#8B5CF6" },
+    };
+    render(<Harness type="links" initial={{ ...PAGE_DEFAULTS.links(), look: violet }} />);
+    const wallpaper = within(screen.getByRole("region", { name: "Wallpaper" }));
+    expect(wallpaper.getByText("Text is hard to read on this wallpaper.")).toBeInTheDocument();
+    // Not under Text, where Auto is already on.
+    const text = within(screen.getByRole("region", { name: "Text" }));
+    expect(text.queryByRole("button", { name: "Use Auto" })).toBeNull();
+    await user.click(wallpaper.getByRole("button", { name: "Adjust the wallpaper" }));
+    expect(look().wallpaper.color).not.toBe("#8B5CF6");
+    expect(screen.queryByText(/hard to read/)).toBeNull();
   });
 
   it("sets the font and every button setting", async () => {

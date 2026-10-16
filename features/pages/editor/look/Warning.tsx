@@ -2,40 +2,44 @@
 
 import { TriangleAlert } from "lucide-react";
 
-import { fixLook } from "@/features/pages/look/fixes";
-import { lookChecks, type LookCheck } from "@/features/pages/look/resolve";
+import { lookFixes, type FixPlace, type LookFix } from "@/features/pages/look/fixes";
 import type { LookChange, PageLook } from "@/lib/pages/look";
 
-const MESSAGES: Record<LookCheck["id"], string> = {
-  text: "Text is hard to read on this wallpaper.",
-  buttonText: "Button text is hard to read on this color.",
-  button: "Buttons are hard to see on this wallpaper.",
-};
+function message({ id, at }: LookFix) {
+  if (id === "text") return "Text is hard to read on this wallpaper.";
+  if (id === "button") return "Buttons are hard to see on this wallpaper.";
+  // Outline buttons' text sits on the wallpaper; the others' on the button.
+  return at === "wallpaper"
+    ? "Button text is hard to read on this wallpaper."
+    : "Button text is hard to read on this color.";
+}
 
-/** A readability warning under a control, with its one-click fix (spec 6.1). */
-export function Warning({
+/** The readability warnings caused by the control above, each with its one-click fix (spec 6.1). */
+export function Warnings({
   look,
-  id,
   onLook,
-  fixLabel,
+  at,
 }: {
   look: PageLook;
-  id: LookCheck["id"];
   onLook: (change: LookChange) => void;
-  fixLabel: string;
+  at: FixPlace;
 }) {
-  if (!lookChecks(look).some((check) => check.id === id)) return null;
-  return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-control bg-warning-soft px-3 py-2 text-sm text-fg">
-      <TriangleAlert aria-hidden className="size-4 shrink-0 text-warning" />
-      {MESSAGES[id]}
-      <button
-        type="button"
-        onClick={() => onLook(fixLook(look, id))}
-        className="min-h-11 rounded-control px-1 font-semibold text-link underline underline-offset-4 focus-ring sm:min-h-0"
+  return lookFixes(look)
+    .filter((fix) => fix.at === at)
+    .map((fix) => (
+      <p
+        key={fix.id}
+        className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-control bg-warning-soft px-3 py-2 text-sm text-fg"
       >
-        {fixLabel}
-      </button>
-    </p>
-  );
+        <TriangleAlert aria-hidden className="size-4 shrink-0 text-warning" />
+        {message(fix)}
+        <button
+          type="button"
+          onClick={() => onLook(fix.look)}
+          className="min-h-11 rounded-control px-1 font-semibold text-link underline underline-offset-4 focus-ring sm:min-h-0"
+        >
+          {fix.label}
+        </button>
+      </p>
+    ));
 }

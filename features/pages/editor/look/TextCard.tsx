@@ -9,7 +9,7 @@ import { FONTS } from "@/features/pages/look/fonts";
 import { resolveLook } from "@/features/pages/look/resolve";
 import { FONT_IDS, type LookChange, type PageLook } from "@/lib/pages/look";
 
-import { Warning } from "./Warning";
+import { Warnings } from "./Warning";
 
 /** The font (spec 6.3) and the text color, Auto or custom. */
 export function TextCard({
@@ -64,7 +64,9 @@ export function TextCard({
           ]}
         />
         {mode === "auto" ? (
-          <p className="text-sm text-fg-muted">Auto always picks the readable one.</p>
+          <p className="text-sm text-fg-muted">
+            Auto picks white or near-black, whichever reads better.
+          </p>
         ) : (
           <div className="max-w-56">
             <ColorField
@@ -74,7 +76,7 @@ export function TextCard({
             />
           </div>
         )}
-        <Warning look={look} id="text" onLook={onLook} fixLabel="Use Auto" />
+        <Warnings look={look} onLook={onLook} at="text" />
       </div>
     </Card>
   );
