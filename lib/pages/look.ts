@@ -175,6 +175,11 @@ export function themeLook(theme: ThemeId, type: PageTypeId): PageLook {
   };
 }
 
+/** A theme's wallpaper, font, text color and buttons on this look; header, shape and socials stay. */
+export function applyTheme(look: PageLook, theme: ThemeId): PageLook {
+  return { ...look, theme, ...structuredClone(THEMES[theme].look) };
+}
+
 /** A page saved before looks existed: Paper, with its own color on the buttons (spec 6.9). */
 export function legacyLook(type: PageTypeId, raw: Record<string, unknown>): PageLook {
   const look = themeLook("paper", type);
