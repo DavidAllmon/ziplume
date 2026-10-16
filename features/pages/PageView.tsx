@@ -94,34 +94,33 @@ function LinksView({ page, preview }: ViewProps<LinksPage>) {
       />
       {look.socials === "top" && socials}
       <nav aria-label="Links" className="flex flex-col gap-3">
-        {anyLinks ? (
-          rows.map(({ link, href }, i) => {
-            if (link.kind === "header") {
+        {anyLinks
+          ? rows.map(({ link, href }, i) => {
+              if (link.kind === "header") {
+                return (
+                  <h2
+                    key={i}
+                    className="mt-3 px-1 text-center font-page-heading text-sm font-semibold tracking-wide text-fg-muted uppercase first:mt-0"
+                  >
+                    {link.label.trim()}
+                  </h2>
+                );
+              }
+              const icon = linkIcon(link);
               return (
-                <h2
+                <PageLink
                   key={i}
-                  className="mt-3 px-1 text-center font-page-heading text-sm font-semibold tracking-wide text-fg-muted uppercase first:mt-0"
+                  href={href}
+                  preview={preview}
+                  featured={i === featuredAt}
+                  icon={icon ? <LinkIconMark icon={icon} /> : undefined}
                 >
-                  {link.label.trim()}
-                </h2>
+                  {link.label.trim() || link.url.replace(/^(https?:\/\/|mailto:|tel:|sms:)/, "")}
+                </PageLink>
               );
-            }
-            const icon = linkIcon(link);
-            return (
-              <PageLink
-                key={i}
-                href={href}
-                preview={preview}
-                featured={i === featuredAt}
-                icon={icon ? <LinkIconMark icon={icon} /> : undefined}
-              >
-                {link.label.trim() || link.url.replace(/^(https?:\/\/|mailto:|tel:|sms:)/, "")}
-              </PageLink>
-            );
-          })
-        ) : (
-          <EmptyNote>Links you add appear here.</EmptyNote>
-        )}
+            })
+          : // The editor's hint; visitors never see it, even when every link is scheduled away.
+            preview && <EmptyNote>Links you add appear here.</EmptyNote>}
       </nav>
       {look.socials === "bottom" && socials}
     </PageFrame>

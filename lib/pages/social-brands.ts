@@ -25,6 +25,6 @@ export const BRAND_COLORS: Partial<Record<SocialNetwork, string>> = {
   linkedin: "#0A66C2",
 };
 
-/** White or black, whichever reads better on a brand color. */
+/** A white icon, as brands draw it, unless white wouldn't read (3:1) on that color: then black. */
 export const brandGlyph = (color: string): "#FFFFFF" | "#000000" =>
-  contrastRatio("#FFFFFF", color) >= contrastRatio("#000000", color) ? "#FFFFFF" : "#000000";
+  contrastRatio("#FFFFFF", color) >= 3 ? "#FFFFFF" : "#000000";

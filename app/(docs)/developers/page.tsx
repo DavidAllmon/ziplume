@@ -254,7 +254,9 @@ export default function DevelopersPage() {
         Video pages take a YouTube or Vimeo link in <code>url</code>. Links may also set{" "}
         <code>kind</code> (<code>link</code> or <code>header</code>), <code>type</code> (
         <code>web</code>, <code>email</code>, <code>phone</code> or <code>sms</code>),{" "}
-        <code>featured</code>, and <code>showFrom</code>/<code>showUntil</code> (ISO times). Upload
+        <code>featured</code> (only the first featured link is drawn), <code>icon</code> (
+        <code>auto</code>, <code>none</code> or <code>image</code>) with an uploaded{" "}
+        <code>image</code>, and <code>showFrom</code>/<code>showUntil</code> (ISO times). Upload
         images and files in the app first; the API can refer to them but not upload them. A link or
         button with <code>&quot;on&quot;: false</code> stays saved but isn’t shown on the page;
         without it, it’s shown.
@@ -307,6 +309,11 @@ export default function DevelopersPage() {
         </li>
         <li>
           <code>socials</code>: <code>top</code> (under the header) or <code>bottom</code>.
+        </li>
+        <li>
+          <code>socialStyle</code>: <code>outline</code>, <code>filled</code>, <code>plain</code> or{" "}
+          <code>brand</code>; <code>socialSize</code>: <code>small</code>, <code>medium</code> or{" "}
+          <code>large</code>.
         </li>
       </ul>
 

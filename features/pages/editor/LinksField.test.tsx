@@ -13,11 +13,19 @@ vi.mock("./upload", async (original) => ({ ...(await original<object>()), upload
 
 const errors: ErrorsApi = { error: () => undefined, touch: () => {}, reorder: () => {} };
 
-function Harness({ initial, extras = true }: { initial: LinkItem[]; extras?: boolean }) {
+function Harness({
+  initial,
+  extras = true,
+  errorsApi = errors,
+}: {
+  initial: LinkItem[];
+  extras?: boolean;
+  errorsApi?: ErrorsApi;
+}) {
   const [links, setLinks] = useState(initial);
   return (
     <>
-      <LinksField items={links} onChange={setLinks} max={30} errors={errors} extras={extras} />
+      <LinksField items={links} onChange={setLinks} max={30} errors={errorsApi} extras={extras} />
       <output aria-label="Links">{JSON.stringify(links)}</output>
     </>
   );
@@ -67,7 +75,8 @@ describe("LinksField with extras", () => {
     const from = screen.getByLabelText(/^Show from/);
     await user.type(from, "2030-01-10T09:00");
     expect(links()[0]!.showFrom).toBe(new Date("2030-01-10T09:00").toISOString());
-    expect(screen.getByText("Scheduled")).toBeInTheDocument();
+    // The row says when it shows (ruling 2), in the owner's own time.
+    expect(screen.getByText("From Jan 10, 9:00 AM")).toBeInTheDocument();
   });
 
   it("uploads a link's own image as a small square", async () => {
@@ -95,5 +104,48 @@ describe("LinksField with extras", () => {
     expect(screen.queryByRole("button", { name: "Add header" })).toBeNull();
     expect(screen.queryByRole("combobox", { name: "Link type" })).toBeNull();
     expect(screen.queryByRole("button", { name: /More options/ })).toBeNull();
+  });
+
+  it("opens More options when its schedule has a problem, so Show me can reach it", () => {
+    const failing: ErrorsApi = {
+      ...errors,
+      error: (path) => (path === "links.0.showUntil" ? "End after the start" : undefined),
+    };
+    render(
+      <Harness
+        errorsApi={failing}
+        initial={[
+          {
+            ...newLink(),
+            label: "Sale",
+            url: "shop.com",
+            showFrom: "2030-01-12T00:00:00.000Z",
+            showUntil: "2030-01-10T00:00:00.000Z",
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /More options/ })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByText("End after the start")).toBeInTheDocument();
+  });
+
+  it("says on the row when a scheduled link shows, or that its time has passed", () => {
+    const from = new Date("2030-01-10T09:00").toISOString();
+    const { unmount } = render(
+      <Harness initial={[{ ...newLink(), label: "Sale", url: "shop.com", showFrom: from }]} />,
+    );
+    expect(screen.getByText("From Jan 10, 9:00 AM")).toBeInTheDocument();
+    unmount();
+    render(
+      <Harness
+        initial={[
+          { ...newLink(), label: "Old", url: "shop.com", showUntil: "2020-01-01T00:00:00.000Z" },
+        ]}
+      />,
+    );
+    expect(screen.getByText("Ended")).toBeInTheDocument();
   });
 });

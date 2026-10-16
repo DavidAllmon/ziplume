@@ -15,6 +15,8 @@ test.describe("Link list extras", () => {
       .getByRole("navigation", { name: "Links" })
       .getByRole("link", { name: /Instagram/ });
     await expect(featured).toHaveAttribute("data-featured", "true");
+    // Taller, and marked in the accent color (spec item 8).
+    await expect(featured).toHaveCSS("outline-style", "solid");
     await expect(page.getByRole("link", { name: /Email us/ })).toHaveAttribute(
       "href",
       "mailto:hi@example.com",

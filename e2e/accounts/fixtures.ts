@@ -122,6 +122,8 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
         { label: "Shop", url: "", on: true, kind: "header" },
         { label: "Instagram", url: "instagram.com/ziplume", on: true, featured: true },
         { label: "Email us", url: "hi@example.com", on: true, type: "email" },
+        // No button text, so the address itself is the label, and it has nowhere to break.
+        { label: "", url: "reservations@mariospizzeriaandbakery.com", on: true, type: "email" },
         {
           label: "Later",
           url: "example.com/later",

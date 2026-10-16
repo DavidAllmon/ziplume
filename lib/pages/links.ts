@@ -20,13 +20,20 @@ export const newHeader = (): LinkItem => ({ ...newLink(), kind: "header" });
 // saved before these fields existed may lack them: read each with its default.
 const typeOf = (link: LinkItem) => link.type ?? "web";
 
+/** An address without a scheme someone typed in front of it. */
+const bare = (value: string) => value.trim().replace(/^(mailto|tel|sms):/i, "");
+
 /** Where a link goes, by its type; null when the address isn't usable (or it's a header). */
 export function linkHref(link: LinkItem): string | null {
   if (link.kind === "header") return null;
   const type = typeOf(link);
-  if (type === "email") return mailHref(link.url);
-  if (type === "phone") return telHref(link.url);
-  if (type === "sms") return smsHref(link.url);
+  if (type === "email") return mailHref(bare(link.url));
+  if (type === "phone" || type === "sms") {
+    const number = bare(link.url);
+    // Letters can't be dialed (1-800-FLOWERS, "ext 12"): ask for the digits instead.
+    if (/[a-z]/i.test(number)) return null;
+    return type === "phone" ? telHref(number) : smsHref(number);
+  }
   return safeHref(link.url);
 }
 
@@ -86,4 +93,28 @@ export function linkIcon(link: LinkItem): LinkIcon | null {
   if (type !== "web") return { kind: "type", type };
   const network = networkFromUrl(link.url);
   return network ? { kind: "network", network } : null;
+}
+
+const when = (iso: string) =>
+  new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+/** What a scheduled link's row says: when it shows, or that it has ended; null when unscheduled. */
+export function scheduleNote(link: LinkItem, now: Date): string | null {
+  const from = time(link.showFrom ?? "");
+  const until = time(link.showUntil ?? "");
+  if (from === null && until === null) return null;
+  const at = now.getTime();
+  if (until !== null && at >= until) return "Ended";
+  if (from !== null && at < from) {
+    return until !== null
+      ? `${when(link.showFrom)} – ${when(link.showUntil)}`
+      : `From ${when(link.showFrom)}`;
+  }
+  if (until !== null) return `Until ${when(link.showUntil)}`;
+  return `Since ${when(link.showFrom)}`;
 }

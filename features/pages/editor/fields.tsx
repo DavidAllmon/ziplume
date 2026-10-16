@@ -12,7 +12,15 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useContext, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { ColorField } from "@/components/ui/ColorField";
@@ -21,7 +29,7 @@ import { Select, Textarea, TextInput } from "@/components/ui/inputs";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Toggle } from "@/components/ui/Toggle";
 import { cn } from "@/lib/cn";
-import { newHeader, newLink } from "@/lib/pages/links";
+import { newHeader, newLink, scheduleNote } from "@/lib/pages/links";
 import type { DayHours, LinkItem, LinkType, Media, SocialItem } from "@/lib/pages/types";
 import { SOCIAL_NETWORKS } from "@/lib/pages/types";
 import { mediaUrl } from "@/lib/pages/urls";
@@ -579,9 +587,35 @@ function LinkTypeSelect({
   );
 }
 
+const noSubscribe = () => () => {};
+
+/** When a scheduled link shows. The time is in this browser's zone, so it's drawn after hydration. */
+function ScheduleChip({ link }: { link: LinkItem }) {
+  const inBrowser = useSyncExternalStore(
+    noSubscribe,
+    () => true,
+    () => false,
+  );
+  return (
+    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-fg-muted">
+      {(inBrowser && scheduleNote(link, new Date())) || "Scheduled"}
+    </span>
+  );
+}
+
 /** A link's less-used settings, folded away under its fields. */
-function MoreOptions({ name, children }: { name: string; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
+function MoreOptions({
+  name,
+  problem = false,
+  children,
+}: {
+  name: string;
+  /** Something inside needs fixing: stay open so the person (and Show me) can reach it. */
+  problem?: boolean;
+  children: ReactNode;
+}) {
+  const [toggled, setOpen] = useState(false);
+  const open = toggled || problem;
   const panel = useId();
   return (
     <div className="rounded-control border border-border">
@@ -680,11 +714,7 @@ export function LinksField({
       rowActions={(item, update, i) =>
         item.kind === "header" ? null : (
           <>
-            {extras && (item.showFrom || item.showUntil) && (
-              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-fg-muted">
-                Scheduled
-              </span>
-            )}
+            {extras && (item.showFrom || item.showUntil) && <ScheduleChip link={item} />}
             <ShowSwitch
               checked={item.on}
               onChange={(on) => update({ on })}
@@ -730,7 +760,13 @@ export function LinksField({
               placeholder={address.placeholder}
             />
             {extras && (
-              <MoreOptions name={name(item, i)}>
+              <MoreOptions
+                name={name(item, i)}
+                problem={Boolean(
+                  errors.error(`${prefix}.${i}.showFrom`) ||
+                  errors.error(`${prefix}.${i}.showUntil`),
+                )}
+              >
                 <Labeled label="Icon">
                   <SegmentedControl
                     aria-label="Link icon"

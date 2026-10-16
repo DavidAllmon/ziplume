@@ -114,4 +114,12 @@ describe("links on a Link list", () => {
     };
     expect(validatePage("links", page)).toEqual({ "links.0.url": "Add at least one link" });
   });
+
+  it("never turns letters in a phone number, or a typed scheme, into a wrong address", () => {
+    expect(linkHref(link({ type: "phone", url: "1-800-FLOWERS" }))).toBeNull();
+    expect(linkHref(link({ type: "phone", url: "555-CALL-NOW" }))).toBeNull();
+    expect(linkHref(link({ type: "sms", url: "+1 555 010 2030 ext 12" }))).toBeNull();
+    expect(linkHref(link({ type: "email", url: "mailto:hi@shop.com" }))).toBe("mailto:hi@shop.com");
+    expect(linkHref(link({ type: "phone", url: "tel:+1 555 010 2030" }))).toBe("tel:+15550102030");
+  });
 });

@@ -218,8 +218,9 @@ export function MediaImage({
   );
 }
 
+// Long words (an email address as a label) break rather than widen the page.
 const buttonBase =
-  "flex min-h-12 w-full items-center justify-center gap-2 rounded-(--pg-btn-radius) border-2 px-5 py-3 text-center font-page-heading text-[15px] font-semibold transition-[filter,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring) active:scale-[0.99] [&_svg]:size-5 [&_svg]:shrink-0";
+  "flex min-h-12 w-full items-center justify-center gap-2 rounded-(--pg-btn-radius) border-2 px-5 py-3 text-center font-page-heading text-[15px] font-semibold [overflow-wrap:anywhere] transition-[filter,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring) active:scale-[0.99] [&_svg]:size-5 [&_svg]:shrink-0";
 
 export const pageButton = {
   /** The look's button: its color, style, shape and shadow. */
@@ -264,7 +265,8 @@ export function PageLink({
   );
   const classes = cn(
     pageButton[variant],
-    featured && "min-h-16 text-lg ring-2 ring-(--page-accent) ring-offset-2 ring-offset-(--bg)",
+    // An outline, not a ring: the button's shadow variable can't switch it off.
+    featured && "min-h-16 text-lg outline-2 outline-offset-2 outline-(--page-accent)",
   );
   if (preview) {
     return (

@@ -233,6 +233,24 @@ describe("PageView details", () => {
 });
 
 describe("Link list extras", () => {
+  it("never shows visitors the editor's hint when every link is outside its schedule", () => {
+    const later = {
+      ...newLink(),
+      label: "Later",
+      url: "a.com",
+      showFrom: "2999-01-01T00:00:00.000Z",
+    };
+    const { unmount } = view(
+      "links",
+      { ...PAGE_DEFAULTS.links(), title: "Hi", links: [later] },
+      false,
+    );
+    expect(screen.queryByText("Links you add appear here.")).toBeNull();
+    unmount();
+    view("links", { ...PAGE_DEFAULTS.links(), title: "Hi", links: [later] }, true);
+    expect(screen.getByText("Links you add appear here.")).toBeInTheDocument();
+  });
+
   const page = (links: object[]) => ({ ...PAGE_DEFAULTS.links(), title: "Hi", links });
 
   it("draws headers between links, and skips empty ones", () => {
