@@ -113,6 +113,15 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
         pages: { ...state.pages, [action.pageType]: sanitizePage(action.pageType, action.content) },
       };
 
+    case "setLook": {
+      const page = state.pages[action.pageType];
+      const content = { ...page, look: action.update(page.look) };
+      return {
+        ...state,
+        pages: { ...state.pages, [action.pageType]: sanitizePage(action.pageType, content) },
+      };
+    }
+
     case "setName":
       return { ...state, name: action.name.slice(0, MAX_CODE_NAME) };
 

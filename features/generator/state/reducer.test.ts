@@ -12,6 +12,27 @@ describe("generatorReducer", () => {
     expect(state.content.wifi.ssid).toBe("Home");
   });
 
+  it("changes a page's look from its latest content, keeping color the button color", () => {
+    let state = initialState();
+    state = reduce(state, {
+      type: "setPage",
+      pageType: "links",
+      content: { ...state.pages.links, title: "Latest" },
+    });
+    state = reduce(state, {
+      type: "setLook",
+      pageType: "links",
+      update: (look) => ({
+        ...look,
+        font: "typewriter",
+        button: { ...look.button, color: "#BE123C" },
+      }),
+    });
+    expect(state.pages.links.title).toBe("Latest");
+    expect(state.pages.links.look.font).toBe("typewriter");
+    expect(state.pages.links.color).toBe("#BE123C");
+  });
+
   it("ignores unknown fields", () => {
     const state = initialState();
     expect(reduce(state, { type: "setField", qrType: "url", field: "nope", value: "x" })).toBe(

@@ -61,4 +61,11 @@ describe("TypeGallery", () => {
     expect(screen.queryByRole("region", { name: "Unfinished code" })).toBeNull();
     expect(window.localStorage.getItem("ziplume:draft:v2:u1")).toBeNull();
   });
+
+  it("draws each page type on its own theme", () => {
+    render(<TypeGallery userId="u1" folderId={null} />);
+    const tile = screen.getByRole("link", { name: /^Event/ });
+    expect(tile.querySelector("[data-sketch]")).toHaveAttribute("data-sketch", "grape");
+    expect(screen.getByRole("link", { name: /^Wi-Fi/ }).querySelector("[data-sketch]")).toBeNull();
+  });
 });

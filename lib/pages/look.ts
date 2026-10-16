@@ -45,6 +45,9 @@ export interface PageLook {
   socials: "top" | "bottom";
 }
 
+/** A change to a look: the new look, or how to make it from the latest one. */
+export type LookChange = PageLook | ((look: PageLook) => PageLook);
+
 type ThemeLook = Pick<PageLook, "wallpaper" | "font" | "text" | "button">;
 
 const solid = (color: string): Wallpaper => ({ kind: "solid", color });
@@ -175,6 +178,11 @@ export function themeLook(theme: ThemeId, type: PageTypeId): PageLook {
   };
 }
 
+/** A theme's wallpaper, font, text color and buttons on this look; header, shape and socials stay. */
+export function applyTheme(look: PageLook, theme: ThemeId): PageLook {
+  return { ...look, theme, ...structuredClone(THEMES[theme].look) };
+}
+
 /** A page saved before looks existed: Paper, with its own color on the buttons (spec 6.9). */
 export function legacyLook(type: PageTypeId, raw: Record<string, unknown>): PageLook {
   const look = themeLook("paper", type);
@@ -247,6 +255,11 @@ export function sanitizeLook(raw: unknown, fallback: PageLook): PageLook {
     },
     socials: oneOf(["top", "bottom"] as const, raw.socials, fallback.socials),
   };
+}
+
+/** Whether two looks are the same once stored (key order and color case don't count). */
+export function sameLook(a: PageLook, b: PageLook): boolean {
+  return JSON.stringify(sanitizeLook(a, a)) === JSON.stringify(sanitizeLook(b, b));
 }
 
 /** Sets the page's button color, keeping `color` (read by API users) the same. */

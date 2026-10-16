@@ -155,7 +155,8 @@ test.describe("creating codes", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("codes/new?type=links");
     const addLink = page.getByRole("button", { name: "Add link", exact: true });
-    while ((await page.getByLabel("Button text").count()) < 12) await addLink.click();
+    while ((await page.getByLabel("Button text", { exact: true }).count()) < 12)
+      await addLink.click();
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const preview = page.getByRole("complementary", { name: "Preview" });
     const frame = preview.getByRole("region", { name: "Page preview" }).locator("..");
@@ -178,9 +179,10 @@ test.describe("creating codes", () => {
     await page.setViewportSize({ width: 1280, height: 1800 });
     await page.goto("codes/new?type=links");
     const addLink = page.getByRole("button", { name: "Add link", exact: true });
-    while ((await page.getByLabel("Button text").count()) < 3) await addLink.click();
+    while ((await page.getByLabel("Button text", { exact: true }).count()) < 3)
+      await addLink.click();
     for (const [i, name] of ["A", "B", "C"].entries()) {
-      await page.getByLabel("Button text").nth(i).fill(name);
+      await page.getByLabel("Button text", { exact: true }).nth(i).fill(name);
       await page
         .getByLabel("Link", { exact: true })
         .nth(i)
@@ -188,7 +190,7 @@ test.describe("creating codes", () => {
     }
     const order = () =>
       page
-        .getByLabel("Button text")
+        .getByLabel("Button text", { exact: true })
         .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value));
     expect(await order()).toEqual(["A", "B", "C"]);
 
@@ -256,11 +258,11 @@ test.describe("creating codes", () => {
     await page.getByRole("link", { name: /^Link list/ }).click();
     await expect(page.getByRole("heading", { level: 2, name: "Header" })).toBeVisible();
     await page.getByLabel("Title").fill("Gallery links");
-    await page.getByLabel("Button text").first().fill("Old offer");
+    await page.getByLabel("Button text", { exact: true }).first().fill("Old offer");
     await page.getByLabel("Link", { exact: true }).first().fill("example.com/old");
     await page.getByRole("button", { name: "Add link", exact: true }).click();
     // The new link goes on top, with the cursor in it.
-    await expect(page.getByLabel("Button text").first()).toBeFocused();
+    await expect(page.getByLabel("Button text", { exact: true }).first()).toBeFocused();
     await page.keyboard.type("Shop");
     await page.getByLabel("Link", { exact: true }).first().fill("example.com/shop");
     await page.getByRole("switch", { name: "Show link “Old offer” on the page" }).click();
@@ -309,6 +311,55 @@ test.describe("creating codes", () => {
     await page.goto(await livePage(page));
     await expect(page.getByRole("heading", { level: 1, name: "Spring fair" })).toBeVisible();
     await expect(page.getByText("Town hall")).toBeVisible();
+  });
+
+  test("picks a theme in the editor, and the page shows its wallpaper and font", async ({
+    page,
+  }) => {
+    await page.goto("codes/new?type=links");
+    await page.getByLabel("Title").fill("Forest page");
+    await page.getByLabel("Button text", { exact: true }).first().fill("Shop");
+    await page.getByLabel("Link", { exact: true }).first().fill("example.com/shop");
+    await openTab(page, "Look");
+    await page.getByRole("radio", { name: "Forest" }).click();
+    await expect(page.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
+    await page.getByLabel("Code name").fill("Forest page");
+    await createButton(page).click();
+    await expect(page).toHaveURL(/\/codes\/[0-9a-f-]+#download$/);
+    const live = (await page.getByRole("link", { name: /View page/ }).getAttribute("href"))!;
+    await page.goto(live);
+    const frame = page.locator("[data-page-frame]");
+    expect(await frame.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
+      "rgb(20, 83, 45)",
+    );
+    const font = await page.locator("h1").evaluate((el) => getComputedStyle(el).fontFamily);
+    expect(font.toLowerCase()).toContain("playfair");
+  });
+
+  test("a photo wallpaper uploads, darkens, and shows in the preview", async ({ page }) => {
+    await page.goto("codes/new?type=links");
+    await openTab(page, "Look");
+    await page.getByRole("radio", { name: "Photo" }).click();
+    await page
+      .locator('[data-editor-panel="look"] input[type=file]')
+      .setInputFiles("public/icons/icon-512.png");
+    await expect(page.getByLabel("Darken")).toBeVisible();
+    const preview = page
+      .getByRole("complementary", { name: "Preview" })
+      .locator("[data-page-frame]");
+    await expect
+      .poll(() => preview.evaluate((el) => getComputedStyle(el).backgroundImage))
+      .toContain("url(");
+  });
+
+  test("warns about hard-to-read text and fixes it in one click", async ({ page }) => {
+    await page.goto("codes/new?type=links");
+    await openTab(page, "Look");
+    await page.getByRole("radio", { name: "Custom text color" }).click();
+    await page.getByRole("textbox", { name: "Text color", exact: true }).fill("#0B1430");
+    await expect(page.getByText(/Text is hard to read on this wallpaper/)).toBeVisible();
+    await page.getByRole("button", { name: "Use Auto" }).click();
+    await expect(page.getByText(/Text is hard to read/)).toHaveCount(0);
   });
 
   test("the preview's menu chips don't change the editor's address", async ({ page }) => {

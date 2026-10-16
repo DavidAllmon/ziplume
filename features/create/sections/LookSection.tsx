@@ -1,36 +1,19 @@
 "use client";
 
-import { Card, CardHeader } from "@/components/ui/Card";
-import { AccentField } from "@/features/pages/editor/fields";
-import { LookWarnings } from "@/features/pages/editor/LookWarnings";
-import { withButtonColor } from "@/lib/pages/look";
+import { LookEditor } from "@/features/pages/editor/look/LookEditor";
+import type { PageLook } from "@/lib/pages/look";
 import type { PageContentMap } from "@/lib/pages/types";
 import type { PageTypeId } from "@/lib/qr/types";
 
 /** The Look tab: how a hosted page looks to visitors. */
 export function LookSection({
+  type,
   page,
-  onChange,
+  onLook,
 }: {
+  type: PageTypeId;
   page: PageContentMap[PageTypeId];
-  onChange: (page: PageContentMap[PageTypeId]) => void;
+  onLook: (update: (look: PageLook) => PageLook) => void;
 }) {
-  return (
-    <Card aria-labelledby="look-heading">
-      <CardHeader
-        id="look-heading"
-        title="Page look"
-        description="How your page looks to visitors."
-      />
-      <div className="px-5 pt-4 pb-6 sm:px-6">
-        <div className="flex flex-col gap-3">
-          <AccentField
-            value={page.look.button.color}
-            onChange={(color) => onChange(withButtonColor(page, color))}
-          />
-          <LookWarnings look={page.look} />
-        </div>
-      </div>
-    </Card>
-  );
+  return <LookEditor type={type} page={page} onLook={onLook} />;
 }

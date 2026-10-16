@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { PAGE_TYPE_IDS } from "@/lib/qr/types";
 
-import { legacyLook, sanitizeLook, themeLook, THEME_IDS, THEMES, TYPE_THEME } from "./look";
+import {
+  applyTheme,
+  legacyLook,
+  sanitizeLook,
+  themeLook,
+  THEME_IDS,
+  THEMES,
+  TYPE_THEME,
+} from "./look";
 import { mediaPaths, sanitizePage } from "./sanitize";
 import { PAGE_DEFAULTS } from "./types";
 
@@ -155,5 +163,23 @@ describe("pages saved before looks", () => {
       },
     });
     expect(mediaPaths(page)).toContain(`${UID}/wall.jpg`);
+  });
+});
+
+describe("applyTheme", () => {
+  it("sets the theme's wallpaper, font, text and buttons, keeping header, shape and socials", () => {
+    const look = {
+      ...themeLook("paper", "links"),
+      header: "hero" as const,
+      shape: "rounded" as const,
+      socials: "bottom" as const,
+      font: "typewriter" as const,
+    };
+    expect(applyTheme(look, "ocean")).toEqual({
+      ...themeLook("ocean", "links"),
+      header: "hero",
+      shape: "rounded",
+      socials: "bottom",
+    });
   });
 });
