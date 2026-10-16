@@ -7,7 +7,7 @@ import type { LookChange, PageLook } from "@/lib/pages/look";
 import type { PageContentMap } from "@/lib/pages/types";
 import type { PageTypeId } from "@/lib/qr/types";
 
-import { Labeled } from "./Labeled";
+import { Labeled } from "../Labeled";
 
 /** Classic or Hero (spec 6.4), and the photo's shape where the page has one. */
 export function HeaderCard<K extends PageTypeId>({

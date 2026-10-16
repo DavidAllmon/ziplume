@@ -5,17 +5,11 @@ import { isPageType, isStaticType, type CodeTypeId } from "@/lib/qr/types";
 import type { QrCodeRow } from "@/types/supabase";
 
 import { DEFAULT_SETTINGS, type CreateState } from "./state";
+import { isoToLocalInput } from "@/lib/time/local";
 
 const NO_UTM: UtmParams = { source: "", medium: "", campaign: "", term: "", content: "" };
 
-/** "2026-11-14T19:00" in this browser's time zone, for a datetime-local input; "" for none. */
-export function isoToLocalInput(iso: string | null): string {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
+export { isoToLocalInput };
 
 /** A trackable link's saved address, split into the link and its campaign tags. */
 export function splitDestination(destination: string): { url: string; utm: UtmParams } {

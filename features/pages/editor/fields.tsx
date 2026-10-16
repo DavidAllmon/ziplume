@@ -2,21 +2,33 @@
 
 import { arrayMove, useSortable } from "@dnd-kit/sortable";
 import { Switch } from "@headlessui/react";
-import { FileAudio, FileText, GripVertical, Loader2, Plus, Trash2, Upload } from "lucide-react";
+import {
+  ChevronRight,
+  FileAudio,
+  FileText,
+  GripVertical,
+  Loader2,
+  Plus,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { useContext, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { ColorField } from "@/components/ui/ColorField";
 import { Field } from "@/components/ui/Field";
 import { Select, Textarea, TextInput } from "@/components/ui/inputs";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Toggle } from "@/components/ui/Toggle";
 import { cn } from "@/lib/cn";
-import { newLink } from "@/lib/pages/links";
-import type { DayHours, LinkItem, Media, SocialItem } from "@/lib/pages/types";
+import { newHeader, newLink } from "@/lib/pages/links";
+import type { DayHours, LinkItem, LinkType, Media, SocialItem } from "@/lib/pages/types";
 import { SOCIAL_NETWORKS } from "@/lib/pages/types";
 import { mediaUrl } from "@/lib/pages/urls";
+import { isoToLocalInput, localToIso } from "@/lib/time/local";
 
 import { fileSize, SocialIcon, socialLabel } from "../parts";
+import { Labeled } from "./Labeled";
 import { MediaOwnerContext } from "./MediaOwner";
 import { RowMenu } from "./sortable/RowMenu";
 import { SortableArea } from "./sortable/SortableArea";
@@ -526,6 +538,76 @@ export function ShowSwitch({
   );
 }
 
+const LINK_TYPES: { value: LinkType; label: string }[] = [
+  { value: "web", label: "Website" },
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "sms", label: "Text message" },
+];
+
+const ADDRESS: Record<
+  LinkType,
+  { label: string; type: "url" | "email" | "tel"; placeholder: string }
+> = {
+  web: { label: "Link", type: "url", placeholder: "example.com" },
+  email: { label: "Email address", type: "email", placeholder: "hi@example.com" },
+  phone: { label: "Phone number", type: "tel", placeholder: "+1 555 010 2030" },
+  sms: { label: "Phone number", type: "tel", placeholder: "+1 555 010 2030" },
+};
+
+function LinkTypeSelect({
+  value,
+  onChange,
+}: {
+  value: LinkType;
+  onChange: (type: LinkType) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-sm font-medium text-fg">
+        Link type
+      </label>
+      <Select id={id} value={value} onChange={(event) => onChange(event.target.value as LinkType)}>
+        {LINK_TYPES.map((type) => (
+          <option key={type.value} value={type.value}>
+            {type.label}
+          </option>
+        ))}
+      </Select>
+    </div>
+  );
+}
+
+/** A link's less-used settings, folded away under its fields. */
+function MoreOptions({ name, children }: { name: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const panel = useId();
+  return (
+    <div className="rounded-control border border-border">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panel}
+        aria-label={`More options for ${name}`}
+        onClick={() => setOpen(!open)}
+        className="flex min-h-11 w-full items-center gap-2 rounded-control px-3 text-left text-sm font-semibold text-fg focus-ring hover:bg-surface-2"
+      >
+        <ChevronRight
+          aria-hidden
+          className={cn("size-4 shrink-0 transition-transform", open && "rotate-90")}
+        />
+        More options
+      </button>
+      {open && (
+        <div id={panel} className="flex flex-col gap-4 border-t border-border px-3 pt-3 pb-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function LinksField({
   label = "Links",
   items,
@@ -534,6 +616,7 @@ export function LinksField({
   errors,
   prefix = "links",
   itemName = "link",
+  extras = false,
 }: {
   label?: string;
   items: LinkItem[];
@@ -543,8 +626,11 @@ export function LinksField({
   prefix?: string;
   /** "link", or "button" on a Business page. */
   itemName?: string;
+  /** The Link list's extras: types, icons, featured, schedules and headers. */
+  extras?: boolean;
 }) {
-  const name = (item: LinkItem, i: number) => rowName(itemName, item.label, i);
+  const name = (item: LinkItem, i: number) =>
+    rowName(item.kind === "header" ? "header" : itemName, item.label, i);
   return (
     <SortableList
       label={label}
@@ -558,35 +644,149 @@ export function LinksField({
       itemLabel={name}
       newItem={newLink}
       off={(item) => !item.on}
-      rowActions={(item, update, i) => (
-        <ShowSwitch
-          checked={item.on}
-          onChange={(on) => update({ on })}
-          label={`Show ${name(item, i)} on the page`}
-        />
-      )}
-      render={(item, update, i) => (
-        <>
-          <TextField
-            label="Button text"
-            value={item.label}
-            onChange={(labelText) => update({ label: labelText })}
-            path={`${prefix}.${i}.label`}
-            errors={errors}
-            placeholder="My website"
-          />
-          <TextField
-            label="Link"
-            type="url"
-            inputMode="url"
-            value={item.url}
-            onChange={(url) => update({ url })}
-            path={`${prefix}.${i}.url`}
-            errors={errors}
-            placeholder="example.com"
-          />
-        </>
-      )}
+      adder={
+        extras
+          ? ({ add }) => (
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={items.length >= max}
+                    onClick={() => add(newLink())}
+                    className={buttonClasses("outline", "md")}
+                  >
+                    <Plus aria-hidden /> Add {itemName}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={items.length >= max}
+                    onClick={() => add(newHeader())}
+                    className={buttonClasses("outline", "md")}
+                  >
+                    <Plus aria-hidden /> Add header
+                  </button>
+                </div>
+                {items.length >= max && (
+                  <p className="text-sm text-fg-muted">
+                    You can add up to {max} links and headers.
+                  </p>
+                )}
+              </div>
+            )
+          : undefined
+      }
+      rowActions={(item, update, i) =>
+        item.kind === "header" ? null : (
+          <>
+            {extras && (item.showFrom || item.showUntil) && (
+              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-fg-muted">
+                Scheduled
+              </span>
+            )}
+            <ShowSwitch
+              checked={item.on}
+              onChange={(on) => update({ on })}
+              label={`Show ${name(item, i)} on the page`}
+            />
+          </>
+        )
+      }
+      render={(item, update, i) => {
+        if (item.kind === "header") {
+          return (
+            <TextField
+              label="Header text"
+              value={item.label}
+              onChange={(labelText) => update({ label: labelText })}
+              path={`${prefix}.${i}.label`}
+              errors={errors}
+              placeholder="Shop"
+            />
+          );
+        }
+        const type = extras ? (item.type ?? "web") : "web";
+        const address = ADDRESS[type];
+        return (
+          <>
+            {extras && <LinkTypeSelect value={type} onChange={(next) => update({ type: next })} />}
+            <TextField
+              label="Button text"
+              value={item.label}
+              onChange={(labelText) => update({ label: labelText })}
+              path={`${prefix}.${i}.label`}
+              errors={errors}
+              placeholder="My website"
+            />
+            <TextField
+              label={address.label}
+              type={address.type}
+              inputMode={address.type}
+              value={item.url}
+              onChange={(url) => update({ url })}
+              path={`${prefix}.${i}.url`}
+              errors={errors}
+              placeholder={address.placeholder}
+            />
+            {extras && (
+              <MoreOptions name={name(item, i)}>
+                <Labeled label="Icon">
+                  <SegmentedControl
+                    aria-label="Link icon"
+                    size="touch"
+                    value={item.icon ?? "auto"}
+                    onChange={(icon) => update({ icon })}
+                    options={[
+                      { value: "auto", label: "Auto" },
+                      { value: "image", label: "Image" },
+                      { value: "none", label: "None" },
+                    ]}
+                  />
+                </Labeled>
+                {item.icon === "image" && (
+                  <MediaField
+                    label="Icon image"
+                    kind="image"
+                    value={item.image}
+                    onChange={(image) => update({ image })}
+                    maxSide={256}
+                  />
+                )}
+                <ToggleField
+                  label="Featured"
+                  description="Drawn taller, in the accent color."
+                  checked={item.featured}
+                  onChange={(on) =>
+                    onChange(items.map((l, j) => ({ ...l, featured: j === i ? on : false })))
+                  }
+                />
+                <div className="grid gap-4 @min-[28rem]:grid-cols-2">
+                  <TextField
+                    label="Show from"
+                    type="datetime-local"
+                    value={isoToLocalInput(item.showFrom)}
+                    onChange={(value) => update({ showFrom: localToIso(value) ?? "" })}
+                    path={`${prefix}.${i}.showFrom`}
+                    errors={errors}
+                    optional
+                  />
+                  <TextField
+                    label="Show until"
+                    type="datetime-local"
+                    value={isoToLocalInput(item.showUntil)}
+                    onChange={(value) => update({ showUntil: localToIso(value) ?? "" })}
+                    path={`${prefix}.${i}.showUntil`}
+                    errors={errors}
+                    optional
+                  />
+                </div>
+                <p className="text-sm text-fg-muted">
+                  Times are in your time zone. Leave them blank to always show the link.
+                </p>
+              </MoreOptions>
+            )}
+          </>
+        );
+      }}
     />
   );
 }

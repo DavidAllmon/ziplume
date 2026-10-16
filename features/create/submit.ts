@@ -4,6 +4,7 @@ import { normalizeUrl } from "@/lib/qr/normalize";
 import { isPageType } from "@/lib/qr/types";
 
 import { isTrackable, type CreateState } from "./state";
+import { localToIso } from "@/lib/time/local";
 
 /** A Link's address with campaign tags added (when any are filled in). */
 export function taggedDestination(url: string, utm: UtmParams): string {
@@ -16,9 +17,7 @@ export function taggedDestination(url: string, utm: UtmParams): string {
   }
 }
 
-/** A datetime-local value (the viewer's time zone) as an ISO time, or null when empty. */
-export const localToIso = (value: string): string | null =>
-  value ? new Date(value).toISOString() : null;
+export { localToIso };
 
 /**
  * What to send to createCodeWithSettings. Settings only apply to trackable codes: a static code

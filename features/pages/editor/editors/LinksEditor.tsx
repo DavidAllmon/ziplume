@@ -37,6 +37,7 @@ export function LinksEditor({ page, set, errors }: EditorProps<LinksPage>) {
       </FormCard>
       <FormCard title="Links">
         <LinksField
+          extras
           items={page.links}
           onChange={(links) => set({ links })}
           max={LIMITS.links}
