@@ -16,4 +16,14 @@ describe("JoinedTip", () => {
     await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByText(/You’re in/)).toBeNull();
   });
+
+  it("keeps the router's history state when it drops ?joined, so Back still works", () => {
+    // A full page load (an Accept tapped before the page was ready) lands here with Next's
+    // history state already in place.
+    const state = { __NA: true, tree: "app" };
+    window.history.replaceState(state, "", "/codes?joined=1");
+    render(<JoinedTip ownerName="Olivia Owner" />);
+    expect(window.location.search).toBe("");
+    expect(window.history.state).toEqual(state);
+  });
 });

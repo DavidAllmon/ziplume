@@ -10,7 +10,12 @@ export function JoinedTip({ ownerName }: { ownerName: string }) {
     // Nothing is stored for it; dropping ?joined means a reload won't show it again.
     const url = new URL(window.location.href);
     url.searchParams.delete("joined");
-    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    // Keep the router's own history state, or Back stops working after a full page load.
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
   }, []);
   if (!open) return null;
   return (

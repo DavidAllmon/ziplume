@@ -350,4 +350,38 @@ describe("an upload that finishes later", () => {
     expect(page.title).toBe("Edited");
     expect(page.avatar).toEqual(avatar);
   });
+
+  // PDF and audio fill the title from the file name, but only when there's no title yet.
+  function Uploading<K extends "pdf" | "audio">({ type }: { type: K }) {
+    const [page, setPage] = useState(PAGE_DEFAULTS[type]() as PageContentMap[K]);
+    return (
+      <>
+        <PageEditor
+          type={type}
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+
+  it.each([
+    ["pdf", "menu.pdf", "application/pdf"],
+    ["audio", "menu.mp3", "audio/mpeg"],
+  ] as const)("keeps a %s title typed while its file uploads", async (type, name, mime) => {
+    const user = userEvent.setup();
+    let finish!: (result: Awaited<ReturnType<typeof uploadMedia>>) => void;
+    vi.mocked(uploadMedia).mockImplementation(() => new Promise((r) => (finish = r)));
+    const { container } = render(<Uploading type={type} />);
+    const input = container.querySelector<HTMLInputElement>("input[type=file]")!;
+    await user.upload(input, new File(["x"], name, { type: mime }));
+    await user.type(screen.getByRole("textbox", { name: /^Title/ }), "Spring menu");
+    const file = { path: `${UID}/${name}`, name, type: mime, size: 1 };
+    await act(async () => finish({ ok: true, media: file }));
+    const page = JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+    expect(page.title).toBe("Spring menu");
+    expect(page.file).toEqual(file);
+  });
 });

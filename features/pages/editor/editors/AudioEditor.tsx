@@ -20,8 +20,12 @@ export function AudioEditor({
           kind="audio"
           field="file"
           value={page.file}
+          // From the latest page: a title typed while the file uploaded stays.
           onChange={(file) =>
-            set({ file, title: page.title || file?.name.replace(/\.\w+$/, "") || "" })
+            set((latest) => ({
+              file,
+              title: latest.title || file?.name.replace(/\.\w+$/, "") || "",
+            }))
           }
           hint="MP3, M4A, WAV or OGG, up to 50 MB."
           error={touched ? errors.error("file") : undefined}
