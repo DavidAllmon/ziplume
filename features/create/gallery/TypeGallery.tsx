@@ -9,8 +9,10 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { TextInput } from "@/components/ui/inputs";
 import { TYPE_ICONS } from "@/features/generator/content/registry";
+import { LookSketch } from "@/features/pages/look/LookSketch";
 import { cn } from "@/lib/cn";
-import type { CodeTypeId } from "@/lib/qr/types";
+import { themeLook, TYPE_THEME } from "@/lib/pages/look";
+import { isPageType, type CodeTypeId, type PageTypeId } from "@/lib/qr/types";
 
 import { clearDraft, parseDraft, rawDraft } from "../draft";
 import { galleryDescription, galleryGroups, galleryLabel } from "./gallery";
@@ -20,6 +22,14 @@ function subscribe(onChange: () => void) {
   window.addEventListener("storage", onChange);
   return () => window.removeEventListener("storage", onChange);
 }
+
+/** The sketch's header, as the type draws it (spec 6.4). */
+const sketchHeader = (id: PageTypeId) =>
+  id === "coupon" || id === "event"
+    ? "banner"
+    : id === "pdf" || id === "images" || id === "video"
+      ? "none"
+      : "classic";
 
 const tileClass =
   "flex h-full min-h-11 flex-col gap-1 rounded-control border border-border bg-surface p-3 text-left transition-colors focus-ring hover:border-field-border hover:bg-surface-2";
@@ -113,6 +123,14 @@ export function TypeGallery({ userId, folderId }: { userId: string; folderId: st
               return (
                 <li key={id}>
                   <Link href={href(id)} className={tileClass}>
+                    {isPageType(id) && (
+                      // A tiny drawing of the page, on its type's own theme.
+                      <LookSketch
+                        look={themeLook(TYPE_THEME[id], id)}
+                        header={sketchHeader(id)}
+                        className="mb-1 h-20 w-full"
+                      />
+                    )}
                     <span className="flex items-center gap-2 text-sm font-semibold text-fg">
                       <Icon aria-hidden className="size-4 shrink-0" />
                       {galleryLabel(id)}
