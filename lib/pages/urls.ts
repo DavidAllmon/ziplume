@@ -36,6 +36,9 @@ export const telHref = (number: string) => {
   return cleaned.replace(/\D/g, "").length >= 3 ? `tel:${cleaned}` : null;
 };
 
+/** A text-message link: the number's digits (and a leading +). */
+export const smsHref = (number: string) => telHref(number)?.replace(/^tel:/, "sms:") ?? null;
+
 export const mailHref = (address: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address.trim()) ? `mailto:${address.trim()}` : null;
 

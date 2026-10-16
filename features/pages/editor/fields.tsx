@@ -11,6 +11,7 @@ import { Field } from "@/components/ui/Field";
 import { Select, Textarea, TextInput } from "@/components/ui/inputs";
 import { Toggle } from "@/components/ui/Toggle";
 import { cn } from "@/lib/cn";
+import { newLink } from "@/lib/pages/links";
 import type { DayHours, LinkItem, Media, SocialItem } from "@/lib/pages/types";
 import { SOCIAL_NETWORKS } from "@/lib/pages/types";
 import { mediaUrl } from "@/lib/pages/urls";
@@ -555,7 +556,7 @@ export function LinksField({
       path={prefix}
       errors={errors}
       itemLabel={name}
-      newItem={() => ({ label: "", url: "", on: true })}
+      newItem={newLink}
       off={(item) => !item.on}
       rowActions={(item, update, i) => (
         <ShowSwitch

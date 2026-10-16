@@ -34,6 +34,13 @@ const link: Record<string, Spec> = {
   url: str(2048),
   // Pages saved before links could be switched off show every link.
   on: { kind: "bool", fallback: true },
+  kind: { kind: "enum", values: ["link", "header"] },
+  type: { kind: "enum", values: ["web", "email", "phone", "sms"] },
+  icon: { kind: "enum", values: ["auto", "none", "image"] },
+  image: media,
+  featured: bool,
+  showFrom: str(30),
+  showUntil: str(30),
 };
 const social: Spec = {
   kind: "list",
