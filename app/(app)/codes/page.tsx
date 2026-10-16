@@ -9,8 +9,10 @@ import { CodesView } from "@/features/codes/list/CodesView";
 import { FolderActions } from "@/features/codes/list/FolderActions";
 import { FolderSelect } from "@/features/codes/list/FolderSelect";
 import { formatCount } from "@/features/dashboard/format";
+import { JoinedTip } from "@/features/teams/JoinedTip";
+import { PeopleSwitch } from "@/features/teams/PeopleSwitch";
 import { requireUser } from "@/lib/auth/server";
-import { accessTo, personLabel } from "@/lib/teams/access";
+import { codesScope, personLabel } from "@/lib/teams/access";
 import { loadTeam } from "@/lib/teams/server";
 
 export const metadata: Metadata = { title: "Codes" };
@@ -18,46 +20,73 @@ export const metadata: Metadata = { title: "Codes" };
 export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
   const params = await searchParams;
   const requested = typeof params.workspace === "string" ? params.workspace : null;
+  const view = typeof params.view === "string" ? params.view : null;
   const folderParam = typeof params.folder === "string" ? params.folder : null;
   const { supabase, user } = await requireUser(
-    requested ? `/codes?workspace=${requested}` : "/codes",
+    requested
+      ? `/codes?workspace=${requested}`
+      : view === "everyone"
+        ? "/codes?view=everyone"
+        : "/codes",
   );
   const team = await loadTeam(supabase);
-  // Anyone who isn't a teammate (or no one asked for) shows your own codes.
-  const access = (requested && accessTo(team, user.id, requested)) || {
-    self: true,
-    canEdit: true,
-    person: null,
-  };
-  // Teammates can read each other's codes, so always filter to the person shown.
-  const ownerId = access.person?.userId ?? user.id;
-  const teamId = access.person?.userId ?? null;
-  const canEdit = access.canEdit;
-  const label = access.person ? personLabel(access.person) : null;
+  // Someone you can't see, or Everyone while you're on your own, shows your own codes.
+  const scope = codesScope(team, user.id, { workspace: requested, view });
+  const person = scope.kind === "person" ? scope.person : null;
+  const everyone = scope.kind === "everyone";
+  const own = scope.kind === "self";
+  const canEditOthers =
+    scope.kind === "everyone"
+      ? scope.canEditOthers
+      : scope.kind === "person"
+        ? scope.canEdit
+        : true;
+  const ownerId = person?.userId ?? user.id;
+  // Teammates can read each other's codes, so always filter to the people shown.
+  const owners = everyone ? team.map((p) => p.userId) : [ownerId];
+  const label = person ? personLabel(person) : null;
 
   const { data: folders } = await supabase
     .from("folders")
     .select("*")
-    .eq("user_id", ownerId)
+    .in("user_id", owners)
     .order("name");
-  // Only a folder of this workspace counts; anything else shows all codes.
-  const folder = (folders ?? []).find((f) => f.id === folderParam) ?? null;
+  // Only a folder of the person shown counts; Everyone has none (folders belong to one person).
+  const folder = everyone
+    ? null
+    : ((folders ?? []).find((f) => f.id === folderParam && f.user_id === ownerId) ?? null);
   let query = supabase
     .from("qr_codes")
     .select("*")
-    .eq("user_id", ownerId)
+    .in("user_id", owners)
     .order("updated_at", { ascending: false });
   if (folder) query = query.eq("folder_id", folder.id);
-  const [{ data: codes }, { data: scans }] = await Promise.all([
+  const [{ data: codes }, scanLists] = await Promise.all([
     query,
-    supabase.rpc("recent_scan_counts", { p_owner: ownerId }),
+    Promise.all(owners.map((owner) => supabase.rpc("recent_scan_counts", { p_owner: owner }))),
   ]);
   const list = codes ?? [];
   const recentScans = Object.fromEntries(
-    (scans ?? []).map((row) => [row.code_id, Number(row.scans)]),
+    scanLists.flatMap(({ data }) => data ?? []).map((row) => [row.code_id, Number(row.scans)]),
   );
   const totalScans = list.reduce((sum, code) => sum + (recentScans[code.id] ?? 0), 0);
-  const title = folder ? folder.name : label ? `${label}’s codes` : "All codes";
+  const title = folder
+    ? folder.name
+    : everyone
+      ? "Everyone’s codes"
+      : label
+        ? `${label}’s codes`
+        : "All codes";
+  const roleNote = everyone
+    ? canEditOthers
+      ? "You can edit these"
+      : "You can view teammates’ codes and edit your own"
+    : label
+      ? canEditOthers
+        ? "You can edit these"
+        : "You can view these"
+      : null;
+  const teamOwner = team.find((p) => p.role === "owner" && !p.isMe) ?? null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -65,17 +94,19 @@ export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
         title={title}
         description={
           <>
-            {label && <>{canEdit ? "You can edit these" : "You can view these"} · </>}
+            {roleNote && <>{roleNote} · </>}
             {formatCount(list.length)} {list.length === 1 ? "code" : "codes"} ·{" "}
             {formatCount(totalScans)} {totalScans === 1 ? "scan" : "scans"} in the last 30 days
           </>
         }
         actions={
-          (access.self || (canEdit && folder)) && (
+          (own || everyone || (canEditOthers && folder)) && (
             <>
-              {folder && canEdit && <FolderActions folder={folder} teamId={teamId} />}
-              {/* New codes always go in your own space, so creating only shows there. */}
-              {access.self && (
+              {folder && canEditOthers && (
+                <FolderActions folder={folder} teamId={person?.userId ?? null} />
+              )}
+              {/* New codes always go in your own space, so creating shows with your codes. */}
+              {(own || everyone) && (
                 <>
                   <Link
                     href={bulkCreateHref({ folderId: folder?.id, ownerId: null })}
@@ -96,30 +127,40 @@ export default async function CodesPage({ searchParams }: PageProps<"/codes">) {
         }
       />
 
-      {!canEdit && (
+      {team.length > 0 && (
+        <PeopleSwitch
+          team={team}
+          current={everyone ? "everyone" : person ? person.userId : "self"}
+        />
+      )}
+      {params.joined === "1" && teamOwner && <JoinedTip ownerName={personLabel(teamOwner)} />}
+
+      {person && !canEditOthers && (
         <p className="flex items-center gap-2 rounded-control bg-surface-2 px-4 py-3 text-sm text-fg-muted">
           <Eye aria-hidden className="size-4 shrink-0" />
           You can view {label}’s codes and their analytics. Your own codes are under My codes.
         </p>
       )}
 
-      <FolderSelect
-        folders={folders ?? []}
-        current={folder?.id ?? null}
-        ownerId={ownerId}
-        teamId={teamId}
-        canEdit={access.self}
-      />
+      {!everyone && (
+        <FolderSelect
+          folders={folders ?? []}
+          current={folder?.id ?? null}
+          ownerId={ownerId}
+          teamId={person?.userId ?? null}
+          canEdit={own}
+        />
+      )}
 
       <CodesView
-        key={`${ownerId}:${folder?.id ?? "all"}`}
+        key={`${scope.kind}:${ownerId}:${folder?.id ?? "all"}`}
         userId={user.id}
         codes={list}
         folders={folders ?? []}
         folder={folder}
-        ownerId={ownerId}
-        teamId={teamId}
-        canEdit={canEdit}
+        scope={scope.kind}
+        canEditOthers={canEditOthers}
+        team={team}
         recentScans={recentScans}
       />
     </div>

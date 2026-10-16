@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Users } from "lucide-react";
 import Link from "next/link";
 
 import { Avatar } from "@/components/ui/Avatar";
@@ -20,6 +20,8 @@ interface WorkspaceSwitcherProps {
   teams: ShellTeam[];
   /** The team whose codes are shown, or null for your own. */
   current: ShellTeam | null;
+  /** Everyone's codes are shown. */
+  everyone?: boolean;
   /** Icon-only on tablets until the rail is expanded. */
   collapsed?: boolean;
 }
@@ -29,9 +31,10 @@ export function WorkspaceSwitcher({
   user,
   teams,
   current,
+  everyone = false,
   collapsed = false,
 }: WorkspaceSwitcherProps) {
-  const label = current ? `${current.label}’s codes` : "My codes";
+  const label = everyone ? "Everyone’s codes" : current ? `${current.label}’s codes` : "My codes";
   return (
     <Menu as="div" className="relative min-w-0">
       <MenuButton
@@ -41,13 +44,17 @@ export function WorkspaceSwitcher({
           collapsed && "rail:justify-center rail:border-transparent rail:px-0",
         )}
       >
-        <Avatar
-          id={current?.ownerId ?? user.id}
-          name={current ? current.label : user.name}
-          email={current ? null : user.email}
-          src={current ? current.avatarUrl : user.avatarUrl}
-          size="sm"
-        />
+        {everyone ? (
+          <EveryoneIcon />
+        ) : (
+          <Avatar
+            id={current?.ownerId ?? user.id}
+            name={current ? current.label : user.name}
+            email={current ? null : user.email}
+            src={current ? current.avatarUrl : user.avatarUrl}
+            size="sm"
+          />
+        )}
         <span className={cn("min-w-0 flex-1 truncate", collapsed && "rail:sr-only")}>{label}</span>
         <ChevronsUpDown
           aria-hidden
@@ -65,7 +72,7 @@ export function WorkspaceSwitcher({
               size="sm"
             />
             <span className="min-w-0 flex-1 truncate">My codes</span>
-            {!current && <Check aria-hidden className="text-fg-muted" />}
+            {!current && !everyone && <Check aria-hidden className="text-fg-muted" />}
           </Link>
         </MenuItem>
         {teams.map((team) => (
@@ -79,6 +86,15 @@ export function WorkspaceSwitcher({
             </Link>
           </MenuItem>
         ))}
+        {teams.length > 0 && (
+          <MenuItem>
+            <Link href="/codes?view=everyone" className={menuItemClass}>
+              <EveryoneIcon />
+              <span className="min-w-0 flex-1 truncate">Everyone’s codes</span>
+              {everyone && <Check aria-hidden className="text-fg-muted" />}
+            </Link>
+          </MenuItem>
+        )}
         {teams.length === 0 && (
           <p className="px-3 py-2 text-sm text-fg-muted">
             Teammates show up here once you invite someone or join a team.
@@ -86,5 +102,17 @@ export function WorkspaceSwitcher({
         )}
       </MenuItems>
     </Menu>
+  );
+}
+
+/** Everyone in the team, where a person's photo would go. */
+function EveryoneIcon() {
+  return (
+    <span
+      aria-hidden
+      className="grid size-8 shrink-0 place-items-center rounded-full bg-surface-2 text-fg-muted"
+    >
+      <Users className="size-4" />
+    </span>
   );
 }
