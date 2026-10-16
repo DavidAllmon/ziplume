@@ -126,7 +126,7 @@ describe("EditorLayout", () => {
     window.history.replaceState(null, "", "/codes/new?type=links#look");
     renderLayout({ type: "links" });
     expect(screen.getByRole("tab", { name: "Look" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("heading", { name: "Page look" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Theme" })).toBeVisible();
   });
 
   it("shows the page for Content and Look, and the code for the QR code tab", async () => {

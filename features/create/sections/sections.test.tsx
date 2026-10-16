@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ContentEditor } from "@/features/generator/content/types";
+import { ToastProvider } from "@/components/ui/Toast";
 import { initialState } from "@/features/generator/state/defaults";
-import { withButtonColor } from "@/lib/pages/look";
 import { PAGE_DEFAULTS } from "@/lib/pages/types";
 import type { CodeTypeId } from "@/lib/qr/types";
 import type { FolderRow } from "@/types/supabase";
@@ -172,24 +172,6 @@ describe("SettingsSection", () => {
   });
 });
 
-describe("LookSection", () => {
-  it("warns when the color is hard to see on the page", () => {
-    const page = withButtonColor(PAGE_DEFAULTS.links(), "#0A1330");
-    render(<LookSection page={page} onChange={vi.fn()} />);
-    expect(screen.getByText(/Buttons are hard to see/)).toBeInTheDocument();
-  });
-
-  it("changes the page's color", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    const page = PAGE_DEFAULTS.links();
-    render(<LookSection page={page} onChange={onChange} />);
-    expect(screen.getByRole("heading", { name: "Page look" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Use #BE123C" }));
-    expect(onChange).toHaveBeenCalledWith(withButtonColor(page, "#BE123C"));
-  });
-});
-
 describe("FolderSection", () => {
   it("files the code in a folder", async () => {
     const user = userEvent.setup();
@@ -294,13 +276,17 @@ describe("the sections when editing a saved code", () => {
 });
 
 describe("LookSection", () => {
-  it("sets the page's button color, and color with it", async () => {
+  it("is the Look tab: picking a theme changes the page's look and color", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<LookSection page={PAGE_DEFAULTS.links()} onChange={onChange} />);
-    await user.click(screen.getByRole("button", { name: "Use #BE123C" }));
+    render(
+      <ToastProvider>
+        <LookSection type="links" page={PAGE_DEFAULTS.links()} onChange={onChange} />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByRole("radio", { name: "Ocean" }));
     const next = onChange.mock.lastCall![0];
-    expect(next.look.button.color).toBe("#BE123C");
-    expect(next.color).toBe("#BE123C");
+    expect(next.look.theme).toBe("ocean");
+    expect(next.color).toBe(next.look.button.color);
   });
 });

@@ -17,6 +17,8 @@ import { PreviewColumn, type CreateControls, type PreviewView } from "./PreviewC
 import { ContentSection } from "./sections/ContentSection";
 import { DesignSection } from "./sections/DesignSection";
 import { FolderSection } from "./sections/FolderSection";
+import { MediaOwnerContext } from "@/features/pages/editor/MediaOwner";
+
 import { LookSection } from "./sections/LookSection";
 import { SettingsSection, type SavedSettings } from "./sections/SettingsSection";
 import { TAB_LABELS, tabsFor, type EditorTab } from "./tabs";
@@ -104,7 +106,14 @@ export function EditorLayout({
     ),
     look:
       pageType && page ? (
-        <LookSection page={page} onChange={(next) => draft.setPage(pageType, next)} />
+        // Photo wallpapers are stored with the code owner's files.
+        <MediaOwnerContext value={mediaOwner}>
+          <LookSection
+            type={pageType}
+            page={page}
+            onChange={(next) => draft.setPage(pageType, next)}
+          />
+        </MediaOwnerContext>
       ) : null,
     qr: (
       <DesignSection
