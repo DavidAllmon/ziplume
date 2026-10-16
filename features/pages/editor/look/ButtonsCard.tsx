@@ -6,6 +6,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { resolveLook } from "@/features/pages/look/resolve";
 import type { LookChange, PageLook } from "@/lib/pages/look";
 
+import { Labeled } from "./Labeled";
 import { Swatches } from "./Swatches";
 import { Warnings } from "./Warning";
 
@@ -38,39 +39,45 @@ export function ButtonsCard({
     <Card aria-labelledby="look-buttons">
       <CardHeader id="look-buttons" title="Buttons" />
       <div className="flex flex-col gap-4 px-5 pt-4 pb-6 sm:px-6">
-        <SegmentedControl
-          aria-label="Button shape"
-          size="touch"
-          value={b.shape}
-          onChange={(shape) => set({ shape })}
-          options={[
-            { value: "square", label: "Square" },
-            { value: "rounded", label: "Rounded" },
-            { value: "pill", label: "Pill" },
-          ]}
-        />
-        <SegmentedControl
-          aria-label="Button style"
-          size="touch"
-          value={b.style}
-          onChange={(style) => set({ style })}
-          options={[
-            { value: "solid", label: "Solid" },
-            { value: "outline", label: "Outline" },
-            { value: "soft", label: "Soft" },
-          ]}
-        />
-        <SegmentedControl
-          aria-label="Button shadow"
-          size="touch"
-          value={b.shadow}
-          onChange={(shadow) => set({ shadow })}
-          options={[
-            { value: "none", label: "None" },
-            { value: "soft", label: "Soft" },
-            { value: "hard", label: "Hard" },
-          ]}
-        />
+        <Labeled label="Shape">
+          <SegmentedControl
+            aria-label="Button shape"
+            size="touch"
+            value={b.shape}
+            onChange={(shape) => set({ shape })}
+            options={[
+              { value: "square", label: "Square" },
+              { value: "rounded", label: "Rounded" },
+              { value: "pill", label: "Pill" },
+            ]}
+          />
+        </Labeled>
+        <Labeled label="Style">
+          <SegmentedControl
+            aria-label="Button style"
+            size="touch"
+            value={b.style}
+            onChange={(style) => set({ style })}
+            options={[
+              { value: "solid", label: "Solid" },
+              { value: "outline", label: "Outline" },
+              { value: "soft", label: "Soft" },
+            ]}
+          />
+        </Labeled>
+        <Labeled label="Shadow">
+          <SegmentedControl
+            aria-label="Button shadow"
+            size="touch"
+            value={b.shadow}
+            onChange={(shadow) => set({ shadow })}
+            options={[
+              { value: "none", label: "None" },
+              { value: "soft", label: "Soft" },
+              { value: "hard", label: "Hard" },
+            ]}
+          />
+        </Labeled>
         <Swatches
           name="Button color"
           colors={COLORS}
@@ -81,22 +88,25 @@ export function ButtonsCard({
           <ColorField label="Button color" value={b.color} onChange={(color) => set({ color })} />
         </div>
         <Warnings look={look} onLook={onLook} at="buttonColor" />
-        <SegmentedControl
-          aria-label="Button text color mode"
-          size="touch"
-          value={textMode}
-          onChange={(next) =>
-            set({ text: next === "auto" ? "auto" : resolveLook(look).buttonText })
-          }
-          options={[
-            { value: "auto", label: "Auto", ariaLabel: "Auto button text" },
-            { value: "custom", label: "Custom", ariaLabel: "Custom button text" },
-          ]}
-        />
+        <Labeled label="Text color">
+          <SegmentedControl
+            aria-label="Button text color mode"
+            size="touch"
+            value={textMode}
+            onChange={(next) =>
+              set({ text: next === "auto" ? "auto" : resolveLook(look).buttonText })
+            }
+            options={[
+              { value: "auto", label: "Auto", ariaLabel: "Auto button text" },
+              { value: "custom", label: "Custom", ariaLabel: "Custom button text" },
+            ]}
+          />
+        </Labeled>
         {textMode === "custom" && (
           <div className="max-w-56">
             <ColorField
               label="Button text color"
+              hideLabel
               value={b.text}
               onChange={(text) => set({ text })}
             />

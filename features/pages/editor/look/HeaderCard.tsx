@@ -7,6 +7,8 @@ import type { LookChange, PageLook } from "@/lib/pages/look";
 import type { PageContentMap } from "@/lib/pages/types";
 import type { PageTypeId } from "@/lib/qr/types";
 
+import { Labeled } from "./Labeled";
+
 /** Classic or Hero (spec 6.4), and the photo's shape where the page has one. */
 export function HeaderCard<K extends PageTypeId>({
   type,
@@ -25,28 +27,32 @@ export function HeaderCard<K extends PageTypeId>({
     <Card aria-labelledby="look-header">
       <CardHeader id="look-header" title="Header" />
       <div className="flex flex-col gap-4 px-5 pt-4 pb-6 sm:px-6">
-        <SegmentedControl
-          aria-label="Header layout"
-          size="touch"
-          value={look.header}
-          onChange={(header) => onLook({ ...look, header })}
-          options={[
-            { value: "classic", label: "Classic" },
-            { value: "hero", label: "Hero" },
-          ]}
-        />
-        {!image && <p className="text-sm text-fg-muted">Add a photo to use Hero</p>}
-        {hasShape(type) && classic && (
+        <Labeled label="Layout">
           <SegmentedControl
-            aria-label="Image shape"
+            aria-label="Header layout"
             size="touch"
-            value={look.shape}
-            onChange={(shape) => onLook({ ...look, shape })}
+            value={look.header}
+            onChange={(header) => onLook({ ...look, header })}
             options={[
-              { value: "circle", label: "Circle" },
-              { value: "rounded", label: "Rounded" },
+              { value: "classic", label: "Classic" },
+              { value: "hero", label: "Hero" },
             ]}
           />
+        </Labeled>
+        {!image && <p className="text-sm text-fg-muted">Add a photo to use Hero</p>}
+        {hasShape(type) && classic && (
+          <Labeled label="Image shape">
+            <SegmentedControl
+              aria-label="Image shape"
+              size="touch"
+              value={look.shape}
+              onChange={(shape) => onLook({ ...look, shape })}
+              options={[
+                { value: "circle", label: "Circle" },
+                { value: "rounded", label: "Rounded" },
+              ]}
+            />
+          </Labeled>
         )}
       </div>
     </Card>

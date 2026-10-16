@@ -322,7 +322,7 @@ test.describe("creating codes", () => {
     await page.getByLabel("Link", { exact: true }).first().fill("example.com/shop");
     await openTab(page, "Look");
     await page.getByRole("radio", { name: "Forest" }).click();
-    await expect(page.getByRole("button", { name: "Undo" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
     await page.getByLabel("Code name").fill("Forest page");
     await createButton(page).click();
     await expect(page).toHaveURL(/\/codes\/[0-9a-f-]+#download$/);

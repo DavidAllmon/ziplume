@@ -12,10 +12,12 @@ interface ColorFieldProps {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  /** For a field whose name already shows above it. */
+  hideLabel?: boolean;
 }
 
 /** A native color picker paired with a hex input that only commits valid colors. */
-export function ColorField({ label, value, onChange, disabled }: ColorFieldProps) {
+export function ColorField({ label, value, onChange, disabled, hideLabel }: ColorFieldProps) {
   const id = useId();
   const [draft, setDraft] = useState<string | null>(null);
   const text = draft ?? value;
@@ -23,7 +25,7 @@ export function ColorField({ label, value, onChange, disabled }: ColorFieldProps
 
   return (
     <div className={cn("flex flex-col gap-1.5", disabled && "opacity-50")}>
-      <label htmlFor={id} className="text-sm font-medium text-fg">
+      <label htmlFor={id} className={cn("text-sm font-medium text-fg", hideLabel && "sr-only")}>
         {label}
       </label>
       {/* The swatch sits inside the field so the full hex value fits on narrow phones. */}

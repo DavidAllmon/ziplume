@@ -121,6 +121,18 @@ describe("LookEditor", () => {
     expect(look().font).toBe("clean");
   });
 
+  it("names every choice on screen, not only for screen readers", () => {
+    render(<Harness type="links" initial={PAGE_DEFAULTS.links()} />);
+    const header = within(screen.getByRole("region", { name: "Header" }));
+    for (const label of ["Layout", "Image shape"]) expect(header.getByText(label)).toBeVisible();
+    const text = within(screen.getByRole("region", { name: "Text" }));
+    expect(text.getByText("Text color")).toBeVisible();
+    const buttons = within(screen.getByRole("region", { name: "Buttons" }));
+    for (const label of ["Shape", "Style", "Shadow", "Text color"]) {
+      expect(buttons.getByText(label)).toBeVisible();
+    }
+  });
+
   it("says to add a photo to use Hero", () => {
     render(<Harness type="links" initial={PAGE_DEFAULTS.links()} />);
     expect(screen.getByText("Add a photo to use Hero")).toBeInTheDocument();

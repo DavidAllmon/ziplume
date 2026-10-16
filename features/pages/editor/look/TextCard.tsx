@@ -9,6 +9,7 @@ import { FONTS } from "@/features/pages/look/fonts";
 import { resolveLook } from "@/features/pages/look/resolve";
 import { FONT_IDS, type LookChange, type PageLook } from "@/lib/pages/look";
 
+import { Labeled } from "./Labeled";
 import { Warnings } from "./Warning";
 
 /** The font (spec 6.3) and the text color, Auto or custom. */
@@ -51,18 +52,20 @@ export function TextCard({
             </Radio>
           ))}
         </RadioGroup>
-        <SegmentedControl
-          aria-label="Text color mode"
-          size="touch"
-          value={mode}
-          onChange={(next) =>
-            onLook({ ...look, text: next === "auto" ? "auto" : resolveLook(look).text })
-          }
-          options={[
-            { value: "auto", label: "Auto", ariaLabel: "Auto text color" },
-            { value: "custom", label: "Custom", ariaLabel: "Custom text color" },
-          ]}
-        />
+        <Labeled label="Text color">
+          <SegmentedControl
+            aria-label="Text color mode"
+            size="touch"
+            value={mode}
+            onChange={(next) =>
+              onLook({ ...look, text: next === "auto" ? "auto" : resolveLook(look).text })
+            }
+            options={[
+              { value: "auto", label: "Auto", ariaLabel: "Auto text color" },
+              { value: "custom", label: "Custom", ariaLabel: "Custom text color" },
+            ]}
+          />
+        </Labeled>
         {mode === "auto" ? (
           <p className="text-sm text-fg-muted">
             Auto picks white or near-black, whichever reads better.
@@ -71,6 +74,7 @@ export function TextCard({
           <div className="max-w-56">
             <ColorField
               label="Text color"
+              hideLabel
               value={look.text}
               onChange={(text) => onLook({ ...look, text })}
             />
