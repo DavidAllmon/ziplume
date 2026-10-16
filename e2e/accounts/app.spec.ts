@@ -14,6 +14,7 @@ const PAGES = [
   "codes/new?type=business",
   "codes/new?type=menu",
   "codes/new?type=event",
+  "codes/new?type=links#look",
   "codes/bulk",
   "codes/{menu}",
   "codes/{menu}/edit",
@@ -139,6 +140,7 @@ test.describe("signed in as an owner", () => {
     "codes/new?type=links",
     "codes/new?type=business",
     "codes/new?type=event",
+    "codes/new?type=links#look",
     "codes/{menu}/edit",
   ]) {
     for (const width of WIDTHS) {
@@ -159,7 +161,8 @@ test.describe("signed in as an owner", () => {
   }) => {
     await page.goto("codes/new?type=links");
     const addLink = page.getByRole("button", { name: "Add link", exact: true });
-    while ((await page.getByLabel("Button text").count()) < 6) await addLink.click();
+    while ((await page.getByLabel("Button text", { exact: true }).count()) < 6)
+      await addLink.click();
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const before = await page.evaluate(() => Math.round(window.scrollY));
     expect(before).toBeGreaterThan(100);
