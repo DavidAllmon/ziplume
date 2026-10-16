@@ -2,16 +2,7 @@
 
 import { arrayMove, useSortable } from "@dnd-kit/sortable";
 import { Switch } from "@headlessui/react";
-import {
-  FileAudio,
-  FileText,
-  FileVideo,
-  GripVertical,
-  Loader2,
-  Plus,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { FileAudio, FileText, GripVertical, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import { useContext, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/Button";
@@ -201,12 +192,11 @@ export function AccentField({
   );
 }
 
-const KIND_ICON = { pdf: FileText, audio: FileAudio, video: FileVideo, image: FileText };
+const KIND_ICON = { pdf: FileText, audio: FileAudio, image: FileText };
 const KIND_LABEL: Record<MediaKind, string> = {
   image: "image",
   pdf: "PDF",
   audio: "audio file",
-  video: "video",
 };
 
 interface MediaFieldProps {

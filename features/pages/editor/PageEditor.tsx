@@ -123,17 +123,7 @@ export function PageEditor<K extends PageTypeId>({
           />
         );
       case "video":
-        return (
-          <VideoEditor
-            page={page as VideoPage}
-            set={set}
-            errors={{
-              ...errorsApi,
-              error: (p) => (p === "file" ? errors.file : errorsApi.error(p)),
-            }}
-            touched={anyTouched}
-          />
-        );
+        return <VideoEditor page={page as VideoPage} {...props} />;
       case "audio":
         return (
           <AudioEditor

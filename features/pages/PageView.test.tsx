@@ -26,6 +26,16 @@ const view = (type: Parameters<typeof PageView>[0]["type"], content: object, pre
   );
 
 describe("PageView", () => {
+  it("shows a video page saved with an upload as a placeholder, never a player", () => {
+    const old = {
+      ...PAGE_DEFAULTS.video(),
+      title: "Sample: Video",
+      source: "upload",
+      file: media("v.mp4", "video/mp4"),
+    };
+    const { container } = view("video", old, false);
+    expect(container.querySelector("video, iframe")).toBeNull();
+  });
   it("sizes itself from its own width, not the screen's", () => {
     const { container } = view("links", { ...PAGE_DEFAULTS.links(), title: "Hi" }, false);
     expect(container.firstElementChild).toHaveClass("@container");

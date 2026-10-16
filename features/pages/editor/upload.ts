@@ -4,20 +4,18 @@ import { MEDIA_BUCKET } from "@/lib/pages/urls";
 import { MAX_UPLOAD_BYTES, type Media } from "@/lib/pages/types";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
-export type MediaKind = "image" | "pdf" | "audio" | "video";
+export type MediaKind = "image" | "pdf" | "audio";
 
 export const ACCEPT: Record<MediaKind, string> = {
   image: "image/png,image/jpeg,image/webp,image/gif",
   pdf: "application/pdf",
   audio: "audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/x-wav,audio/ogg,audio/webm,.mp3,.m4a",
-  video: "video/mp4,video/webm,video/quicktime",
 };
 
 const MIME_OK: Record<MediaKind, (type: string) => boolean> = {
   image: (t) => ["image/png", "image/jpeg", "image/webp", "image/gif"].includes(t),
   pdf: (t) => t === "application/pdf",
   audio: (t) => t.startsWith("audio/"),
-  video: (t) => ["video/mp4", "video/webm", "video/quicktime"].includes(t),
 };
 
 const EXTENSION: Record<string, string> = {
@@ -33,9 +31,6 @@ const EXTENSION: Record<string, string> = {
   "audio/x-wav": "wav",
   "audio/ogg": "ogg",
   "audio/webm": "weba",
-  "video/mp4": "mp4",
-  "video/webm": "webm",
-  "video/quicktime": "mov",
 };
 
 /** Some browsers report an empty type for .mp3/.m4a; fall back to the extension. */
@@ -51,7 +46,6 @@ export function checkFile(file: File, kind: MediaKind): string | null {
       image: "Use a PNG, JPG, WebP or GIF image.",
       pdf: "That file isn't a PDF.",
       audio: "Use an MP3, M4A, WAV or OGG audio file.",
-      video: "Use an MP4, WebM or MOV video.",
     }[kind];
   }
   if (file.size > MAX_UPLOAD_BYTES) return "Files can be up to 50 MB.";

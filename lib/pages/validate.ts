@@ -122,7 +122,6 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
   pdf: (p): PageErrors => (p.file ? {} : { file: "Upload a PDF" }),
   images: (p): PageErrors => (p.images.length ? {} : { images: "Add at least one image" }),
   video: (p): PageErrors => {
-    if (p.source === "upload") return p.file ? {} : { file: "Upload a video" };
     if (!p.url.trim()) return { url: "Paste a YouTube or Vimeo link" };
     return videoEmbed(p.url) || safeHref(p.url) ? {} : { url: URL_MESSAGE };
   },

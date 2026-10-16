@@ -96,7 +96,7 @@ const LABELS: Record<PageTypeId, string[]> = {
   ],
   pdf: ["PDF", "Title", "Description", "Open the PDF straight away"],
   images: ["Title", "Description"],
-  video: ["Title", "Description"],
+  video: ["Video link", "Title", "Description"],
   audio: ["Audio file", "Or a link", "Title", "Artist", "Cover art", "Description"],
   app: ["App name", "Description", "App icon", "App Store link", "Google Play link", "Website"],
 };
@@ -136,7 +136,8 @@ describe("PageEditor", () => {
     );
     expect(missing).toEqual([]);
     if (type === "video") {
-      expect(screen.getByRole("radiogroup", { name: "Video source" })).toBeInTheDocument();
+      expect(screen.queryByRole("radiogroup", { name: "Video source" })).toBeNull();
+      expect(screen.getByRole("textbox", { name: /^Video link/ })).toBeInTheDocument();
     }
   });
 

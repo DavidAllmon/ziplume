@@ -172,9 +172,8 @@ export interface ImagesPage extends Themed {
 export interface VideoPage extends Themed {
   title: string;
   description: string;
-  source: "link" | "upload";
+  /** A YouTube (Shorts included) or Vimeo link. Ziplume is free, so videos aren't uploaded. */
   url: string;
-  file: Media | null;
 }
 
 export interface AudioPage extends Themed {
@@ -348,9 +347,7 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       color: "#DC2626",
       title: "",
       description: "",
-      source: "link",
       url: "",
-      file: null,
     }),
   audio: () =>
     withLook("audio", {
@@ -425,7 +422,7 @@ export const PAGE_TYPES: Record<PageTypeId, PageTypeInfo> = {
   images: { label: "Images", description: "A photo gallery", emptyHint: "Add some images" },
   video: {
     label: "Video",
-    description: "A video from YouTube, Vimeo or an upload",
+    description: "A YouTube or Vimeo video",
     emptyHint: "Add a video",
   },
   audio: {

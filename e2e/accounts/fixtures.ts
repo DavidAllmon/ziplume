@@ -202,7 +202,7 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
   {
     type: "video",
     slug: "PHONE-VIDEO",
-    content: { title: "Phone video", description: "A test video page.", source: "link", url: "" },
+    content: { title: "Phone video", description: "A test video page.", url: "" },
   },
   {
     type: "audio",

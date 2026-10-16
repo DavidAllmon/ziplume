@@ -135,13 +135,7 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     description: str(LIMITS.text),
     images: { kind: "mediaList", max: LIMITS.images },
   },
-  video: {
-    title: str(),
-    description: str(LIMITS.text),
-    source: { kind: "enum", values: ["link", "upload"] },
-    url: str(2048),
-    file: media,
-  },
+  video: { title: str(), description: str(LIMITS.text), url: str(2048) },
   audio: {
     title: str(),
     artist: str(),
