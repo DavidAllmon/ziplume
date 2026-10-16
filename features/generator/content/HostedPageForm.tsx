@@ -7,6 +7,7 @@ import { buttonClasses } from "@/components/ui/Button";
 import { useSession } from "@/features/auth/useSession";
 import { MediaOwnerContext } from "@/features/pages/editor/MediaOwner";
 import { AccentField } from "@/features/pages/editor/fields";
+import { LookWarnings } from "@/features/pages/editor/LookWarnings";
 import { PageEditor } from "@/features/pages/editor/PageEditor";
 import { accountsEnabled } from "@/lib/env";
 import { withButtonColor } from "@/lib/pages/look";
@@ -94,6 +95,9 @@ export function HostedPageForm({
               value={page.look.button.color}
               onChange={(color) => generator.setPage(type, withButtonColor(page, color))}
             />
+            <div className="mt-3">
+              <LookWarnings look={page.look} />
+            </div>
           </div>
         )}
       </div>

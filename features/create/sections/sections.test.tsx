@@ -173,6 +173,12 @@ describe("SettingsSection", () => {
 });
 
 describe("LookSection", () => {
+  it("warns when the color is hard to see on the page", () => {
+    const page = withButtonColor(PAGE_DEFAULTS.links(), "#0A1330");
+    render(<LookSection page={page} onChange={vi.fn()} />);
+    expect(screen.getByText(/Buttons are hard to see/)).toBeInTheDocument();
+  });
+
   it("changes the page's color", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

@@ -235,7 +235,10 @@ export function withLinks(code: Record<string, unknown>): Record<string, unknown
   let payload: string | null = null;
   if (code.dynamic && slug) payload = dynamicPayload(slug);
   else if (isStaticType(type)) payload = encodeContent(type, sanitizeContent(type, code.content));
-  return { ...code, short_link: slug && code.dynamic ? shortLink(slug) : null, payload };
+  // Pages always come back with a look, filled in for pages saved before looks, so a client
+  // that sends the content back keeps how the page looks.
+  const content = isPageType(type) ? sanitizePage(type, code.content) : code.content;
+  return { ...code, content, short_link: slug && code.dynamic ? shortLink(slug) : null, payload };
 }
 
 /** Maps database errors to API errors. */

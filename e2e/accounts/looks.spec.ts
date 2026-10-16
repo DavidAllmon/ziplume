@@ -27,11 +27,19 @@ test.describe("page looks", () => {
       expect(box.height).toBeGreaterThanOrEqual(844);
       const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
       expect(results.violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
+      // On a solid wallpaper axe can judge every color; it can't over gradients, which the
+      // look's unit tests cover instead.
+      if (await frame(page).evaluate((el) => getComputedStyle(el).backgroundImage === "none")) {
+        const unsure = results.incomplete.filter((check) => check.id === "color-contrast");
+        expect(unsure.map((check) => check.nodes.map((n) => n.target).join(", "))).toEqual([]);
+      }
     });
   }
 
   test("a page looks the same to a visitor in dark mode", async ({ page }) => {
     await page.goto("p/LOOK-PAPER");
+    const behind = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(await behind()).toBe("rgb(246, 245, 241)");
     const light = await background(page);
     const lightText = await page.locator("h1").evaluate((el) => getComputedStyle(el).color);
     await page.emulateMedia({ colorScheme: "dark" });
@@ -39,6 +47,8 @@ test.describe("page looks", () => {
     await expect(page.locator("h1")).toBeVisible();
     expect(await background(page)).toBe(light);
     expect(await page.locator("h1").evaluate((el) => getComputedStyle(el).color)).toBe(lightText);
+    // Behind the page (the bounce past its ends) is its own color, not the visitor's dark one.
+    expect(await behind()).toBe("rgb(246, 245, 241)");
   });
 
   test("a page shows its theme's wallpaper and font, and colors the browser", async ({ page }) => {

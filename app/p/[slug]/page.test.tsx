@@ -49,6 +49,9 @@ describe("hosted page titles", () => {
       themeColor: "#070B1A",
       colorScheme: "dark",
     });
-    expect((await generateMetadata(params)).description).toBe("Breakfast all day");
+    const meta = await generateMetadata(params);
+    expect(meta.description).toBe("Breakfast all day");
+    // X reads its own tags: without these it would show the site's title.
+    expect(meta.twitter).toMatchObject({ title: "Diner", description: "Breakfast all day" });
   });
 });

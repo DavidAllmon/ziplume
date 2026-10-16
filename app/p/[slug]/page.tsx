@@ -34,6 +34,13 @@ export async function generateMetadata({ params }: PageProps<"/p/[slug]">): Prom
       type: "website",
       ...(image ? { images: [mediaUrl(image.path)] } : {}),
     },
+    // X reads its own tags, which the site's root metadata would otherwise fill.
+    twitter: {
+      card: image ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(image ? { images: [mediaUrl(image.path)] } : {}),
+    },
   };
 }
 
@@ -107,12 +114,18 @@ export default async function PublicPage({ params }: PageProps<"/p/[slug]">) {
   }
   // The short link asks for the password, then sends the visitor back here.
   if (page.locked) redirect(`/r/${page.slug}`);
+  // Behind the page (the bounce past its ends on phones) is its wallpaper's color too, not the
+  // visitor's light or dark background. A normalized hex, so it's safe in CSS.
+  const behind = resolveLook(page.content.look).themeColor;
   return (
-    <PageView
-      type={page.type}
-      content={page.content}
-      slug={page.slug}
-      pageUrl={`${SITE_URL}/p/${page.slug}`}
-    />
+    <>
+      <style>{`html,body{background-color:${behind}}`}</style>
+      <PageView
+        type={page.type}
+        content={page.content}
+        slug={page.slug}
+        pageUrl={`${SITE_URL}/p/${page.slug}`}
+      />
+    </>
   );
 }

@@ -218,8 +218,9 @@ export const pageButton = {
     buttonBase,
     "border-(--pg-btn-border) bg-(--pg-btn-bg) text-(--pg-btn-fg) shadow-(--pg-btn-shadow) hover:brightness-110",
   ),
-  /** Quieter actions (Calendar, Download): the card's color. */
-  secondary: cn(buttonBase, "border-border bg-surface text-fg hover:bg-surface-2"),
+  /** Quieter actions (Calendar, Download): the notes' tone, which keeps the text readable on
+   * every theme, on the wallpaper and inside cards. */
+  secondary: cn(buttonBase, "border-border bg-surface-2 text-fg hover:brightness-95"),
 };
 
 /** A link button; renders a disabled look in the editor preview (no navigation). */

@@ -238,6 +238,15 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
   const look = page.look;
   const hero = look.header === "hero" && page.cover !== null;
   const socials = <SocialRow socials={page.socials} preview={preview} />;
+  const actions = [
+    { href: phone, icon: Phone, label: "Call" },
+    { href: email, icon: Mail, label: "Email" },
+    {
+      href: page.address.trim() ? mapsHref(page.address) : null,
+      icon: MapPin,
+      label: "Directions",
+    },
+  ].filter((action) => action.href);
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -251,19 +260,10 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
         sub={page.tagline || undefined}
       />
       {look.socials === "top" && socials}
-      <PageCard className="flex flex-col items-center gap-4 text-center">
-        <div className="grid w-full grid-cols-3 gap-2">
-          {[
-            { href: phone, icon: Phone, label: "Call" },
-            { href: email, icon: Mail, label: "Email" },
-            {
-              href: page.address.trim() ? mapsHref(page.address) : null,
-              icon: MapPin,
-              label: "Directions",
-            },
-          ]
-            .filter((a) => a.href)
-            .map(({ href, icon: Icon, label }) => (
+      {actions.length > 0 && (
+        <PageCard className="flex flex-col items-center gap-4 text-center">
+          <div className="grid w-full grid-cols-3 gap-2">
+            {actions.map(({ href, icon: Icon, label }) => (
               <a
                 key={label}
                 href={preview ? undefined : href!}
@@ -276,8 +276,9 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
                 {label}
               </a>
             ))}
-        </div>
-      </PageCard>
+          </div>
+        </PageCard>
+      )}
       {page.buttons
         .filter((b) => b.on && safeHref(b.url))
         .map((b, i) => (

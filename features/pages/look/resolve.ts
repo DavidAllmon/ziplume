@@ -69,9 +69,13 @@ export interface ResolvedLook {
   /** The notes and chips' color over each card and each wallpaper color. */
   chip: string[];
   accent: string;
-  /** What's behind a button's text: its color, or the wallpaper for outline buttons. */
+  /** What's behind a button's text: its color or tint, or (outline) the wallpaper and cards. */
   buttonBg: string[];
   buttonText: string;
+  /** The highlight behind selected text. */
+  selection: string;
+  /** Form fields' outlines on cards. */
+  fieldBorder: string;
 }
 
 export function resolveLook(look: PageLook): ResolvedLook {
@@ -104,14 +108,36 @@ export function resolveLook(look: PageLook): ResolvedLook {
     }
   }
   const b = look.button;
+  // What's behind a button's text. Buttons sit on the wallpaper and inside cards: a soft
+  // button is one solid tint (the wallpaper's first color at 16% of the button color), so it
+  // reads the same in both; an outline button shows whatever is behind it.
+  const soft = mix(walls[0]!, b.color, 0.16);
   const buttonBg =
-    b.style === "solid"
-      ? [b.color]
-      : b.style === "soft"
-        ? walls.map((wall) => mix(wall, b.color, 0.16))
-        : walls;
-  const buttonText = b.text !== "auto" ? b.text : b.style === "outline" ? b.color : auto(buttonBg);
+    b.style === "solid" ? [b.color] : b.style === "soft" ? [soft] : [...walls, ...card];
+  // Outline text is the button color while that reads; otherwise white or ink.
+  const buttonText =
+    b.text !== "auto"
+      ? b.text
+      : b.style === "outline" && worst(b.color, buttonBg) >= 4.5
+        ? b.color
+        : auto(buttonBg);
   const accent = worst(b.color, card) >= 3 ? b.color : text;
+  // Selected text: the page's text on a highlight that keeps 4.5:1.
+  const selection =
+    [
+      mix(walls[0]!, accent, 0.3),
+      mix(walls[0]!, light ? INK : WHITE, 0.2),
+      mix(walls[0]!, light ? INK : "#000000", 0.35),
+    ].find((color) => contrastRatio(text, color) >= 4.5) ?? walls[0]!;
+  // Form fields' outlines on cards: the text color, softened while it keeps 3:1.
+  let fieldBorder = text;
+  for (let step = 35; step <= 100; step += 5) {
+    const candidate = mix(card[0]!, text, step / 100);
+    if (worst(candidate, card) >= 3) {
+      fieldBorder = candidate;
+      break;
+    }
+  }
   const font = FONTS[look.font];
   const shadow =
     b.shadow === "soft"
@@ -134,19 +160,15 @@ export function resolveLook(look: PageLook): ResolvedLook {
           ? "rgb(255 255 255 / 0.12)"
           : "rgb(0 0 0 / 0.15)",
     "--border": light ? "rgb(15 23 42 / 0.1)" : "rgb(255 255 255 / 0.12)",
-    "--field-border": light ? "rgb(15 23 42 / 0.45)" : "rgb(255 255 255 / 0.45)",
+    "--field-border": fieldBorder,
+    "--selection": selection,
     "--ring": text,
     "--danger": text,
     "--page-accent": accent,
     "--page-accent-fg": auto([accent]),
     "--pg-radius": CARD_RADIUS[b.shape],
     "--pg-btn-radius": BUTTON_RADIUS[b.shape],
-    "--pg-btn-bg":
-      b.style === "solid"
-        ? b.color
-        : b.style === "soft"
-          ? `color-mix(in srgb, ${b.color} 16%, transparent)`
-          : "transparent",
+    "--pg-btn-bg": b.style === "solid" ? b.color : b.style === "soft" ? soft : "transparent",
     "--pg-btn-fg": buttonText,
     "--pg-btn-border": b.style === "outline" ? b.color : "transparent",
     "--pg-btn-shadow": shadow,
@@ -166,6 +188,8 @@ export function resolveLook(look: PageLook): ResolvedLook {
     accent,
     buttonBg,
     buttonText,
+    selection,
+    fieldBorder,
   };
 }
 

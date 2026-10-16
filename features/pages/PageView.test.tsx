@@ -163,3 +163,32 @@ describe("PageView looks", () => {
     expect(container.querySelector("main")).toBeNull();
   });
 });
+
+describe("PageView details", () => {
+  it("draws no empty card on a Business page without contact details", () => {
+    const page = { ...PAGE_DEFAULTS.business(), name: "Cafe" };
+    const { container } = view("business", page, false);
+    for (const section of container.querySelectorAll("section")) {
+      expect(section.textContent?.trim()).not.toBe("");
+    }
+  });
+
+  it("draws quieter buttons in the note tone, which reads on every theme", () => {
+    const page = {
+      ...PAGE_DEFAULTS.event(),
+      title: "Fair",
+      start: "2031-05-01T10:00",
+      timeZone: "UTC",
+    };
+    view("event", page, false);
+    expect(screen.getByRole("link", { name: /Calendar/ })).toHaveClass("bg-surface-2");
+  });
+
+  it("colors the feedback stars with the page's accent, and the empty ones readably", () => {
+    const page = { ...PAGE_DEFAULTS.feedback(), business: "Cafe", question: "How was it?" };
+    const { container } = view("feedback", page, false);
+    const stars = container.querySelectorAll("svg.lucide-star");
+    expect(stars.length).toBe(5);
+    for (const star of stars) expect(star.getAttribute("class")).toContain("text-fg-muted");
+  });
+});

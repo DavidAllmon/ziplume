@@ -87,7 +87,10 @@ export function FeedbackForm({
                 aria-hidden
                 className={cn(
                   "size-10 transition-colors",
-                  i < shown ? "fill-amber-400 text-amber-400" : "text-border",
+                  // The page's accent (3:1 on cards); empty stars in the muted text color.
+                  i < shown
+                    ? "fill-[var(--page-accent)] text-[var(--page-accent)]"
+                    : "text-fg-muted",
                 )}
                 strokeWidth={1.5}
               />

@@ -28,8 +28,18 @@ describe("resolveLook", () => {
       expect(contrastRatio(r.text, chip), `text on chip ${chip}`).toBeGreaterThanOrEqual(4.5);
       expect(contrastRatio(r.muted, chip), `muted on chip ${chip}`).toBeGreaterThanOrEqual(4.5);
     }
+    // Buttons sit on the wallpaper and inside cards.
     for (const bg of r.buttonBg) {
       expect(contrastRatio(r.buttonText, bg)).toBeGreaterThanOrEqual(4.5);
+    }
+    if (look.button.style === "outline") {
+      // An outline button's text is checked on every wallpaper color and card.
+      expect(r.buttonBg.length).toBe(surfaces.length);
+    }
+    // Selected text, and the outlines of form fields on cards.
+    expect(contrastRatio(r.text, r.selection), "selection").toBeGreaterThanOrEqual(4.5);
+    for (const card of r.card) {
+      expect(contrastRatio(r.fieldBorder, card), "field border").toBeGreaterThanOrEqual(3);
     }
     for (const card of r.card) {
       expect(contrastRatio(r.accent, card)).toBeGreaterThanOrEqual(3);
@@ -40,6 +50,21 @@ describe("resolveLook", () => {
     const r = resolveLook(themeLook("sand", "menu"));
     const noteOnWallpaper = mix("#F3E8D8", INK, 0.06);
     expect(contrastRatio(r.muted, noteOnWallpaper)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps an outline button's text readable when its color doesn't read on the page", () => {
+    const look = themeLook("midnight", "video");
+    look.button.color = "#0A1330";
+    const r = resolveLook(look);
+    for (const bg of r.buttonBg) {
+      expect(contrastRatio(r.buttonText, bg)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("draws soft buttons in one solid tint, so they read the same inside cards", () => {
+    const r = resolveLook(themeLook("ocean", "audio"));
+    expect(r.vars["--pg-btn-bg"]).toMatch(/^#[0-9A-F]{6}$/);
+    expect(r.buttonBg).toEqual([r.vars["--pg-btn-bg"]]);
   });
 
   it("picks white or ink text by the wallpaper, worst end first", () => {

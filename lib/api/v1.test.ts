@@ -151,6 +151,19 @@ describe("withLinks and imageOptions", () => {
     ).toMatchObject({ payload: "tel:+1555", short_link: null });
   });
 
+  it("returns a page's look, filling one in for pages saved before looks", () => {
+    const out = withLinks({
+      type: "links",
+      dynamic: true,
+      slug: "AB3X9Q",
+      content: { title: "Old", color: "#4F46E5" },
+    });
+    expect(out.content).toMatchObject({
+      color: "#4F46E5",
+      look: { theme: "paper", button: { color: "#4F46E5" } },
+    });
+  });
+
   it("checks image options", async () => {
     expect(imageOptions(new URLSearchParams("format=png&size=300&fg=ff0000&ec=h"))).toMatchObject({
       format: "png",
