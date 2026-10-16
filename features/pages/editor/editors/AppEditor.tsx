@@ -25,6 +25,8 @@ export function AppEditor({ page, set, errors }: EditorProps<AppPage>) {
           errors={errors}
         />
         <AreaField
+          path="description"
+          errors={errors}
           label="Description"
           value={page.description}
           onChange={(description) => set({ description })}
@@ -41,7 +43,6 @@ export function AppEditor({ page, set, errors }: EditorProps<AppPage>) {
           path="iosUrl"
           errors={errors}
           placeholder="apps.apple.com/app/…"
-          maxLength={2048}
         />
         <TextField
           label="Google Play link"
@@ -53,7 +54,6 @@ export function AppEditor({ page, set, errors }: EditorProps<AppPage>) {
           path="androidUrl"
           errors={errors}
           placeholder="play.google.com/store/apps/details?id=…"
-          maxLength={2048}
         />
         <p className="rounded-control bg-surface-2 px-3.5 py-3 text-sm text-fg-muted">
           iPhones go straight to the App Store and Android phones to Google Play. Everyone else sees
@@ -72,7 +72,6 @@ export function AppEditor({ page, set, errors }: EditorProps<AppPage>) {
           onChange={(webUrl) => set({ webUrl })}
           path="webUrl"
           errors={errors}
-          maxLength={2048}
         />
       </FormCard>
     </>

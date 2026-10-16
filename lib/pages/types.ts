@@ -172,9 +172,8 @@ export interface ImagesPage extends Themed {
 export interface VideoPage extends Themed {
   title: string;
   description: string;
-  source: "link" | "upload";
+  /** A YouTube (Shorts included) or Vimeo link. Ziplume is free, so videos aren't uploaded. */
   url: string;
-  file: Media | null;
 }
 
 export interface AudioPage extends Themed {
@@ -223,10 +222,16 @@ export const LIMITS = {
   images: 24,
   short: 120,
   medium: 300,
+  /** Descriptions and other text of several lines. */
+  text: 1000,
   long: 2000,
+  /** The most the editor holds in one box while it's too long (a guard against huge pastes). */
+  paste: 20000,
 } as const;
 
-export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+const MB = 1024 * 1024;
+/** Ziplume is free, so files stay small: images are also resized before they're stored. */
+export const UPLOAD_CAPS = { image: 15 * MB, pdf: 10 * MB, audio: 15 * MB } as const;
 
 const day = (open: boolean): DayHours => ({ open, from: "09:00", to: "17:00" });
 
@@ -344,9 +349,7 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       color: "#DC2626",
       title: "",
       description: "",
-      source: "link",
       url: "",
-      file: null,
     }),
   audio: () =>
     withLook("audio", {
@@ -421,7 +424,7 @@ export const PAGE_TYPES: Record<PageTypeId, PageTypeInfo> = {
   images: { label: "Images", description: "A photo gallery", emptyHint: "Add some images" },
   video: {
     label: "Video",
-    description: "A video from YouTube, Vimeo or an upload",
+    description: "A YouTube or Vimeo video",
     emptyHint: "Add a video",
   },
   audio: {

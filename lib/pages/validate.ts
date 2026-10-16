@@ -1,6 +1,7 @@
 import type { PageTypeId } from "@/lib/qr/types";
 import { isTimeZone, zonedTimeToUtc } from "@/lib/time/zone";
 
+import { overLimit } from "./sanitize";
 import type { LinkItem, PageContentMap, SocialItem } from "./types";
 import { mailHref, safeHref, socialHref, telHref, videoEmbed } from "./urls";
 
@@ -121,7 +122,6 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
   pdf: (p): PageErrors => (p.file ? {} : { file: "Upload a PDF" }),
   images: (p): PageErrors => (p.images.length ? {} : { images: "Add at least one image" }),
   video: (p): PageErrors => {
-    if (p.source === "upload") return p.file ? {} : { file: "Upload a video" };
     if (!p.url.trim()) return { url: "Paste a YouTube or Vimeo link" };
     return videoEmbed(p.url) || safeHref(p.url) ? {} : { url: URL_MESSAGE };
   },
@@ -144,7 +144,10 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
 };
 
 export function validatePage<K extends PageTypeId>(type: K, page: PageContentMap[K]): PageErrors {
-  return VALIDATORS[type](page);
+  const errors = VALIDATORS[type](page);
+  // Text over its limit comes after the type's own problems, so Show me goes to those first.
+  for (const [path, message] of Object.entries(overLimit(type, page))) errors[path] ??= message;
+  return errors;
 }
 
 /** A short description of the page for lists, e.g. its title. */

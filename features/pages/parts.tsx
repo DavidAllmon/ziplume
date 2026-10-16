@@ -8,7 +8,9 @@ import { SOCIAL_ICONS } from "@/lib/pages/social-icons.data";
 import type { Media, SocialItem, SocialNetwork } from "@/lib/pages/types";
 import { mediaUrl, socialHref } from "@/lib/pages/urls";
 
+import { linkify } from "./linkify";
 import { resolveLook } from "./look/resolve";
+import { ShareButton } from "./ShareButton";
 
 // Building blocks shared by every hosted page: the frame that paints the page's look, its header,
 // cards and buttons. One centered column, at most 560px wide.
@@ -37,11 +39,13 @@ export function PageFrame({
     <Root
       style={style}
       data-page-frame
-      className="@container flex min-h-full flex-1 flex-col font-page-body text-fg"
+      className="@container relative flex min-h-full flex-1 flex-col font-page-body text-fg"
     >
+      <ShareButton preview={preview} />
       <div
         data-page-column
-        className="mx-auto flex w-full max-w-[560px] flex-1 flex-col gap-4 px-4 pt-8 pb-6 @min-[40rem]:pt-14"
+        // On narrow pages the column starts below the Share button, so long titles never run under it.
+        className="mx-auto flex w-full max-w-[560px] flex-1 flex-col gap-4 px-4 pt-16 pb-6 @min-[40rem]:pt-14"
       >
         {children}
       </div>
@@ -103,7 +107,11 @@ export function PageHeader({
       <h1 className="font-page-heading text-3xl font-bold tracking-tight text-balance text-fg">
         {title}
       </h1>
-      {sub && <p className="text-[15px] text-balance text-fg-muted">{sub}</p>}
+      {sub && (
+        <p className="text-[15px] text-balance whitespace-pre-line text-fg-muted">
+          {typeof sub === "string" ? linkify(sub) : sub}
+        </p>
+      )}
     </div>
   );
   if (drawn === "banner") {
@@ -126,7 +134,7 @@ export function PageHeader({
       // Reaches the column's edges and top: the column's own padding.
       <div
         data-header="hero"
-        className="-mx-4 -mt-8 flex flex-col items-center gap-4 @min-[40rem]:-mt-14"
+        className="-mx-4 -mt-16 flex flex-col items-center gap-4 @min-[40rem]:-mt-14"
       >
         <div className="relative aspect-[16/10] w-full overflow-hidden @min-[40rem]:aspect-[16/7]">
           <MediaImage media={image} alt={imageAlt} eager className="size-full object-cover" />
@@ -320,7 +328,7 @@ export function Prose({ text, className }: { text: string; className?: string })
     <div className={cn("flex flex-col gap-3 text-[15px] leading-relaxed text-fg-muted", className)}>
       {paragraphs.map((p, i) => (
         <p key={i} className="whitespace-pre-line">
-          {p}
+          {linkify(p)}
         </p>
       ))}
     </div>

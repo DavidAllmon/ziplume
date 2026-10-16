@@ -54,7 +54,7 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     lastName: str(60),
     jobTitle: str(),
     company: str(),
-    bio: str(LIMITS.medium),
+    bio: str(LIMITS.text),
     photo: media,
     phones: { kind: "list", max: LIMITS.phones, item: { label: str(30), number: str(40) } },
     emails: { kind: "list", max: LIMITS.emails, item: { label: str(30), address: str(254) } },
@@ -79,7 +79,7 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
   },
   menu: {
     name: str(),
-    description: str(LIMITS.medium),
+    description: str(LIMITS.text),
     logo: media,
     currency: str(4),
     sections: {
@@ -94,13 +94,13 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
         },
       },
     },
-    note: str(LIMITS.medium),
+    note: str(LIMITS.text),
   },
   coupon: {
     business: str(),
     headline: str(),
     offer: str(40),
-    description: str(LIMITS.medium),
+    description: str(LIMITS.text),
     code: str(40),
     validUntil: str(10),
     terms: str(LIMITS.long),
@@ -127,32 +127,26 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     question: str(),
     allowComment: bool,
     askContact: bool,
-    thanks: str(LIMITS.medium),
+    thanks: str(LIMITS.text),
   },
-  pdf: { title: str(), description: str(LIMITS.medium), file: media, direct: bool },
+  pdf: { title: str(), description: str(LIMITS.text), file: media, direct: bool },
   images: {
     title: str(),
-    description: str(LIMITS.medium),
+    description: str(LIMITS.text),
     images: { kind: "mediaList", max: LIMITS.images },
   },
-  video: {
-    title: str(),
-    description: str(LIMITS.medium),
-    source: { kind: "enum", values: ["link", "upload"] },
-    url: str(2048),
-    file: media,
-  },
+  video: { title: str(), description: str(LIMITS.text), url: str(2048) },
   audio: {
     title: str(),
     artist: str(),
-    description: str(LIMITS.medium),
+    description: str(LIMITS.text),
     cover: media,
     file: media,
     link: str(2048),
   },
   app: {
     name: str(),
-    description: str(LIMITS.medium),
+    description: str(LIMITS.text),
     icon: media,
     iosUrl: str(2048),
     androidUrl: str(2048),
@@ -179,10 +173,14 @@ function sanitizeHours(raw: unknown, fallback: DayHours[]): DayHours[] {
   });
 }
 
-function clean(spec: Spec, raw: unknown, fallback: unknown): unknown {
+type CleanOptions = { keepLongText: boolean };
+
+function clean(spec: Spec, raw: unknown, fallback: unknown, options: CleanOptions): unknown {
   switch (spec.kind) {
     case "string":
-      return typeof raw === "string" ? raw.replaceAll("\u0000", "").slice(0, spec.max) : fallback;
+      return typeof raw === "string"
+        ? raw.replaceAll("\u0000", "").slice(0, options.keepLongText ? LIMITS.paste : spec.max)
+        : fallback;
     case "bool":
       return typeof raw === "boolean" ? raw : fallback;
     case "color":
@@ -200,7 +198,7 @@ function clean(spec: Spec, raw: unknown, fallback: unknown): unknown {
       return sanitizeHours(raw, fallback as DayHours[]);
     case "list": {
       if (!Array.isArray(raw)) return fallback;
-      return raw.slice(0, spec.max).map((item) => cleanObject(spec.item, item, {}));
+      return raw.slice(0, spec.max).map((item) => cleanObject(spec.item, item, {}, options));
     }
   }
 }
@@ -227,11 +225,12 @@ function cleanObject(
   schema: Record<string, Spec>,
   raw: unknown,
   defaults: Record<string, unknown>,
+  options: CleanOptions,
 ): Record<string, unknown> {
   const source = isObject(raw) ? raw : {};
   const out: Record<string, unknown> = {};
   for (const [key, spec] of Object.entries(schema)) {
-    out[key] = clean(spec, source[key], key in defaults ? defaults[key] : emptyFor(spec));
+    out[key] = clean(spec, source[key], key in defaults ? defaults[key] : emptyFor(spec), options);
   }
   return out;
 }
@@ -240,15 +239,19 @@ function cleanObject(
  * A valid page of the given type from any stored or edited JSON. It always has a look: a saved
  * page without one keeps how it looked (spec 6.9), garbage gets the type's defaults, and an API
  * request without one gets the type's theme (`missingLook: "theme"`, spec 6.10). `color` always
- * equals the look's button color.
+ * equals the look's button color. The editor passes `keepLongText`, so text over a limit stays (up
+ * to `LIMITS.paste`) and validation asks to shorten it.
  */
 export function sanitizePage<K extends PageTypeId>(
   type: K,
   raw: unknown,
-  { missingLook = "legacy" }: { missingLook?: "legacy" | "theme" } = {},
+  {
+    missingLook = "legacy",
+    keepLongText = false,
+  }: { missingLook?: "legacy" | "theme"; keepLongText?: boolean } = {},
 ): PageContentMap[K] {
   const defaults = PAGE_DEFAULTS[type]() as unknown as Record<string, unknown>;
-  const page = cleanObject(SCHEMAS[type], raw, defaults);
+  const page = cleanObject(SCHEMAS[type], raw, defaults, { keepLongText });
   const source = isObject(raw) ? raw : null;
   const fallback = !source
     ? (defaults.look as PageLook)
@@ -272,4 +275,48 @@ export function mediaPaths(content: unknown): string[] {
   };
   visit(content);
   return [...paths];
+}
+
+/** "Shorten by 120 characters". */
+export const shortenBy = (n: number) =>
+  `Shorten by ${n.toLocaleString("en-US")} ${n === 1 ? "character" : "characters"}`;
+
+/** A text field's limit by its path ("bio", "links.3.label"), or null when it isn't text. */
+export function limitAt(type: PageTypeId, path: string): number | null {
+  let schema: Record<string, Spec> | undefined = SCHEMAS[type];
+  const parts = path.split(".");
+  for (let i = 0; i < parts.length; i++) {
+    const spec: Spec | undefined = schema?.[parts[i]!];
+    if (!spec) return null;
+    if (i === parts.length - 1) return spec.kind === "string" ? spec.max : null;
+    // Only a list goes deeper, and only through an item's index.
+    if (spec.kind !== "list" || !/^\d+$/.test(parts[i + 1] ?? "")) return null;
+    i++;
+    if (i === parts.length - 1) return null;
+    schema = spec.item;
+  }
+  return null;
+}
+
+/** Every text field over its limit, by path, with how much to shorten it. */
+export function overLimit<K extends PageTypeId>(
+  type: K,
+  page: PageContentMap[K],
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const walk = (schema: Record<string, Spec>, value: unknown, prefix: string) => {
+    if (!isObject(value)) return;
+    for (const [key, spec] of Object.entries(schema)) {
+      const path = prefix ? `${prefix}.${key}` : key;
+      const field = value[key];
+      if (spec.kind === "string" && typeof field === "string" && field.length > spec.max) {
+        errors[path] = shortenBy(field.length - spec.max);
+      }
+      if (spec.kind === "list" && Array.isArray(field)) {
+        field.forEach((item, i) => walk(spec.item, item, `${path}.${i}`));
+      }
+    }
+  };
+  walk(SCHEMAS[type], page, "");
+  return errors;
 }

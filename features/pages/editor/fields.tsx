@@ -2,16 +2,7 @@
 
 import { arrayMove, useSortable } from "@dnd-kit/sortable";
 import { Switch } from "@headlessui/react";
-import {
-  FileAudio,
-  FileText,
-  FileVideo,
-  GripVertical,
-  Loader2,
-  Plus,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { FileAudio, FileText, GripVertical, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import { useContext, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/Button";
@@ -29,6 +20,7 @@ import { MediaOwnerContext } from "./MediaOwner";
 import { RowMenu } from "./sortable/RowMenu";
 import { SortableArea } from "./sortable/SortableArea";
 import { SortableList } from "./sortable/SortableList";
+import { limitNote, useLimit } from "./limits";
 import { ACCEPT, uploadMedia, type MediaKind } from "./upload";
 
 /** Shows a field's error once it has been left (or after a save attempt). */
@@ -43,12 +35,12 @@ interface TextFieldProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  path?: string;
+  /** The field's place in the page ("bio", "links.3.label"); its limit comes from the schema. */
+  path: string;
   errors?: ErrorsApi;
   hint?: ReactNode;
   optional?: boolean;
   placeholder?: string;
-  maxLength?: number;
   type?: "text" | "url" | "email" | "tel" | "date" | "datetime-local" | "time";
   inputMode?: "text" | "url" | "email" | "tel" | "decimal";
   autoComplete?: string;
@@ -65,19 +57,23 @@ export function TextField({
   hint,
   optional,
   placeholder,
-  maxLength = 120,
   type = "text",
   inputMode,
   autoComplete,
   hideLabel,
 }: TextFieldProps) {
+  const limit = useLimit(path);
+  // Dates and times have a fixed shape; they need no counter.
+  const plain = !["date", "datetime-local", "time"].includes(type);
+  const note = limitNote(value.length, plain ? limit : null, false);
   return (
     <Field
       label={label}
       hint={hint}
       optional={optional}
       hideLabel={hideLabel}
-      error={path ? errors?.error(path) : undefined}
+      error={note.error ?? errors?.error(path)}
+      counter={note.counter}
     >
       {(control) => (
         <TextInput
@@ -88,10 +84,9 @@ export function TextField({
           autoCapitalize={type === "url" || type === "email" ? "none" : undefined}
           spellCheck={type === "url" || type === "email" ? false : undefined}
           placeholder={placeholder}
-          maxLength={maxLength}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          onBlur={() => path && errors?.touch(path)}
+          onBlur={() => errors?.touch(path)}
           data-field={path}
         />
       )}
@@ -103,23 +98,33 @@ export function AreaField({
   label,
   value,
   onChange,
+  path,
+  errors,
   hint,
   optional = true,
   placeholder,
-  maxLength = 300,
   rows = 3,
   hideLabel,
-}: Omit<TextFieldProps, "type" | "path" | "errors"> & { rows?: number }) {
+}: Omit<TextFieldProps, "type"> & { rows?: number }) {
+  const note = limitNote(value.length, useLimit(path), true);
   return (
-    <Field label={label} hint={hint} optional={optional} hideLabel={hideLabel}>
+    <Field
+      label={label}
+      hint={hint}
+      optional={optional}
+      hideLabel={hideLabel}
+      error={note.error ?? errors?.error(path)}
+      counter={note.counter}
+    >
       {(control) => (
         <Textarea
           {...control}
           rows={rows}
           placeholder={placeholder}
-          maxLength={maxLength}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          onBlur={() => errors?.touch(path)}
+          data-field={path}
         />
       )}
     </Field>
@@ -187,12 +192,11 @@ export function AccentField({
   );
 }
 
-const KIND_ICON = { pdf: FileText, audio: FileAudio, video: FileVideo, image: FileText };
+const KIND_ICON = { pdf: FileText, audio: FileAudio, image: FileText };
 const KIND_LABEL: Record<MediaKind, string> = {
   image: "image",
   pdf: "PDF",
   audio: "audio file",
-  video: "video",
 };
 
 interface MediaFieldProps {
@@ -566,8 +570,9 @@ export function LinksField({
             label="Button text"
             value={item.label}
             onChange={(labelText) => update({ label: labelText })}
+            path={`${prefix}.${i}.label`}
+            errors={errors}
             placeholder="My website"
-            maxLength={80}
           />
           <TextField
             label="Link"
@@ -578,7 +583,6 @@ export function LinksField({
             path={`${prefix}.${i}.url`}
             errors={errors}
             placeholder="example.com"
-            maxLength={2048}
           />
         </>
       )}
@@ -655,7 +659,6 @@ export function SocialsField({
               path={`socials.${i}.url`}
               errors={errors}
               placeholder={item.network === "website" ? "example.com" : "Profile link or @handle"}
-              maxLength={2048}
             />
           </div>
         </div>

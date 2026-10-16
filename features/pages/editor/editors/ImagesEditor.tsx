@@ -16,6 +16,8 @@ export function ImagesEditor({
     <>
       <FormCard title="Details">
         <TextField
+          path="title"
+          errors={errors}
           label="Title"
           optional
           value={page.title}
@@ -23,6 +25,8 @@ export function ImagesEditor({
           placeholder="Our wedding"
         />
         <AreaField
+          path="description"
+          errors={errors}
           label="Description"
           value={page.description}
           onChange={(description) => set({ description })}

@@ -27,13 +27,22 @@ export function PdfEditor({
               title: latest.title || file?.name.replace(/\.pdf$/i, "") || "",
             }))
           }
-          hint="Up to 50 MB."
+          hint="Up to 10 MB."
           error={touched ? (errors.error("file") ?? undefined) : undefined}
         />
       </FormCard>
       <FormCard title="Details">
-        <TextField label="Title" optional value={page.title} onChange={(title) => set({ title })} />
+        <TextField
+          path="title"
+          errors={errors}
+          label="Title"
+          optional
+          value={page.title}
+          onChange={(title) => set({ title })}
+        />
         <AreaField
+          path="description"
+          errors={errors}
           label="Description"
           value={page.description}
           onChange={(description) => set({ description })}

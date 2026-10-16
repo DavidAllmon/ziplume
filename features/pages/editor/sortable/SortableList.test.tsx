@@ -35,8 +35,9 @@ function Harness({
         path="links"
         errors={errors}
         itemLabel={(item, i) => (item.label ? `link “${item.label}”` : `link ${i + 1}`)}
-        render={(item, update) => (
+        render={(item, update, i) => (
           <TextField
+            path={`links.${i}.label`}
             label="Button text"
             value={item.label}
             onChange={(label) => update({ label })}

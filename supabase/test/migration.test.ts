@@ -537,11 +537,17 @@ describe("hosted pages", () => {
     expect(await asEve("select name from storage.objects")).toEqual([{ name: `${EVE}/menu.pdf` }]);
     await asFrank("delete from storage.objects");
     expect(await asEve("select name from storage.objects")).toHaveLength(1);
-    const [bucket] = await asService<{ public: boolean; file_size_limit: string }>(
-      "select public, file_size_limit from storage.buckets where id = 'page-media'",
+    const [bucket] = await asService<{
+      public: boolean;
+      file_size_limit: string;
+      allowed_mime_types: string[];
+    }>(
+      "select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'page-media'",
     );
     expect(bucket).toMatchObject({ public: true });
-    expect(Number(bucket?.file_size_limit)).toBe(52428800);
+    expect(Number(bucket?.file_size_limit)).toBe(15728640);
+    expect(bucket?.allowed_mime_types.some((t) => t.startsWith("video/"))).toBe(false);
+    expect(bucket?.allowed_mime_types).toContain("application/pdf");
   });
 });
 

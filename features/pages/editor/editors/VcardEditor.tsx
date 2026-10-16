@@ -27,22 +27,26 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
             path="firstName"
             errors={errors}
             autoComplete="given-name"
-            maxLength={60}
           />
           <TextField
+            path="lastName"
+            errors={errors}
             label="Last name"
             value={page.lastName}
             onChange={(lastName) => set({ lastName })}
             autoComplete="family-name"
-            maxLength={60}
           />
           <TextField
+            path="jobTitle"
+            errors={errors}
             label="Job title"
             optional
             value={page.jobTitle}
             onChange={(jobTitle) => set({ jobTitle })}
           />
           <TextField
+            path="company"
+            errors={errors}
             label="Company"
             optional
             value={page.company}
@@ -51,7 +55,14 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
         </div>
       </FormCard>
       <FormCard title="About">
-        <AreaField label="About" hideLabel value={page.bio} onChange={(bio) => set({ bio })} />
+        <AreaField
+          path="bio"
+          errors={errors}
+          label="About"
+          hideLabel
+          value={page.bio}
+          onChange={(bio) => set({ bio })}
+        />
       </FormCard>
       <FormCard title="Phone numbers">
         <SortableList
@@ -70,10 +81,11 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
           render={(item, update, i) => (
             <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">
               <TextField
+                path={`phones.${i}.label`}
+                errors={errors}
                 label="Label"
                 value={item.label}
                 onChange={(label) => update({ label })}
-                maxLength={30}
               />
               <TextField
                 label="Number"
@@ -84,7 +96,6 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
                 path={`phones.${i}.number`}
                 errors={errors}
                 placeholder="+1 555 010 9999"
-                maxLength={40}
               />
             </div>
           )}
@@ -107,10 +118,11 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
           render={(item, update, i) => (
             <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">
               <TextField
+                path={`emails.${i}.label`}
+                errors={errors}
                 label="Label"
                 value={item.label}
                 onChange={(label) => update({ label })}
-                maxLength={30}
               />
               <TextField
                 label="Email"
@@ -121,7 +133,6 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
                 path={`emails.${i}.address`}
                 errors={errors}
                 placeholder="you@example.com"
-                maxLength={254}
               />
             </div>
           )}
@@ -138,15 +149,15 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
           path="website"
           errors={errors}
           placeholder="example.com"
-          maxLength={2048}
         />
         <TextField
+          path="address"
+          errors={errors}
           label="Address"
           optional
           value={page.address}
           onChange={(address) => set({ address })}
           autoComplete="street-address"
-          maxLength={300}
         />
       </FormCard>
       <FormCard title="Social icons">

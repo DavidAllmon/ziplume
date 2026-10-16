@@ -101,6 +101,17 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
     content: { title: "Phone links", bio: "Every link on one page.", links, socials: [] },
   },
   {
+    // A title as long as a real business's, and a long address in the line under it.
+    type: "links",
+    slug: "PHONE-LONG",
+    content: {
+      title: "Mario's Pizzeria & Bakery 2026",
+      bio: "Order at https://www.example.com/order/online/mario-pizzeria-and-bakery/main-street-location",
+      links,
+      socials: [],
+    },
+  },
+  {
     type: "vcard",
     slug: "PHONE-VCARD",
     content: {
@@ -202,7 +213,7 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
   {
     type: "video",
     slug: "PHONE-VIDEO",
-    content: { title: "Phone video", description: "A test video page.", source: "link", url: "" },
+    content: { title: "Phone video", description: "A test video page.", url: "" },
   },
   {
     type: "audio",

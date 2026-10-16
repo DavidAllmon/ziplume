@@ -17,6 +17,8 @@ export function CouponEditor({ page, set, errors }: EditorProps<CouponPage>) {
           onChange={(image) => set({ image })}
         />
         <TextField
+          path="business"
+          errors={errors}
           label="Business"
           optional
           value={page.business}
@@ -32,18 +34,20 @@ export function CouponEditor({ page, set, errors }: EditorProps<CouponPage>) {
             path="offer"
             errors={errors}
             placeholder="20% OFF"
-            maxLength={40}
           />
           <TextField
+            path="code"
+            errors={errors}
             label="Coupon code"
             optional
             value={page.code}
             onChange={(code) => set({ code })}
             placeholder="SPRING20"
-            maxLength={40}
           />
         </div>
         <TextField
+          path="headline"
+          errors={errors}
           label="Headline"
           optional
           value={page.headline}
@@ -51,6 +55,8 @@ export function CouponEditor({ page, set, errors }: EditorProps<CouponPage>) {
           placeholder="On your next visit"
         />
         <AreaField
+          path="description"
+          errors={errors}
           label="Description"
           value={page.description}
           onChange={(description) => set({ description })}
@@ -63,18 +69,18 @@ export function CouponEditor({ page, set, errors }: EditorProps<CouponPage>) {
           onChange={(validUntil) => set({ validUntil })}
           path="validUntil"
           errors={errors}
-          maxLength={10}
         />
       </FormCard>
       <FormCard title="Button">
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
+            path="buttonLabel"
+            errors={errors}
             label="Button text"
             optional
             value={page.buttonLabel}
             onChange={(buttonLabel) => set({ buttonLabel })}
             placeholder="Shop now"
-            maxLength={40}
           />
           <TextField
             label="Button link"
@@ -85,16 +91,16 @@ export function CouponEditor({ page, set, errors }: EditorProps<CouponPage>) {
             onChange={(buttonUrl) => set({ buttonUrl })}
             path="buttonUrl"
             errors={errors}
-            maxLength={2048}
           />
         </div>
       </FormCard>
       <FormCard title="Terms">
         <AreaField
+          path="terms"
+          errors={errors}
           label="Terms and conditions"
           value={page.terms}
           onChange={(terms) => set({ terms })}
-          maxLength={2000}
         />
       </FormCard>
     </>

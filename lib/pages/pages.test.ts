@@ -305,3 +305,22 @@ describe("links and buttons can be switched off", () => {
     ).toEqual({});
   });
 });
+
+describe("video pages take links only", () => {
+  it("turns a saved upload page into a link page with no file", () => {
+    const page = sanitizePage("video", {
+      title: "Sample: Video",
+      source: "upload",
+      file: {
+        path: "00000000-0000-0000-0000-000000000000/v.mp4",
+        name: "v.mp4",
+        type: "video/mp4",
+        size: 1,
+      },
+      url: "",
+    });
+    expect(page).not.toHaveProperty("source");
+    expect(page).not.toHaveProperty("file");
+    expect(validatePage("video", page)).toEqual({ url: "Paste a YouTube or Vimeo link" });
+  });
+});

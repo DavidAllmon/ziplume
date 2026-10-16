@@ -720,8 +720,8 @@ function StillMedia({ icon }: { icon: ReactNode }) {
 }
 
 function VideoView({ page, preview }: ViewProps<VideoPage>) {
-  const embed = page.source === "link" ? videoEmbed(page.url) : null;
-  const link = page.source === "link" && !embed ? safeHref(page.url) : null;
+  const embed = videoEmbed(page.url);
+  const link = !embed ? safeHref(page.url) : null;
   const look = page.look;
   return (
     <PageFrame look={look} preview={preview}>
@@ -735,7 +735,7 @@ function VideoView({ page, preview }: ViewProps<VideoPage>) {
       <PageCard className="flex flex-col gap-4">
         {/* The player sits inside the card's padding: no overhang on phones. */}
         <div className="overflow-hidden rounded-(--pg-radius) bg-black">
-          {preview && (embed || (page.source === "upload" && page.file)) ? (
+          {preview && embed ? (
             <StillMedia icon={<Play aria-hidden className="size-12" />} />
           ) : embed ? (
             <iframe
@@ -746,14 +746,6 @@ function VideoView({ page, preview }: ViewProps<VideoPage>) {
               referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
               loading="lazy"
-            />
-          ) : page.source === "upload" && page.file ? (
-            <video
-              src={mediaUrl(page.file.path)}
-              controls
-              playsInline
-              preload="metadata"
-              className="aspect-video w-full bg-black"
             />
           ) : (
             <div className="grid aspect-video place-items-center text-white/80">
