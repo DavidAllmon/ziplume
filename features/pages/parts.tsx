@@ -238,18 +238,37 @@ export function PageLink({
   variant = "primary",
   download,
   preview,
+  icon,
+  featured = false,
 }: {
   href: string | null;
   children: ReactNode;
   variant?: "primary" | "secondary";
   download?: boolean | string;
   preview?: boolean;
+  /** A mark at the start of the button; the label stays centered. */
+  icon?: ReactNode;
+  /** The Link list's featured link: taller, ringed in the accent color (spec item 8). */
+  featured?: boolean;
 }) {
   if (!href) return null;
+  const body = icon ? (
+    <span className="grid w-full grid-cols-[1.75rem_1fr_1.75rem] items-center gap-2">
+      {icon}
+      <span className="min-w-0">{children}</span>
+      <span aria-hidden />
+    </span>
+  ) : (
+    children
+  );
+  const classes = cn(
+    pageButton[variant],
+    featured && "min-h-16 text-lg ring-2 ring-(--page-accent) ring-offset-2 ring-offset-(--bg)",
+  );
   if (preview) {
     return (
-      <span className={pageButton[variant]} aria-disabled>
-        {children}
+      <span className={classes} aria-disabled data-featured={featured || undefined}>
+        {body}
       </span>
     );
   }
@@ -257,11 +276,12 @@ export function PageLink({
   return (
     <a
       href={href}
-      className={pageButton[variant]}
+      className={classes}
+      data-featured={featured || undefined}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       {...(download ? { download: typeof download === "string" ? download : "" } : {})}
     >
-      {children}
+      {body}
     </a>
   );
 }
