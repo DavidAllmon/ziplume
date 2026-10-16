@@ -137,16 +137,16 @@ test.describe("creating codes", () => {
     const column = preview
       .getByRole("region", { name: "Page preview" })
       .locator("[data-page-column]");
-    // The column's top padding follows the page's own width (32px, or 56px from 640px up);
-    // computed styles ignore the frame's scale.
+    // The column's top padding follows the page's own width (64px, clear of the Share button, or
+    // 56px from 640px up); computed styles ignore the frame's scale.
     const top = () => column.evaluate((el) => getComputedStyle(el).paddingTop);
-    expect(await top()).toBe("32px");
+    expect(await top()).toBe("64px");
     await preview.getByRole("radio", { name: "Tablet" }).click();
     expect(await top()).toBe("56px");
     await preview.getByRole("radio", { name: "Desktop" }).click();
     expect(await top()).toBe("56px");
     await preview.getByRole("radio", { name: "Phone" }).click();
-    expect(await top()).toBe("32px");
+    expect(await top()).toBe("64px");
   });
 
   test("the whole preview stays on a laptop screen while you scroll a long form", async ({

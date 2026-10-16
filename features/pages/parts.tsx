@@ -44,7 +44,8 @@ export function PageFrame({
       <ShareButton preview={preview} />
       <div
         data-page-column
-        className="mx-auto flex w-full max-w-[560px] flex-1 flex-col gap-4 px-4 pt-8 pb-6 @min-[40rem]:pt-14"
+        // On narrow pages the column starts below the Share button, so long titles never run under it.
+        className="mx-auto flex w-full max-w-[560px] flex-1 flex-col gap-4 px-4 pt-16 pb-6 @min-[40rem]:pt-14"
       >
         {children}
       </div>
@@ -133,7 +134,7 @@ export function PageHeader({
       // Reaches the column's edges and top: the column's own padding.
       <div
         data-header="hero"
-        className="-mx-4 -mt-8 flex flex-col items-center gap-4 @min-[40rem]:-mt-14"
+        className="-mx-4 -mt-16 flex flex-col items-center gap-4 @min-[40rem]:-mt-14"
       >
         <div className="relative aspect-[16/10] w-full overflow-hidden @min-[40rem]:aspect-[16/7]">
           <MediaImage media={image} alt={imageAlt} eager className="size-full object-cover" />

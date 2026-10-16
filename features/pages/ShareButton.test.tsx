@@ -10,7 +10,14 @@ afterEach(() => {
 });
 
 describe("ShareButton", () => {
-  it("opens the share sheet where there is one", async () => {
+  const touch = (coarse: boolean) =>
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({ matches: coarse && query === "(pointer: coarse)" })),
+    );
+
+  it("opens the share sheet on phones and tablets", async () => {
+    touch(true);
     const share = vi.fn(async () => {});
     Object.defineProperty(navigator, "share", { value: share, configurable: true });
     document.title = "Spring menu";
@@ -36,5 +43,24 @@ describe("ShareButton", () => {
   it("is a still picture in the editor's preview", () => {
     render(<ShareButton preview />);
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("copies the link on a computer, even where it has a share sheet", async () => {
+    touch(false);
+    const share = vi.fn(async () => {});
+    Object.defineProperty(navigator, "share", { value: share, configurable: true });
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    render(<ShareButton />);
+    await userEvent.click(screen.getByRole("button", { name: "Share this page" }));
+    expect(share).not.toHaveBeenCalled();
+    expect(writeText).toHaveBeenCalledWith(window.location.href);
+  });
+
+  it("draws on the page's own background, so it reads over photos on every theme", () => {
+    render(<ShareButton />);
+    expect(screen.getByRole("button", { name: "Share this page" }).className).toContain(
+      "bg-(--bg)",
+    );
   });
 });

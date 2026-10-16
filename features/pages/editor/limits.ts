@@ -19,7 +19,8 @@ export function limitNote(
 ): { counter: string | null; error: string | null } {
   if (limit === null) return { counter: null, error: null };
   const over = length - limit;
-  const near = multiline || length >= limit - 20;
+  // Small boxes (a price, a currency, a label) stay quiet until they're too long.
+  const near = multiline || (limit >= 30 && length >= limit - 20);
   return {
     counter: near || over > 0 ? `${count(length)} / ${count(limit)}` : null,
     error: over > 0 ? shortenBy(over) : null,

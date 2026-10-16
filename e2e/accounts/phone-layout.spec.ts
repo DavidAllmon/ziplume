@@ -266,7 +266,7 @@ test.describe("signed in", () => {
 
 test.describe("hosted pages", () => {
   for (const { type, slug } of PHONE_PAGES) {
-    test(`a ${type} page ends with its footer`, async ({ page }) => {
+    test(`a ${type} page ends with its footer (${slug})`, async ({ page }) => {
       await page.goto(`p/${slug}`);
       // Wait for the page's footer, which is part of the page itself.
       const footer = page.getByRole("link", { name: /Made with Ziplume/ });
@@ -276,6 +276,34 @@ test.describe("hosted pages", () => {
       await expectEndsWith(page, footer, 40);
     });
   }
+
+  test("the Share button never covers a long title", async ({ page }) => {
+    await page.goto("p/PHONE-LONG");
+    const share = await page.getByRole("button", { name: "Share this page" }).boundingBox();
+    // Each line of the title as drawn, not the heading's box.
+    const lines = await page
+      .locator("h1")
+      .first()
+      .evaluate((el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        return [...range.getClientRects()].map((r) => ({
+          x: r.x,
+          y: r.y,
+          w: r.width,
+          h: r.height,
+        }));
+      });
+    expect(share).not.toBeNull();
+    for (const line of lines) {
+      const apart =
+        line.x + line.w <= share!.x ||
+        line.x >= share!.x + share!.width ||
+        line.y + line.h <= share!.y ||
+        line.y >= share!.y + share!.height;
+      expect(apart, JSON.stringify({ line, share })).toBe(true);
+    }
+  });
 
   test("a paused page's notice fits on the screen", async ({ page }) => {
     await page.goto(`p/${PAUSED_PAGE_SLUG}`);

@@ -4,7 +4,7 @@ import { Check, Share2 } from "lucide-react";
 import { useRef, useState } from "react";
 
 const BUTTON =
-  "absolute top-3 right-3 z-10 grid size-11 place-items-center rounded-full border border-border bg-surface text-fg shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring)";
+  "absolute top-3 right-3 z-10 grid size-11 place-items-center rounded-full border border-border bg-(--bg) text-fg shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring)";
 
 /** Share this page: the phone's share sheet, or copy the link (spec item 55). */
 export function ShareButton({ preview = false }: { preview?: boolean }) {
@@ -24,7 +24,10 @@ export function ShareButton({ preview = false }: { preview?: boolean }) {
   };
   async function share() {
     const url = window.location.href;
-    if (typeof navigator.share === "function") {
+    // Phones and tablets get their share sheet; computers copy the link (spec item 55).
+    const touch =
+      typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+    if (touch && typeof navigator.share === "function") {
       try {
         await navigator.share({ title: document.title, url });
         return;
