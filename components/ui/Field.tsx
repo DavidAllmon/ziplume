@@ -19,6 +19,8 @@ interface FieldProps {
   labelAction?: ReactNode;
   /** The card's heading already says it; screen readers still hear the label. */
   hideLabel?: boolean;
+  /** A character count, shown at the end of the line under the box. */
+  counter?: ReactNode;
   className?: string;
   children: (control: FieldControlProps) => ReactNode;
 }
@@ -31,13 +33,15 @@ export function Field({
   optional,
   labelAction,
   hideLabel = false,
+  counter,
   className,
   children,
 }: FieldProps) {
   const id = useId();
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
-  const describedBy = [errorId, hintId].filter(Boolean).join(" ") || undefined;
+  const counterId = counter ? `${id}-counter` : undefined;
+  const describedBy = [errorId, hintId, counterId].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
@@ -49,16 +53,31 @@ export function Field({
         {labelAction}
       </div>
       {children({ id, "aria-describedby": describedBy, "aria-invalid": error ? true : undefined })}
-      {error ? (
-        <p id={errorId} className="text-sm text-danger">
-          {error}
-        </p>
-      ) : (
-        hint && (
-          <p id={hintId} className="text-sm text-fg-muted">
-            {hint}
-          </p>
-        )
+      {(error || hint || counter) && (
+        <div className="flex items-start justify-between gap-3">
+          {error ? (
+            <p id={errorId} className="text-sm text-danger">
+              {error}
+            </p>
+          ) : hint ? (
+            <p id={hintId} className="text-sm text-fg-muted">
+              {hint}
+            </p>
+          ) : (
+            <span />
+          )}
+          {counter && (
+            <p
+              id={counterId}
+              className={cn(
+                "shrink-0 text-sm tabular-nums",
+                error ? "text-danger" : "text-fg-muted",
+              )}
+            >
+              {counter}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

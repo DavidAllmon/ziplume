@@ -40,7 +40,6 @@ export function AudioEditor({
           onChange={(link) => set({ link })}
           path="link"
           errors={errors}
-          maxLength={2048}
         />
       </FormCard>
       <FormCard title="Header" note="At the top of your page">
@@ -53,12 +52,16 @@ export function AudioEditor({
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
+            path="title"
+            errors={errors}
             label="Title"
             optional
             value={page.title}
             onChange={(title) => set({ title })}
           />
           <TextField
+            path="artist"
+            errors={errors}
             label="Artist"
             optional
             value={page.artist}
@@ -68,6 +71,8 @@ export function AudioEditor({
       </FormCard>
       <FormCard title="Details">
         <AreaField
+          path="description"
+          errors={errors}
           label="Description"
           value={page.description}
           onChange={(description) => set({ description })}

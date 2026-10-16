@@ -32,8 +32,17 @@ export function PdfEditor({
         />
       </FormCard>
       <FormCard title="Details">
-        <TextField label="Title" optional value={page.title} onChange={(title) => set({ title })} />
+        <TextField
+          path="title"
+          errors={errors}
+          label="Title"
+          optional
+          value={page.title}
+          onChange={(title) => set({ title })}
+        />
         <AreaField
+          path="description"
+          errors={errors}
           label="Description"
           value={page.description}
           onChange={(description) => set({ description })}

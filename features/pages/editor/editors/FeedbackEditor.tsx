@@ -47,6 +47,8 @@ export function FeedbackEditor({ page, set, errors }: EditorProps<FeedbackPage>)
       </FormCard>
       <FormCard title="After sending">
         <AreaField
+          path="thanks"
+          errors={errors}
           label="Thank-you message"
           value={page.thanks}
           onChange={(thanks) => set({ thanks })}

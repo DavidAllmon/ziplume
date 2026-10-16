@@ -26,6 +26,8 @@ export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
           errors={errors}
         />
         <AreaField
+          path="description"
+          errors={errors}
           label="Description"
           value={page.description}
           onChange={(description) => set({ description })}
@@ -50,11 +52,12 @@ export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
           render={(section, update, s) => (
             <>
               <TextField
+                path={`sections.${s}.name`}
+                errors={errors}
                 label="Section name"
                 value={section.name}
                 onChange={(name) => update({ name })}
                 placeholder="Mains"
-                maxLength={80}
               />
               <SortableList
                 label="Dishes and drinks"
@@ -78,28 +81,31 @@ export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
                         errors={errors}
                       />
                       <TextField
+                        path={`sections.${s}.items.${i}.price`}
+                        errors={errors}
                         label="Price"
                         value={item.price}
                         onChange={(price) => updateItem({ price })}
                         inputMode="decimal"
-                        maxLength={20}
                         placeholder="12"
                       />
                     </div>
                     <TextField
+                      path={`sections.${s}.items.${i}.description`}
+                      errors={errors}
                       label="Description"
                       optional
                       value={item.description}
                       onChange={(description) => updateItem({ description })}
-                      maxLength={300}
                     />
                     <TextField
+                      path={`sections.${s}.items.${i}.tags`}
+                      errors={errors}
                       label="Tags"
                       optional
                       hint="Comma separated, e.g. vegan, gluten-free"
                       value={item.tags}
                       onChange={(tags) => updateItem({ tags })}
-                      maxLength={80}
                     />
                   </>
                 )}
@@ -111,14 +117,17 @@ export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
       <FormCard title="Currency and note">
         <div className="max-w-32">
           <TextField
+            path="currency"
+            errors={errors}
             label="Currency"
             value={page.currency}
             onChange={(currency) => set({ currency })}
-            maxLength={4}
             placeholder="$"
           />
         </div>
         <AreaField
+          path="note"
+          errors={errors}
           label="Note"
           value={page.note}
           onChange={(note) => set({ note })}

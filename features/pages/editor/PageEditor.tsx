@@ -17,6 +17,7 @@ import {
   type VideoPage,
   type PageContentMap,
 } from "@/lib/pages/types";
+import { limitAt } from "@/lib/pages/sanitize";
 import type { PageErrors } from "@/lib/pages/validate";
 import type { PageTypeId } from "@/lib/qr/types";
 
@@ -34,6 +35,7 @@ import { VcardEditor } from "./editors/VcardEditor";
 import { VideoEditor } from "./editors/VideoEditor";
 import type { ErrorsApi } from "./fields";
 import { FormCardStyle } from "./FormCard";
+import { LimitsContext } from "./limits";
 import { remapTouched } from "./touched";
 
 interface PageEditorProps<K extends PageTypeId> {
@@ -152,8 +154,11 @@ export function PageEditor<K extends PageTypeId>({
   })();
 
   return (
-    <FormCardStyle value={cards ? "card" : "section"}>
-      <div className={cards ? "flex flex-col gap-6" : "flex flex-col gap-5"}>{body}</div>
-    </FormCardStyle>
+    // Each text box's limit comes from the page's schema, by the box's path.
+    <LimitsContext value={(path) => limitAt(type, path)}>
+      <FormCardStyle value={cards ? "card" : "section"}>
+        <div className={cards ? "flex flex-col gap-6" : "flex flex-col gap-5"}>{body}</div>
+      </FormCardStyle>
+    </LimitsContext>
   );
 }

@@ -11,6 +11,7 @@ import {
   type MenuPage,
   type PageContentMap,
 } from "@/lib/pages/types";
+import { limitAt } from "@/lib/pages/sanitize";
 import { validatePage } from "@/lib/pages/validate";
 import { PAGE_TYPE_IDS, type PageTypeId } from "@/lib/qr/types";
 
@@ -383,5 +384,72 @@ describe("an upload that finishes later", () => {
     const page = JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
     expect(page.title).toBe("Spring menu");
     expect(page.file).toEqual(file);
+  });
+});
+
+describe("text limits in the editor", () => {
+  function Typing({ initial }: { initial: PageContentMap["video"] }) {
+    const [page, setPage] = useState(initial);
+    return (
+      <PageEditor
+        type="video"
+        page={page}
+        errors={validatePage("video", page)}
+        onUpdate={(update) => setPage((p) => update(p))}
+      />
+    );
+  }
+
+  it("shows a counter on text of several lines, and keeps a paste over the limit", async () => {
+    const user = userEvent.setup();
+    render(<Typing initial={PAGE_DEFAULTS.video()} />);
+    const box = screen.getByRole("textbox", { name: /^Description/ });
+    expect(screen.getByText("0 / 1,000")).toBeInTheDocument();
+    await user.click(box);
+    await user.paste("x".repeat(1200));
+    expect(box).toHaveValue("x".repeat(1200));
+    expect(screen.getByText("Shorten by 200 characters")).toBeInTheDocument();
+    expect(screen.getByText("1,200 / 1,000")).toBeInTheDocument();
+    expect(box).toHaveAttribute("aria-invalid", "true");
+    expect(box).not.toHaveAttribute("maxlength");
+  });
+
+  it("shows a one-line box's counter only near its limit", async () => {
+    const user = userEvent.setup();
+    render(<Typing initial={PAGE_DEFAULTS.video()} />);
+    const title = screen.getByRole("textbox", { name: /^Title/ });
+    await user.type(title, "x".repeat(99));
+    expect(screen.queryByText(/ \/ 120$/)).toBeNull();
+    await user.type(title, "x");
+    expect(screen.getByText("100 / 120")).toBeInTheDocument();
+  });
+
+  it.each(PAGE_TYPE_IDS)("%s: every text box has a limit from the page's schema", (type) => {
+    const page = PAGE_DEFAULTS[type]() as unknown as Record<string, unknown>;
+    // One of everything in lists, so their rows render.
+    if (type === "menu") {
+      page.sections = [{ name: "", items: [{ name: "", description: "", price: "", tags: "" }] }];
+    }
+    if (type === "business" || type === "links") {
+      page.socials = [{ network: "instagram", url: "" }];
+    }
+    if (type === "business") page.buttons = [{ label: "", url: "", on: true }];
+    if (type === "vcard") page.socials = [{ network: "instagram", url: "" }];
+    const { container } = render(
+      <PageEditor type={type} page={page as never} errors={{}} onUpdate={vi.fn()} reveal />,
+    );
+    const boxes = [
+      ...container.querySelectorAll<HTMLElement>("input:not([type=file]), textarea"),
+    ].filter(
+      // Opening hours are time boxes with a fixed shape, checked by the hours schema, not text.
+      (el) =>
+        !["checkbox", "radio", "range", "color", "time"].includes(el.getAttribute("type") ?? ""),
+    );
+    expect(boxes.length).toBeGreaterThan(0);
+    for (const box of boxes) {
+      const path = box.getAttribute("data-field");
+      expect(path, `${type}: ${box.outerHTML.slice(0, 80)}`).toBeTruthy();
+      expect(limitAt(type, path!), `${type}.${path}`).not.toBeNull();
+    }
   });
 });

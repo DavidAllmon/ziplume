@@ -35,7 +35,6 @@ export function VideoEditor({
             path="url"
             errors={errors}
             placeholder="https://youtu.be/…"
-            maxLength={2048}
           />
         ) : (
           <MediaField
@@ -50,8 +49,17 @@ export function VideoEditor({
         )}
       </FormCard>
       <FormCard title="Details">
-        <TextField label="Title" optional value={page.title} onChange={(title) => set({ title })} />
+        <TextField
+          path="title"
+          errors={errors}
+          label="Title"
+          optional
+          value={page.title}
+          onChange={(title) => set({ title })}
+        />
         <AreaField
+          path="description"
+          errors={errors}
           label="Description"
           value={page.description}
           onChange={(description) => set({ description })}

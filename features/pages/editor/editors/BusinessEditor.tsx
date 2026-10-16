@@ -41,6 +41,8 @@ export function BusinessEditor({ page, set, errors }: EditorProps<BusinessPage>)
           errors={errors}
         />
         <TextField
+          path="tagline"
+          errors={errors}
           label="Tagline"
           optional
           value={page.tagline}
@@ -59,7 +61,6 @@ export function BusinessEditor({ page, set, errors }: EditorProps<BusinessPage>)
             onChange={(phone) => set({ phone })}
             path="phone"
             errors={errors}
-            maxLength={40}
           />
           <TextField
             label="Email"
@@ -70,7 +71,6 @@ export function BusinessEditor({ page, set, errors }: EditorProps<BusinessPage>)
             onChange={(email) => set({ email })}
             path="email"
             errors={errors}
-            maxLength={254}
           />
           <TextField
             label="Website"
@@ -81,24 +81,25 @@ export function BusinessEditor({ page, set, errors }: EditorProps<BusinessPage>)
             onChange={(website) => set({ website })}
             path="website"
             errors={errors}
-            maxLength={2048}
           />
           <TextField
+            path="address"
+            errors={errors}
             label="Address"
             optional
             value={page.address}
             onChange={(address) => set({ address })}
-            maxLength={300}
           />
         </div>
       </FormCard>
       <FormCard title="About">
         <AreaField
+          path="about"
+          errors={errors}
           label="About"
           hideLabel
           value={page.about}
           onChange={(about) => set({ about })}
-          maxLength={2000}
           rows={4}
         />
       </FormCard>

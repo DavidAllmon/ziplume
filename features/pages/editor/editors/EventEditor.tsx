@@ -24,6 +24,8 @@ export function EventEditor({ page, set, errors }: EditorProps<EventPage>) {
           errors={errors}
         />
         <TextField
+          path="organizer"
+          errors={errors}
           label="Organizer"
           optional
           value={page.organizer}
@@ -44,7 +46,6 @@ export function EventEditor({ page, set, errors }: EditorProps<EventPage>) {
             onChange={(start) => set({ start })}
             path="start"
             errors={errors}
-            maxLength={16}
           />
           <TextField
             label="Ends"
@@ -54,7 +55,6 @@ export function EventEditor({ page, set, errors }: EditorProps<EventPage>) {
             onChange={(end) => set({ end })}
             path="end"
             errors={errors}
-            maxLength={16}
           />
         </div>
         <TimeZoneField
@@ -65,31 +65,34 @@ export function EventEditor({ page, set, errors }: EditorProps<EventPage>) {
       </FormCard>
       <FormCard title="Where">
         <TextField
+          path="location"
+          errors={errors}
           label="Location"
           optional
           value={page.location}
           onChange={(location) => set({ location })}
           placeholder="Venue name and address"
-          maxLength={300}
         />
       </FormCard>
       <FormCard title="Details">
         <AreaField
+          path="description"
+          errors={errors}
           label="Description"
           value={page.description}
           onChange={(description) => set({ description })}
-          maxLength={2000}
           rows={4}
         />
       </FormCard>
       <FormCard title="Tickets">
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
+            path="ticketLabel"
+            errors={errors}
             label="Ticket button text"
             optional
             value={page.ticketLabel}
             onChange={(ticketLabel) => set({ ticketLabel })}
-            maxLength={40}
           />
           <TextField
             label="Ticket link"
@@ -100,7 +103,6 @@ export function EventEditor({ page, set, errors }: EditorProps<EventPage>) {
             onChange={(ticketUrl) => set({ ticketUrl })}
             path="ticketUrl"
             errors={errors}
-            maxLength={2048}
           />
         </div>
       </FormCard>

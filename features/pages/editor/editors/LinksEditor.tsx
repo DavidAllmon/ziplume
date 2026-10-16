@@ -27,6 +27,8 @@ export function LinksEditor({ page, set, errors }: EditorProps<LinksPage>) {
           placeholder="Your name or brand"
         />
         <AreaField
+          path="bio"
+          errors={errors}
           label="Bio"
           value={page.bio}
           onChange={(bio) => set({ bio })}
