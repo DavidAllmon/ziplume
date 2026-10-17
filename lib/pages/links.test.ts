@@ -123,3 +123,17 @@ describe("links on a Link list", () => {
     expect(linkHref(link({ type: "phone", url: "tel:+1 555 010 2030" }))).toBe("tel:+15550102030");
   });
 });
+
+describe("ready-made Business buttons", () => {
+  it("gives a ready-made button its own icon", () => {
+    expect(linkIcon(link({ icon: "review", url: "g.page/r/abc" }))).toEqual({
+      kind: "preset",
+      preset: "review",
+    });
+    const page = sanitizePage("business", {
+      name: "B",
+      buttons: [{ label: "Book now", url: "cal.com/b", icon: "book" }],
+    });
+    expect(page.buttons[0]!.icon).toBe("book");
+  });
+});

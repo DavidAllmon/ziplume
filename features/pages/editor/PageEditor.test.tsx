@@ -238,10 +238,20 @@ const CARDS: Record<PageTypeId, string[]> = {
     "About",
     "Phone numbers",
     "Email addresses",
-    "Website and address",
+    "Quick buttons",
+    "Websites and address",
     "Social icons",
   ],
-  business: ["Header", "Contact", "About", "Opening hours", "Buttons", "Social icons"],
+  business: [
+    "Header",
+    "Contact",
+    "Photos",
+    "About",
+    "Services",
+    "Opening hours",
+    "Buttons",
+    "Social icons",
+  ],
   menu: ["Header", "Sections and dishes", "Currency and note"],
   coupon: ["Header", "Offer", "Button", "Terms"],
   event: ["Header", "When", "Where", "Details", "Tickets"],
@@ -453,5 +463,154 @@ describe("text limits in the editor", () => {
       expect(path, `${type}: ${box.outerHTML.slice(0, 80)}`).toBeTruthy();
       expect(limitAt(type, path!), `${type}.${path}`).not.toBeNull();
     }
+  });
+});
+
+describe("Contact page editor extras", () => {
+  function Contact() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.vcard());
+    return (
+      <>
+        <PageEditor
+          type="vcard"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("edits pronouns, department and up to four websites", async () => {
+    const user = userEvent.setup();
+    render(<Contact />);
+    await user.type(screen.getByRole("textbox", { name: /^Pronouns/ }), "she/her");
+    await user.type(screen.getByRole("textbox", { name: /^Department/ }), "Design");
+    await user.click(screen.getByRole("button", { name: "Add website" }));
+    await user.type(screen.getByRole("textbox", { name: /^Website address/ }), "ana.dev");
+    expect(saved()).toMatchObject({
+      pronouns: "she/her",
+      department: "Design",
+      websites: [{ label: "", url: "ana.dev" }],
+    });
+  });
+
+  it("ticks a number as WhatsApp, and turns quick buttons off", async () => {
+    const user = userEvent.setup();
+    render(<Contact />);
+    await user.click(screen.getByRole("checkbox", { name: /WhatsApp/ }));
+    await user.click(screen.getByRole("switch", { name: /^Text/ }));
+    expect(saved().phones[0].whatsapp).toBe(true);
+    expect(saved().showText).toBe(false);
+  });
+
+  it("offers a cover photo", () => {
+    render(<Contact />);
+    expect(screen.getByText("Cover photo")).toBeInTheDocument();
+  });
+});
+
+describe("Business editor extras", () => {
+  function Biz() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.business());
+    return (
+      <>
+        <PageEditor
+          type="business"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("adds a ready-made Google review button, and puts the cursor in its link", async () => {
+    const user = userEvent.setup();
+    render(<Biz />);
+    await user.click(screen.getByRole("button", { name: "Add Google review" }));
+    expect(saved().buttons[0]).toMatchObject({
+      label: "Leave a Google review",
+      icon: "review",
+      url: "",
+    });
+    expect(document.activeElement).toHaveAttribute("data-field", "buttons.0.url");
+  });
+
+  it("adds second hours to a day, a closure date, and a service", async () => {
+    const user = userEvent.setup();
+    render(<Biz />);
+    await user.click(screen.getByRole("button", { name: "Add hours for Monday" }));
+    expect(saved().hours[0]).toMatchObject({ from2: "13:00", to2: "17:00" });
+    expect(screen.getByLabelText("Monday opens again")).toHaveValue("13:00");
+    await user.click(screen.getByRole("button", { name: "Remove second hours for Monday" }));
+    expect(saved().hours[0]).toMatchObject({ from2: "", to2: "" });
+    await user.click(screen.getByRole("button", { name: "Add closure" }));
+    expect(saved().closures).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Add service" }));
+    await user.type(screen.getByRole("textbox", { name: /^Service/ }), "Cake order");
+    expect(saved().services[0].name).toBe("Cake order");
+  });
+
+  it("offers a photo gallery and a time zone", () => {
+    render(<Biz />);
+    expect(screen.getByText("Photos")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /^Time zone/ })).toBeInTheDocument();
+  });
+});
+
+describe("Business opening hours", () => {
+  function Biz() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.business());
+    return (
+      <>
+        <PageEditor
+          type="business"
+          page={page}
+          errors={validatePage("business", page)}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("splits a day for a lunch break, which saves with no error", async () => {
+    const user = userEvent.setup();
+    render(<Biz />);
+    // The button's name starts with its visible text, for voice control.
+    await user.click(screen.getByRole("button", { name: "Add hours for Monday" }));
+    expect(saved().hours[0]).toEqual({
+      open: true,
+      from: "09:00",
+      to: "12:00",
+      from2: "13:00",
+      to2: "17:00",
+    });
+    expect(validatePage("business", saved())).not.toHaveProperty("hours.0");
+  });
+
+  it("adds a second range after a day that ends before lunch", async () => {
+    const user = userEvent.setup();
+    render(<Biz />);
+    fireEvent.change(screen.getByLabelText("Tuesday closes"), { target: { value: "11:00" } });
+    await user.click(screen.getByRole("button", { name: "Add hours for Tuesday" }));
+    expect(saved().hours[1]).toMatchObject({ to: "11:00", from2: "12:00", to2: "15:00" });
+    expect(validatePage("business", saved())).not.toHaveProperty("hours.1");
+  });
+
+  it("marks a day's first box for Show me, and shows its error once you leave it", () => {
+    render(<Biz />);
+    const opens = screen.getByLabelText("Monday opens");
+    expect(opens).toHaveAttribute("data-field", "hours.0");
+    fireEvent.change(opens, { target: { value: "18:00" } });
+    expect(screen.queryByText("Closing time must be after opening")).toBeNull();
+    fireEvent.blur(opens);
+    expect(screen.getByText("Closing time must be after opening")).toBeInTheDocument();
   });
 });

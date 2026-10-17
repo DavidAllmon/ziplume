@@ -7,6 +7,7 @@ import {
   Globe,
   Mail,
   MapPin,
+  MessageSquare,
   Music,
   Phone,
   Play,
@@ -33,13 +34,24 @@ import type {
   VcardPage,
   VideoPage,
 } from "@/lib/pages/types";
+import { DAY_NAMES, formatTime, rangesOf } from "@/lib/pages/hours";
 import { isShown, linkHref, linkIcon } from "@/lib/pages/links";
-import { mailHref, mediaUrl, safeHref, telHref, videoEmbed } from "@/lib/pages/urls";
+import {
+  mailHref,
+  mediaUrl,
+  safeHref,
+  smsHref,
+  telHref,
+  videoEmbed,
+  whatsappHref,
+} from "@/lib/pages/urls";
 import type { PageTypeId } from "@/lib/qr/types";
 
 import { CopyCode } from "./CopyCode";
 import { LinkIconMark } from "./LinkIcon";
 import { FeedbackForm } from "./FeedbackForm";
+import { Gallery } from "./Viewer";
+import { OpenStatus } from "./OpenStatus";
 import {
   EmptyNote,
   fileSize,
@@ -49,6 +61,8 @@ import {
   PageHeader,
   PageLink,
   Prose,
+  QuickActions,
+  SocialIcon,
   SocialRow,
 } from "./parts";
 
@@ -176,24 +190,68 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
       .join(" ") ||
     page.company ||
     "Your name";
-  const role = [page.jobTitle.trim(), page.company.trim()].filter(Boolean).join(" · ");
-  const website = safeHref(page.website);
+  const role = [page.jobTitle, page.department, page.company]
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(" · ");
+  const pronouns = page.pronouns.trim();
   const look = page.look;
   const socials = <SocialRow socials={page.socials} look={look} preview={preview} />;
+  // The quick buttons use the first phone and email that work (spec item 12).
+  const phone = page.phones.find((p) => telHref(p.number));
+  const whatsapp = page.phones.map((p) => p.whatsapp && whatsappHref(p.number)).find(Boolean);
+  const email = page.emails.find((e) => mailHref(e.address));
+  const actions = [
+    page.showCall &&
+      phone && { label: "Call", href: telHref(phone.number)!, icon: <Phone aria-hidden /> },
+    page.showText &&
+      phone && { label: "Text", href: smsHref(phone.number)!, icon: <MessageSquare aria-hidden /> },
+    page.showEmail &&
+      email && { label: "Email", href: mailHref(email.address)!, icon: <Mail aria-hidden /> },
+    page.showWhatsapp &&
+      whatsapp && {
+        label: "WhatsApp",
+        href: whatsapp,
+        icon: <SocialIcon network="whatsapp" />,
+      },
+    page.showDirections &&
+      page.address.trim() && {
+        label: "Directions",
+        href: mapsHref(page.address),
+        icon: <MapPin aria-hidden />,
+      },
+  ];
+  const websites = page.websites
+    .map((w) => ({ ...w, href: safeHref(w.url) }))
+    .filter((w) => w.href);
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
         look={look}
-        layout={look.header}
-        image={page.photo}
-        imageAlt={name}
-        title={name}
+        // With a cover, it runs across the top and the photo sits over it (spec item 11).
+        layout={page.cover ? "banner" : look.header}
+        image={page.cover ?? page.photo}
+        imageAlt={page.cover ? "" : name}
+        badge={page.cover ? page.photo : null}
+        badgeRound={look.shape === "circle"}
+        title={
+          <>
+            {name}
+            {pronouns && (
+              <>
+                {" "}
+                <span className="align-middle text-lg font-medium text-fg-muted">({pronouns})</span>
+              </>
+            )}
+          </>
+        }
         sub={role || undefined}
       />
       {look.socials === "top" && socials}
       <PageLink href={`/p/${encodeURIComponent(slug)}/contact.vcf`} download preview={preview}>
         <UserPlus aria-hidden /> Save contact
       </PageLink>
+      <QuickActions actions={actions} preview={preview} />
       <PageCard>
         {page.bio.trim() && <Prose text={page.bio} className="mb-3" />}
         <ul className="divide-y divide-border">
@@ -221,15 +279,16 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
                 preview={preview}
               />
             ))}
-          {website && (
+          {websites.map((w, i) => (
             <ContactRow
+              key={`w${i}`}
               icon={Globe}
-              label="Website"
-              value={page.website.replace(/^https?:\/\//, "")}
-              href={website}
+              label={w.label.trim() || "Website"}
+              value={w.url.trim().replace(/^https?:\/\//, "")}
+              href={w.href}
               preview={preview}
             />
-          )}
+          ))}
           {page.address.trim() && (
             <ContactRow
               icon={MapPin}
@@ -246,33 +305,23 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
   );
 }
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-function formatTime(value: string) {
-  const [h = 0, m = 0] = value.split(":").map(Number);
-  return new Date(Date.UTC(2000, 0, 1, h, m)).toLocaleTimeString("en", {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "UTC",
-  });
-}
-
 function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
   const phone = telHref(page.phone);
   const email = mailHref(page.email);
   const website = safeHref(page.website);
   const look = page.look;
   const hero = look.header === "hero" && page.cover !== null;
+  const services = page.services.filter((service) => service.name.trim());
   const socials = <SocialRow socials={page.socials} look={look} preview={preview} />;
   const actions = [
-    { href: phone, icon: Phone, label: "Call" },
-    { href: email, icon: Mail, label: "Email" },
-    {
-      href: page.address.trim() ? mapsHref(page.address) : null,
-      icon: MapPin,
+    phone && { label: "Call", href: phone, icon: <Phone aria-hidden /> },
+    email && { label: "Email", href: email, icon: <Mail aria-hidden /> },
+    page.address.trim() && {
       label: "Directions",
+      href: mapsHref(page.address),
+      icon: <MapPin aria-hidden />,
     },
-  ].filter((action) => action.href);
+  ];
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -286,36 +335,65 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
         sub={page.tagline || undefined}
       />
       {look.socials === "top" && socials}
-      {actions.length > 0 && (
-        <PageCard className="flex flex-col items-center gap-4 text-center">
-          <div className="grid w-full grid-cols-3 gap-2">
-            {actions.map(({ href, icon: Icon, label }) => (
-              <a
-                key={label}
-                href={preview ? undefined : href!}
-                {...(href!.startsWith("http")
-                  ? { target: "_blank", rel: "noopener noreferrer" }
-                  : {})}
-                className="flex flex-col items-center gap-1 rounded-2xl bg-surface-2 px-2 py-3 text-sm font-semibold text-fg focus-visible:outline-2 focus-visible:outline-[var(--page-accent)]"
-              >
-                <Icon aria-hidden className="size-5 text-[var(--page-accent)]" />
-                {label}
-              </a>
-            ))}
-          </div>
-        </PageCard>
-      )}
+      <QuickActions actions={actions} preview={preview} />
       {page.buttons
         .filter((b) => b.kind !== "header" && b.on && linkHref(b))
-        .map((b, i) => (
-          <PageLink key={i} href={linkHref(b)} preview={preview}>
-            {b.label.trim() || b.url.replace(/^(https?:\/\/|mailto:|tel:|sms:)/, "")}
-          </PageLink>
-        ))}
+        .map((b, i) => {
+          // A known site's icon, or a ready-made button's own, as on a Link list.
+          const icon = linkIcon(b);
+          return (
+            <PageLink
+              key={i}
+              href={linkHref(b)}
+              preview={preview}
+              icon={icon ? <LinkIconMark icon={icon} /> : undefined}
+            >
+              {b.label.trim() || b.url.replace(/^(https?:\/\/|mailto:|tel:|sms:)/, "")}
+            </PageLink>
+          );
+        })}
+      <Gallery
+        images={page.gallery.map((media, i) => ({
+          media,
+          alt: `Photo ${i + 1} of ${page.name.trim() || "the business"}`,
+        }))}
+        label="Photos"
+        preview={preview}
+      />
       {page.about.trim() && (
         <PageCard>
           <h2 className="mb-2 font-page-heading text-lg font-bold text-fg">About</h2>
           <Prose text={page.about} />
+        </PageCard>
+      )}
+      {services.length > 0 && (
+        <PageCard>
+          <section aria-labelledby="services-heading">
+            <h2 id="services-heading" className="mb-3 font-page-heading text-lg font-bold text-fg">
+              Services
+            </h2>
+            <ul className="divide-y divide-border">
+              {services.map((service, i) => (
+                <li key={i} className="flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0">
+                  <div className="flex min-w-0 items-baseline justify-between gap-3">
+                    <span className="min-w-0 font-medium [overflow-wrap:anywhere] text-fg">
+                      {service.name}
+                    </span>
+                    {service.price.trim() && (
+                      <span className="shrink-0 font-semibold text-fg tabular-nums">
+                        {service.price}
+                      </span>
+                    )}
+                  </div>
+                  {service.description.trim() && (
+                    <p className="text-sm [overflow-wrap:anywhere] text-fg-muted">
+                      {service.description}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
         </PageCard>
       )}
       {page.showHours && (
@@ -323,12 +401,18 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
           <h2 className="mb-3 flex items-center gap-2 font-page-heading text-lg font-bold text-fg">
             <Clock aria-hidden className="size-5" /> Opening hours
           </h2>
+          {/* Clock-dependent, so never in the editor's preview. */}
+          {!preview && (
+            <OpenStatus hours={page.hours} closures={page.closures} timeZone={page.timeZone} />
+          )}
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[15px]">
             {page.hours.map((h, i) => (
-              <div key={DAYS[i]} className="contents">
-                <dt className="text-fg-muted">{DAYS[i]}</dt>
+              <div key={DAY_NAMES[i]} className="contents">
+                <dt className="text-fg-muted">{DAY_NAMES[i]}</dt>
                 <dd className="text-right font-medium text-fg tabular-nums">
-                  {h.open ? `${formatTime(h.from)} – ${formatTime(h.to)}` : "Closed"}
+                  {rangesOf(h)
+                    .map(([from, to]) => `${formatTime(from)} – ${formatTime(to)}`)
+                    .join(", ") || "Closed"}
                 </dd>
               </div>
             ))}

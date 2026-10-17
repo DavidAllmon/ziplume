@@ -6,7 +6,7 @@ import { contactVcard, eventIcs, eventTimes, googleCalendarUrl } from "./files";
 import { newLink } from "./links";
 import { mediaPaths, sanitizeMedia, sanitizePage } from "./sanitize";
 import { PAGE_DEFAULTS, type EventPage, type VcardPage } from "./types";
-import { safeHref, socialHref, videoEmbed } from "./urls";
+import { safeHref, socialHref, videoEmbed, whatsappHref } from "./urls";
 import { pageSummary, validatePage } from "./validate";
 
 const UID = "11111111-1111-4111-8111-111111111111";
@@ -60,7 +60,7 @@ describe("sanitizePage", () => {
   it("repairs opening hours", () => {
     const page = sanitizePage("business", { hours: [{ open: false, from: "25:00", to: "18:30" }] });
     expect(page.hours).toHaveLength(7);
-    expect(page.hours[0]).toEqual({ open: false, from: "09:00", to: "18:30" });
+    expect(page.hours[0]).toEqual({ open: false, from: "09:00", to: "18:30", from2: "", to2: "" });
   });
 
   it("lists every file a page uses", () => {
@@ -209,12 +209,12 @@ describe("downloads", () => {
       firstName: "Ada",
       lastName: "Lovelace",
       company: "Analytical, Ltd",
-      phones: [{ label: "Work", number: "+1 (555) 010-9999" }],
+      phones: [{ label: "Work", number: "+1 (555) 010-9999", whatsapp: false }],
       emails: [
         { label: "Work", address: "ada@example.com" },
         { label: "", address: "not-an-email" },
       ],
-      website: "example.com",
+      websites: [{ label: "", url: "example.com" }],
       socials: [{ network: "github", url: "@ada" }],
     };
     const vcf = contactVcard(card);
@@ -329,5 +329,122 @@ describe("video pages take links only", () => {
     expect(page).not.toHaveProperty("source");
     expect(page).not.toHaveProperty("file");
     expect(validatePage("video", page)).toEqual({ url: "Paste a YouTube or Vimeo link" });
+  });
+});
+
+describe("Contact page details", () => {
+  it("turns an old single website into the first of the websites", () => {
+    const page = sanitizePage("vcard", { firstName: "Ana", website: "ana.dev" });
+    expect(page.websites).toEqual([{ label: "", url: "ana.dev" }]);
+    expect(page).not.toHaveProperty("website");
+    expect(page).toMatchObject({
+      showCall: true,
+      showText: true,
+      showEmail: true,
+      showWhatsapp: true,
+      showDirections: true,
+      pronouns: "",
+      department: "",
+      cover: null,
+    });
+    // A page that already has websites keeps them.
+    const kept = sanitizePage("vcard", {
+      websites: [{ label: "Blog", url: "b.dev" }],
+      website: "x.dev",
+    });
+    expect(kept.websites).toEqual([{ label: "Blog", url: "b.dev" }]);
+  });
+
+  it("puts department, every website and pronouns in the saved contact card", () => {
+    const card = contactVcard({
+      ...PAGE_DEFAULTS.vcard(),
+      firstName: "Ana",
+      company: "Acme",
+      department: "Design",
+      pronouns: "she/her",
+      bio: "Hi",
+      websites: [
+        { label: "Blog", url: "b.dev" },
+        { label: "", url: "ana.dev" },
+      ],
+    });
+    expect(card).toContain("ORG:Acme;Design");
+    expect(card).toContain("URL:https://b.dev/");
+    expect(card).toContain("URL:https://ana.dev/");
+    expect(card).toContain("NOTE:Pronouns: she/her\\nHi");
+  });
+
+  it("checks each website", () => {
+    const page = {
+      ...PAGE_DEFAULTS.vcard(),
+      firstName: "Ana",
+      websites: [{ label: "", url: "not a url" }],
+    };
+    expect(validatePage("vcard", page)).toEqual({
+      "websites.0.url": "Enter a web address, like example.com",
+    });
+  });
+});
+
+describe("Business hours, closures and time zone", () => {
+  it("reads old hours as one range a day, and drops a bad second range", () => {
+    const page = sanitizePage("business", {
+      name: "B",
+      hours: [
+        { open: true, from: "08:00", to: "16:00" },
+        { open: true, from2: "25:00", to2: "x" },
+      ],
+    });
+    expect(page.hours[0]).toEqual({ open: true, from: "08:00", to: "16:00", from2: "", to2: "" });
+    expect(page.hours[1]).toMatchObject({ from2: "", to2: "" });
+    expect(page).toMatchObject({ timeZone: "", closures: [] });
+  });
+
+  it("checks the second hours, closure dates and the time zone", () => {
+    const hours = PAGE_DEFAULTS.business().hours;
+    hours[0] = { open: true, from: "09:00", to: "12:00", from2: "11:00", to2: "17:00" };
+    hours[1] = { open: true, from: "09:00", to: "12:00", from2: "13:00", to2: "" };
+    hours[2] = { open: true, from: "09:00", to: "12:00", from2: "13:00", to2: "17:00" };
+    const errors = validatePage("business", {
+      ...PAGE_DEFAULTS.business(),
+      name: "B",
+      hours,
+      closures: [{ date: "", note: "Holiday" }],
+      timeZone: "Mars/Base",
+    });
+    const second = "The second hours must start after the first and end after they start";
+    expect(errors).toMatchObject({
+      "hours.0": second,
+      "hours.1": second,
+      "closures.0.date": "Pick a date",
+      timeZone: "Choose a time zone",
+    });
+    expect(errors).not.toHaveProperty("hours.2");
+  });
+});
+
+describe("WhatsApp quick button", () => {
+  it("needs the full international number, and ignores an extension", () => {
+    expect(whatsappHref("+1 555 010 2030")).toBe("https://wa.me/15550102030");
+    expect(whatsappHref("0044 7700 900123")).toBe("https://wa.me/447700900123");
+    expect(whatsappHref("+1 555 010 2030 ext 12")).toBe("https://wa.me/15550102030");
+    expect(whatsappHref("+44 7700 900123 x4")).toBe("https://wa.me/447700900123");
+    expect(whatsappHref("(555) 010-2030")).toBeNull();
+    expect(whatsappHref("07700 900123")).toBeNull();
+    expect(whatsappHref("+1")).toBeNull();
+  });
+
+  it("asks for the country code on a number marked On WhatsApp", () => {
+    const page = {
+      ...PAGE_DEFAULTS.vcard(),
+      firstName: "Ana",
+      phones: [
+        { label: "Mobile", number: "(555) 010-2030", whatsapp: true },
+        { label: "Home", number: "(555) 010-4040", whatsapp: false },
+      ],
+    };
+    expect(validatePage("vcard", page)).toEqual({
+      "phones.0.number": "Add the country code, like +1 or +44",
+    });
   });
 });

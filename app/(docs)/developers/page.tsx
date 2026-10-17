@@ -261,6 +261,21 @@ export default function DevelopersPage() {
         button with <code>&quot;on&quot;: false</code> stays saved but isn’t shown on the page;
         without it, it’s shown.
       </p>
+      <p>
+        Contact pages (<code>vcard</code>) take <code>websites</code> (up to 4, each a{" "}
+        <code>label</code> and <code>url</code>), a <code>cover</code> image, <code>pronouns</code>,{" "}
+        <code>department</code>, a phone’s <code>whatsapp</code> (true or false), and{" "}
+        <code>showCall</code>, <code>showText</code>, <code>showEmail</code>,{" "}
+        <code>showWhatsapp</code> and <code>showDirections</code> for the quick buttons (shown
+        unless false). An older single <code>website</code> is read as the first of the websites.
+        Business pages take <code>timeZone</code> (an IANA name like <code>America/New_York</code>,
+        for Open now; without one, each visitor’s own time is used), <code>closures</code> (up to
+        10, each a <code>date</code> as <code>YYYY-MM-DD</code> and a <code>note</code>), a second
+        range on each day of <code>hours</code> (<code>from2</code>/<code>to2</code>), a{" "}
+        <code>gallery</code> of up to 6 images, <code>services</code> (up to 30, each a{" "}
+        <code>name</code>, <code>price</code> and <code>description</code>), and buttons with{" "}
+        <code>icon</code> <code>review</code>, <code>book</code> or <code>order</code>.
+      </p>
       <Code>{`{
   "type": "links",
   "name": "Bio links",

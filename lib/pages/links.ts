@@ -83,12 +83,16 @@ export function networkFromUrl(url: string): SocialNetwork | null {
 export type LinkIcon =
   | { kind: "network"; network: SocialNetwork }
   | { kind: "type"; type: "email" | "phone" | "sms" }
-  | { kind: "image"; image: Media };
+  | { kind: "image"; image: Media }
+  | { kind: "preset"; preset: "review" | "book" | "order" };
 
 /** A link's icon: its uploaded image, or (Auto) its type's or a known site's; null for none. */
 export function linkIcon(link: LinkItem): LinkIcon | null {
   if (link.icon === "none") return null;
   if (link.icon === "image" && link.image) return { kind: "image", image: link.image };
+  if (link.icon === "review" || link.icon === "book" || link.icon === "order") {
+    return { kind: "preset", preset: link.icon };
+  }
   const type = typeOf(link);
   if (type !== "web") return { kind: "type", type };
   const network = networkFromUrl(link.url);

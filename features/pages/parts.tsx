@@ -84,6 +84,7 @@ export function PageHeader({
   sub,
   eyebrow,
   badge,
+  badgeRound = false,
 }: {
   look: PageLook;
   layout: "classic" | "hero" | "banner";
@@ -96,8 +97,10 @@ export function PageHeader({
   title: ReactNode;
   sub?: ReactNode;
   eyebrow?: ReactNode;
-  /** Business Hero: the logo overlapping the cover. */
+  /** Business Hero: the logo overlapping the cover. Banner: the person's photo over their cover. */
   badge?: Media | null;
+  /** A Banner badge in the look's circle (a person's photo) rather than rounded. */
+  badgeRound?: boolean;
 }) {
   const drawn = layout === "hero" && !image ? "classic" : layout;
   const heading = (
@@ -125,6 +128,19 @@ export function PageHeader({
             eager
             className="aspect-[16/9] w-full rounded-(--pg-radius) object-cover"
           />
+        )}
+        {badge && (
+          <span data-badge className={cn("relative mx-auto block w-fit", image && "-mt-14")}>
+            <MediaImage
+              media={badge}
+              alt=""
+              eager
+              className={cn(
+                "size-24 border-4 border-(--bg) bg-(--bg) object-cover",
+                badgeRound ? "rounded-full" : "rounded-(--pg-radius)",
+              )}
+            />
+          </span>
         )}
         {heading}
       </div>
@@ -193,6 +209,49 @@ export function PageCard({ children, className }: { children: ReactNode; classNa
 }
 
 /** An uploaded image from the page-media bucket. */
+export interface QuickAction {
+  label: string;
+  href: string;
+  icon: ReactNode;
+}
+
+/**
+ * The row of quick buttons (Call, Text, Email, WhatsApp, Directions) under a page's header. Gaps in
+ * the list (a button that's off or can't work) are skipped; with none left there's no row.
+ */
+export function QuickActions({
+  actions: list,
+  preview,
+}: {
+  actions: (QuickAction | false | "" | null | undefined)[];
+  preview?: boolean;
+}) {
+  const actions = list.filter((action): action is QuickAction => Boolean(action));
+  if (!actions.length) return null;
+  return (
+    <PageCard>
+      <nav aria-label="Quick actions">
+        <ul className="grid grid-cols-[repeat(auto-fit,minmax(4.5rem,1fr))] gap-2">
+          {actions.map(({ label, href, icon }) => (
+            <li key={label}>
+              <a
+                href={preview ? undefined : href}
+                {...(href.startsWith("http")
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
+                className="flex min-h-11 flex-col items-center gap-1 rounded-2xl bg-surface-2 px-2 py-3 text-sm font-semibold text-fg focus-visible:outline-2 focus-visible:outline-[var(--page-accent)] [&_svg]:size-5 [&_svg]:text-[var(--page-accent)]"
+              >
+                {icon}
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </PageCard>
+  );
+}
+
 export function MediaImage({
   media,
   alt,

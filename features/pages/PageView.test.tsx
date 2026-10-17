@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { newHeader, newLink } from "@/lib/pages/links";
 import { themeLook } from "@/lib/pages/look";
@@ -341,5 +341,169 @@ describe("Link list extras", () => {
       "href",
       "https://example.com/",
     );
+  });
+});
+
+describe("Contact page extras", () => {
+  const ana = (patch: object = {}) => ({
+    ...PAGE_DEFAULTS.vcard(),
+    firstName: "Ana",
+    jobTitle: "Designer",
+    department: "Brand",
+    company: "Acme",
+    pronouns: "she/her",
+    phones: [
+      { label: "Mobile", number: "+1 555 010 2030", whatsapp: false },
+      { label: "Work", number: "+1 555 010 4040", whatsapp: true },
+    ],
+    emails: [{ label: "Work", address: "ana@acme.com" }],
+    address: "1 Main St",
+    ...patch,
+  });
+
+  it("draws Call, Text, Email, WhatsApp and Directions from the first details", () => {
+    view("vcard", ana(), false);
+    const actions = within(screen.getByRole("navigation", { name: "Quick actions" }));
+    expect(actions.getByRole("link", { name: "Call" })).toHaveAttribute("href", "tel:+15550102030");
+    expect(actions.getByRole("link", { name: "Text" })).toHaveAttribute("href", "sms:+15550102030");
+    expect(actions.getByRole("link", { name: "Email" })).toHaveAttribute(
+      "href",
+      "mailto:ana@acme.com",
+    );
+    expect(actions.getByRole("link", { name: "WhatsApp" })).toHaveAttribute(
+      "href",
+      "https://wa.me/15550104040",
+    );
+    expect(actions.getByRole("link", { name: "Directions" })).toBeInTheDocument();
+  });
+
+  it("leaves out buttons that are off or can't work, and the whole row when none can", () => {
+    const { unmount } = view(
+      "vcard",
+      ana({ showText: false, phones: [{ label: "", number: "+1 555 010 2030", whatsapp: false }] }),
+      false,
+    );
+    const actions = within(screen.getByRole("navigation", { name: "Quick actions" }));
+    expect(actions.queryByRole("link", { name: "Text" })).toBeNull();
+    expect(actions.queryByRole("link", { name: "WhatsApp" })).toBeNull();
+    unmount();
+    view("vcard", ana({ phones: [], emails: [], address: "" }), false);
+    expect(screen.queryByRole("navigation", { name: "Quick actions" })).toBeNull();
+  });
+
+  it("shows pronouns by the name, and the department in the role", () => {
+    view("vcard", ana(), false);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Ana (she/her)");
+    expect(screen.getByText("Designer · Brand · Acme")).toBeInTheDocument();
+  });
+
+  it("draws the cover across the top with the photo over it", () => {
+    const { container } = view(
+      "vcard",
+      ana({ cover: media("cover.jpg", "image/jpeg"), photo: media("me.jpg", "image/jpeg") }),
+      false,
+    );
+    expect(container.querySelector("[data-header=banner]")).not.toBeNull();
+    expect(container.querySelector("[data-header=banner] [data-badge]")).not.toBeNull();
+  });
+
+  it("lists each website with its label", () => {
+    view(
+      "vcard",
+      ana({
+        websites: [
+          { label: "Portfolio", url: "ana.dev" },
+          { label: "", url: "acme.com" },
+        ],
+      }),
+      false,
+    );
+    expect(screen.getByText("Portfolio")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /ana\.dev/ })).toHaveAttribute(
+      "href",
+      "https://ana.dev/",
+    );
+  });
+});
+
+describe("Business hours", () => {
+  it("lists a split day's two ranges in the opening hours", () => {
+    const hours = PAGE_DEFAULTS.business().hours.map((h) => ({ ...h, from2: "", to2: "" }));
+    hours[0] = { open: true, from: "09:00", to: "12:00", from2: "13:00", to2: "17:00" };
+    view("business", { ...PAGE_DEFAULTS.business(), name: "Bakery", hours }, false);
+    expect(screen.getByText("9:00 AM – 12:00 PM, 1:00 PM – 5:00 PM")).toBeInTheDocument();
+  });
+});
+
+describe("Open now", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("shows on the live page in the business's time zone, never in the editor's preview", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2030-01-07T15:00:00Z")); // Monday 10:00 in New York
+    const page = { ...PAGE_DEFAULTS.business(), name: "Bakery", timeZone: "America/New_York" };
+    const { unmount } = view("business", page, false);
+    expect(screen.getByText("Open now · closes 5:00 PM")).toBeInTheDocument();
+    unmount();
+    view("business", page, true);
+    expect(screen.queryByText(/Open now|Closed ·/)).toBeNull();
+  });
+});
+
+describe("Business extras", () => {
+  it("shows a gallery row that opens the viewer, and the services under About", () => {
+    view(
+      "business",
+      {
+        ...PAGE_DEFAULTS.business(),
+        name: "Bakery",
+        about: "Fresh bread",
+        gallery: [media("1.jpg", "image/jpeg"), media("2.jpg", "image/jpeg")],
+        services: [
+          { name: "Cake order", price: "$40", description: "Two days' notice" },
+          { name: "", price: "$1", description: "" },
+        ],
+      },
+      false,
+    );
+    expect(screen.getByRole("button", { name: "Open photo 1 of 2" })).toBeInTheDocument();
+    const services = within(screen.getByRole("region", { name: "Services" }));
+    expect(services.getByText("Cake order")).toBeInTheDocument();
+    expect(services.getByText("$40")).toBeInTheDocument();
+    expect(services.getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("draws a ready-made button with its icon", () => {
+    const { container } = view(
+      "business",
+      {
+        ...PAGE_DEFAULTS.business(),
+        name: "Bakery",
+        buttons: [
+          { ...newLink(), label: "Leave a Google review", url: "g.page/r/abc", icon: "review" },
+        ],
+      },
+      false,
+    );
+    const button = screen.getByRole("link", { name: /Leave a Google review/ });
+    expect(button.querySelector("[data-link-icon]")).not.toBeNull();
+    expect(container.querySelector("[data-link-icon]")).not.toBeNull();
+  });
+});
+
+describe("WhatsApp quick button", () => {
+  it("is left out when the WhatsApp number has no country code", () => {
+    view(
+      "vcard",
+      {
+        ...PAGE_DEFAULTS.vcard(),
+        firstName: "Ana",
+        phones: [{ label: "Mobile", number: "(555) 010-2030", whatsapp: true }],
+      },
+      false,
+    );
+    const actions = within(screen.getByRole("navigation", { name: "Quick actions" }));
+    expect(actions.getByRole("link", { name: "Call" })).toBeInTheDocument();
+    expect(actions.queryByRole("link", { name: "WhatsApp" })).toBeNull();
   });
 });

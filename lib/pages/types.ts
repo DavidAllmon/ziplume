@@ -28,8 +28,8 @@ export interface LinkItem {
   /** A header is a text-only row between links. */
   kind: "link" | "header";
   type: LinkType;
-  /** Auto: a known site's icon, or the type's. */
-  icon: "auto" | "none" | "image";
+  /** Auto: a known site's icon, or the type's. A ready-made Business button has its own. */
+  icon: "auto" | "none" | "image" | "review" | "book" | "order";
   image: Media | null;
   /** Drawn taller, in the accent color; one per page. */
   featured: boolean;
@@ -53,6 +53,8 @@ export interface SocialItem {
 export interface PhoneItem {
   label: string;
   number: string;
+  /** This number is on WhatsApp. */
+  whatsapp: boolean;
 }
 
 export interface EmailItem {
@@ -64,6 +66,22 @@ export interface DayHours {
   open: boolean;
   from: string;
   to: string;
+  /** A second range the same day ("" for none). */
+  from2: string;
+  to2: string;
+}
+
+export interface ServiceItem {
+  name: string;
+  price: string;
+  description: string;
+}
+
+/** A day the business is closed (spec item 17). */
+export interface Closure {
+  /** YYYY-MM-DD */
+  date: string;
+  note: string;
 }
 
 export interface MenuItem {
@@ -96,15 +114,26 @@ export interface LinksPage extends Themed {
 export interface VcardPage extends Themed {
   firstName: string;
   lastName: string;
+  pronouns: string;
   jobTitle: string;
+  department: string;
   company: string;
   bio: string;
   photo: Media | null;
+  /** A wide photo across the top (spec item 11). */
+  cover: Media | null;
   phones: PhoneItem[];
   emails: EmailItem[];
-  website: string;
+  /** Up to 4; an old page's single website becomes the first. */
+  websites: { label: string; url: string }[];
   address: string;
   socials: SocialItem[];
+  /** The quick buttons under the name (spec item 12); each can be turned off. */
+  showCall: boolean;
+  showText: boolean;
+  showEmail: boolean;
+  showWhatsapp: boolean;
+  showDirections: boolean;
 }
 
 export interface BusinessPage extends Themed {
@@ -120,6 +149,13 @@ export interface BusinessPage extends Themed {
   /** Monday first. */
   hours: DayHours[];
   showHours: boolean;
+  /** IANA zone for Open now; "" means each visitor's own (spec item 16). */
+  timeZone: string;
+  closures: Closure[];
+  /** Photos in a row that opens the full-screen viewer (spec item 18). */
+  gallery: Media[];
+  /** Under About (spec item 20). */
+  services: ServiceItem[];
   buttons: LinkItem[];
   socials: SocialItem[];
 }
@@ -231,6 +267,10 @@ export const LIMITS = {
   socials: 16,
   phones: 4,
   emails: 4,
+  websites: 4,
+  closures: 10,
+  gallery: 6,
+  services: 30,
   buttons: 6,
   sections: 20,
   items: 60,
@@ -248,7 +288,7 @@ const MB = 1024 * 1024;
 /** Ziplume is free, so files stay small: images are also resized before they're stored. */
 export const UPLOAD_CAPS = { image: 15 * MB, pdf: 10 * MB, audio: 15 * MB } as const;
 
-const day = (open: boolean): DayHours => ({ open, from: "09:00", to: "17:00" });
+const day = (open: boolean): DayHours => ({ open, from: "09:00", to: "17:00", from2: "", to2: "" });
 
 export const DEFAULT_PAGE_COLOR = "#0A1330";
 
@@ -286,15 +326,23 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       color: DEFAULT_PAGE_COLOR,
       firstName: "",
       lastName: "",
+      pronouns: "",
       jobTitle: "",
+      department: "",
       company: "",
       bio: "",
       photo: null,
-      phones: [{ label: "Mobile", number: "" }],
+      cover: null,
+      phones: [{ label: "Mobile", number: "", whatsapp: false }],
       emails: [{ label: "Work", address: "" }],
-      website: "",
+      websites: [],
       address: "",
       socials: [],
+      showCall: true,
+      showText: true,
+      showEmail: true,
+      showWhatsapp: true,
+      showDirections: true,
     }),
   business: () =>
     withLook("business", {
@@ -310,6 +358,10 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       address: "",
       hours: [day(true), day(true), day(true), day(true), day(true), day(false), day(false)],
       showHours: true,
+      timeZone: "",
+      closures: [],
+      gallery: [],
+      services: [],
       buttons: [],
       socials: [],
     }),

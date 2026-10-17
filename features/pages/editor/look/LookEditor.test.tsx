@@ -293,3 +293,17 @@ describe("LookEditor", () => {
     });
   });
 });
+
+describe("Contact page with a cover", () => {
+  it("says the cover runs across the top, and keeps the photo's shape", () => {
+    render(
+      <Harness type="vcard" initial={{ ...PAGE_DEFAULTS.vcard(), cover: IMAGE, photo: IMAGE }} />,
+    );
+    const header = screen.getByRole("region", { name: "Header" });
+    expect(
+      within(header).getByText("Your cover photo runs across the top, with your photo over it."),
+    ).toBeInTheDocument();
+    expect(within(header).queryByRole("radiogroup", { name: "Header layout" })).toBeNull();
+    expect(within(header).getByRole("radiogroup", { name: "Image shape" })).toBeInTheDocument();
+  });
+});

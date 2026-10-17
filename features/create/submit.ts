@@ -1,7 +1,8 @@
 import type { CodeSettingsInput, CodeUpdate, NewCode, PasswordChange } from "@/features/codes/api";
 import { withUtm, type UtmParams } from "@/lib/dynamic/utm";
 import { normalizeUrl } from "@/lib/qr/normalize";
-import { isPageType } from "@/lib/qr/types";
+import type { BusinessPage } from "@/lib/pages/types";
+import { isPageType, type PageTypeId } from "@/lib/qr/types";
 
 import { isTrackable, type CreateState } from "./state";
 import { localToIso } from "@/lib/time/local";
@@ -18,6 +19,22 @@ export function taggedDestination(url: string, utm: UtmParams): string {
 }
 
 export { localToIso };
+
+/**
+ * Page content as saved. A Business page without a time zone (one saved before it had one) gets
+ * the owner's when they first save it (spec item 16), so Open now reads its hours in the
+ * business's time rather than each visitor's. A zone the owner picked is kept.
+ */
+function savedPage(type: PageTypeId, content: unknown): unknown {
+  if (type !== "business" || (content as BusinessPage).timeZone) return content;
+  let zone = "";
+  try {
+    zone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "";
+  } catch {
+    zone = "";
+  }
+  return zone ? { ...(content as BusinessPage), timeZone: zone } : content;
+}
 
 /**
  * What to send to createCodeWithSettings. Settings only apply to trackable codes: a static code
@@ -37,7 +54,7 @@ export function toNewCode(
     folderId,
     name,
     qrType: type,
-    content: isPageType(type) ? code.pages[type] : code.content[type],
+    content: isPageType(type) ? savedPage(type, code.pages[type]) : code.content[type],
     design: code.design,
     // Only in a team; a draft from before leaving one can't make a code private.
     ...(canBePrivate && settings.isPrivate && { isPrivate: true }),
@@ -85,7 +102,7 @@ export function toCodePatch(
 
   if (isPageType(type)) {
     if (!same(current.code.pages[type], initial.code.pages[type])) {
-      patch.content = current.code.pages[type];
+      patch.content = savedPage(type, current.code.pages[type]);
     }
   } else if (trackable && type === "url") {
     const before = { url: initial.code.content.url.url, utm: initial.settings.utm };

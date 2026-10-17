@@ -4,7 +4,7 @@ import { isTimeZone, zonedTimeToUtc } from "@/lib/time/zone";
 import { overLimit } from "./sanitize";
 import type { LinkItem, PageContentMap, SocialItem } from "./types";
 import { linkHref } from "./links";
-import { mailHref, safeHref, socialHref, telHref, videoEmbed } from "./urls";
+import { mailHref, safeHref, socialHref, telHref, videoEmbed, whatsappHref } from "./urls";
 
 /** Problems keyed by field path, e.g. "title" or "links.2.url". Empty = ready to save. */
 export type PageErrors = Record<string, string>;
@@ -67,12 +67,14 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     p.phones.forEach((ph, i) => {
       if (ph.number.trim() && !telHref(ph.number))
         errors[`phones.${i}.number`] = "Enter a valid phone number";
+      else if (ph.whatsapp && ph.number.trim() && !whatsappHref(ph.number))
+        errors[`phones.${i}.number`] = "Add the country code, like +1 or +44";
     });
     p.emails.forEach((e, i) => {
       if (e.address.trim() && !mailHref(e.address))
         errors[`emails.${i}.address`] = "Enter a valid email";
     });
-    checkUrl(errors, "website", p.website);
+    p.websites.forEach((w, i) => checkUrl(errors, `websites.${i}.url`, w.url));
     checkSocials(errors, p.socials);
     return errors;
   },
@@ -85,7 +87,17 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     p.buttons.forEach((b, i) => checkLink(errors, `buttons.${i}`, b));
     p.hours.forEach((h, i) => {
       if (h.open && h.from >= h.to) errors[`hours.${i}`] = "Closing time must be after opening";
+      else if (h.open && (h.from2 || h.to2)) {
+        if (!h.from2 || !h.to2 || h.from2 >= h.to2 || h.from2 < h.to) {
+          errors[`hours.${i}`] =
+            "The second hours must start after the first and end after they start";
+        }
+      }
     });
+    p.closures.forEach((c, i) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(c.date)) errors[`closures.${i}.date`] = "Pick a date";
+    });
+    if (p.timeZone && !isTimeZone(p.timeZone)) errors.timeZone = "Choose a time zone";
     checkSocials(errors, p.socials);
     return errors;
   },

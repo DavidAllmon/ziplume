@@ -86,6 +86,8 @@ export function defaultPages(): PageContentMap {
   } catch {
     pages.event.timeZone = "UTC";
   }
+  // So does a Business's Open now (spec item 16). Saved pages without one use each visitor's.
+  pages.business.timeZone = pages.event.timeZone;
   return pages;
 }
 
