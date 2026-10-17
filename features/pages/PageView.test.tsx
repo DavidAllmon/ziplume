@@ -490,3 +490,20 @@ describe("Business extras", () => {
     expect(container.querySelector("[data-link-icon]")).not.toBeNull();
   });
 });
+
+describe("WhatsApp quick button", () => {
+  it("is left out when the WhatsApp number has no country code", () => {
+    view(
+      "vcard",
+      {
+        ...PAGE_DEFAULTS.vcard(),
+        firstName: "Ana",
+        phones: [{ label: "Mobile", number: "(555) 010-2030", whatsapp: true }],
+      },
+      false,
+    );
+    const actions = within(screen.getByRole("navigation", { name: "Quick actions" }));
+    expect(actions.getByRole("link", { name: "Call" })).toBeInTheDocument();
+    expect(actions.queryByRole("link", { name: "WhatsApp" })).toBeNull();
+  });
+});

@@ -544,7 +544,7 @@ describe("Business editor extras", () => {
   it("adds second hours to a day, a closure date, and a service", async () => {
     const user = userEvent.setup();
     render(<Biz />);
-    await user.click(screen.getByRole("button", { name: "Add second hours for Monday" }));
+    await user.click(screen.getByRole("button", { name: "Add hours for Monday" }));
     expect(saved().hours[0]).toMatchObject({ from2: "13:00", to2: "17:00" });
     expect(screen.getByLabelText("Monday opens again")).toHaveValue("13:00");
     await user.click(screen.getByRole("button", { name: "Remove second hours for Monday" }));
@@ -560,5 +560,57 @@ describe("Business editor extras", () => {
     render(<Biz />);
     expect(screen.getByText("Photos")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /^Time zone/ })).toBeInTheDocument();
+  });
+});
+
+describe("Business opening hours", () => {
+  function Biz() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.business());
+    return (
+      <>
+        <PageEditor
+          type="business"
+          page={page}
+          errors={validatePage("business", page)}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("splits a day for a lunch break, which saves with no error", async () => {
+    const user = userEvent.setup();
+    render(<Biz />);
+    // The button's name starts with its visible text, for voice control.
+    await user.click(screen.getByRole("button", { name: "Add hours for Monday" }));
+    expect(saved().hours[0]).toEqual({
+      open: true,
+      from: "09:00",
+      to: "12:00",
+      from2: "13:00",
+      to2: "17:00",
+    });
+    expect(validatePage("business", saved())).not.toHaveProperty("hours.0");
+  });
+
+  it("adds a second range after a day that ends before lunch", async () => {
+    const user = userEvent.setup();
+    render(<Biz />);
+    fireEvent.change(screen.getByLabelText("Tuesday closes"), { target: { value: "11:00" } });
+    await user.click(screen.getByRole("button", { name: "Add hours for Tuesday" }));
+    expect(saved().hours[1]).toMatchObject({ to: "11:00", from2: "12:00", to2: "15:00" });
+    expect(validatePage("business", saved())).not.toHaveProperty("hours.1");
+  });
+
+  it("marks a day's first box for Show me, and shows its error once you leave it", () => {
+    render(<Biz />);
+    const opens = screen.getByLabelText("Monday opens");
+    expect(opens).toHaveAttribute("data-field", "hours.0");
+    fireEvent.change(opens, { target: { value: "18:00" } });
+    expect(screen.queryByText("Closing time must be after opening")).toBeNull();
+    fireEvent.blur(opens);
+    expect(screen.getByText("Closing time must be after opening")).toBeInTheDocument();
   });
 });

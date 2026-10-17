@@ -6,7 +6,7 @@ import { contactVcard, eventIcs, eventTimes, googleCalendarUrl } from "./files";
 import { newLink } from "./links";
 import { mediaPaths, sanitizeMedia, sanitizePage } from "./sanitize";
 import { PAGE_DEFAULTS, type EventPage, type VcardPage } from "./types";
-import { safeHref, socialHref, videoEmbed } from "./urls";
+import { safeHref, socialHref, videoEmbed, whatsappHref } from "./urls";
 import { pageSummary, validatePage } from "./validate";
 
 const UID = "11111111-1111-4111-8111-111111111111";
@@ -420,5 +420,31 @@ describe("Business hours, closures and time zone", () => {
       timeZone: "Choose a time zone",
     });
     expect(errors).not.toHaveProperty("hours.2");
+  });
+});
+
+describe("WhatsApp quick button", () => {
+  it("needs the full international number, and ignores an extension", () => {
+    expect(whatsappHref("+1 555 010 2030")).toBe("https://wa.me/15550102030");
+    expect(whatsappHref("0044 7700 900123")).toBe("https://wa.me/447700900123");
+    expect(whatsappHref("+1 555 010 2030 ext 12")).toBe("https://wa.me/15550102030");
+    expect(whatsappHref("+44 7700 900123 x4")).toBe("https://wa.me/447700900123");
+    expect(whatsappHref("(555) 010-2030")).toBeNull();
+    expect(whatsappHref("07700 900123")).toBeNull();
+    expect(whatsappHref("+1")).toBeNull();
+  });
+
+  it("asks for the country code on a number marked On WhatsApp", () => {
+    const page = {
+      ...PAGE_DEFAULTS.vcard(),
+      firstName: "Ana",
+      phones: [
+        { label: "Mobile", number: "(555) 010-2030", whatsapp: true },
+        { label: "Home", number: "(555) 010-4040", whatsapp: false },
+      ],
+    };
+    expect(validatePage("vcard", page)).toEqual({
+      "phones.0.number": "Add the country code, like +1 or +44",
+    });
   });
 });

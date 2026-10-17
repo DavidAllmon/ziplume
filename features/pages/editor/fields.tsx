@@ -958,6 +958,23 @@ const PRESETS = [
   { name: "Order online", label: "Order online", icon: "order" },
 ] as const;
 
+const toMinutes = (hhmm: string) => {
+  const [h = 0, m = 0] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+};
+const toHhmm = (minutes: number) =>
+  `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+
+/**
+ * A day's second range that's valid as added: a day open over lunch gets a lunch break (9–12 and
+ * 1–5); a day that closes earlier gets three hours starting an hour after it closes.
+ */
+function secondRange(h: DayHours): Partial<DayHours> {
+  if (h.from < "12:00" && h.to > "13:00") return { to: "12:00", from2: "13:00", to2: h.to };
+  const start = Math.min(toMinutes(h.to) + 60, 22 * 60);
+  return { from2: toHhmm(start), to2: toHhmm(Math.min(start + 180, 23 * 60 + 59)) };
+}
+
 export function HoursField({
   hours,
   onChange,
@@ -969,6 +986,7 @@ export function HoursField({
 }) {
   const update = (i: number, patch: Partial<DayHours>) =>
     onChange(hours.map((h, j) => (j === i ? { ...h, ...patch } : h)));
+  const touch = (i: number) => errors.touch(`hours.${i}`);
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="sr-only">Opening hours</legend>
@@ -989,8 +1007,11 @@ export function HoursField({
                 <input
                   type="time"
                   aria-label={`${DAY_NAMES[i]} opens`}
+                  // Where Show me goes for this day's error.
+                  data-field={`hours.${i}`}
                   value={h.from}
                   onChange={(event) => update(i, { from: event.target.value })}
+                  onBlur={() => touch(i)}
                   className="h-10 rounded-control border border-field-border bg-surface px-2 text-sm text-fg"
                 />
                 <span className="text-fg-muted">–</span>
@@ -999,13 +1020,14 @@ export function HoursField({
                   aria-label={`${DAY_NAMES[i]} closes`}
                   value={h.to}
                   onChange={(event) => update(i, { to: event.target.value })}
+                  onBlur={() => touch(i)}
                   className="h-10 rounded-control border border-field-border bg-surface px-2 text-sm text-fg"
                 />
                 {!(h.from2 || h.to2) && (
                   <button
                     type="button"
-                    aria-label={`Add second hours for ${DAY_NAMES[i]}`}
-                    onClick={() => update(i, { from2: "13:00", to2: "17:00" })}
+                    aria-label={`Add hours for ${DAY_NAMES[i]}`}
+                    onClick={() => update(i, secondRange(h))}
                     className="inline-flex min-h-11 items-center gap-1 rounded-control px-2 text-sm font-medium text-primary focus-ring hover:bg-surface-2 sm:min-h-0 sm:py-2"
                   >
                     <Plus aria-hidden className="size-4" /> Add hours
@@ -1024,6 +1046,7 @@ export function HoursField({
                 aria-label={`${DAY_NAMES[i]} opens again`}
                 value={h.from2}
                 onChange={(event) => update(i, { from2: event.target.value })}
+                onBlur={() => touch(i)}
                 className="h-10 rounded-control border border-field-border bg-surface px-2 text-sm text-fg"
               />
               <span className="text-fg-muted">–</span>
@@ -1032,6 +1055,7 @@ export function HoursField({
                 aria-label={`${DAY_NAMES[i]} closes again`}
                 value={h.to2}
                 onChange={(event) => update(i, { to2: event.target.value })}
+                onBlur={() => touch(i)}
                 className="h-10 rounded-control border border-field-border bg-surface px-2 text-sm text-fg"
               />
               <button

@@ -36,6 +36,17 @@ export const telHref = (number: string) => {
   return cleaned.replace(/\D/g, "").length >= 3 ? `tel:${cleaned}` : null;
 };
 
+/**
+ * A WhatsApp chat link for a phone number, or null without the country code: wa.me needs the
+ * full international number (a leading + or 00), and an extension ("ext 12", "x4") isn't part of it.
+ */
+export const whatsappHref = (number: string) => {
+  const main = number.trim().replace(/\s*(?:ext\.?|x|#)\s*\d+$/i, "");
+  const international = /^\+/.test(main) ? main : /^00/.test(main) ? main.slice(2) : null;
+  const digits = international?.replace(/\D/g, "") ?? "";
+  return digits.length >= 7 ? `https://wa.me/${digits}` : null;
+};
+
 /** A text-message link: the number's digits (and a leading +). */
 export const smsHref = (number: string) => telHref(number)?.replace(/^tel:/, "sms:") ?? null;
 

@@ -241,3 +241,43 @@ describe("toCodePatch", () => {
     expect(toCodePatch(initial, initial, keepName(initial)).password).toEqual({ action: "keep" });
   });
 });
+
+describe("a Business page's time zone", () => {
+  const own = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  it("is filled with the owner's the first time an older page is edited", () => {
+    const initial = fromSavedCode(
+      savedRow({ qr_type: "business", destination: null, content: { name: "Bakery" } }),
+    );
+    expect(initial.code.pages.business.timeZone).toBe("");
+    // Opening it changes nothing.
+    expect(hasChanges(toCodePatch(initial, initial, keepName(initial)))).toBe(false);
+    const page = { ...initial.code.pages.business, tagline: "Fresh bread" };
+    const current = after(initial, {
+      type: "code",
+      action: { type: "setPage", pageType: "business", content: page },
+    });
+    expect(toCodePatch(initial, current, keepName(initial)).patch.content).toEqual({
+      ...page,
+      timeZone: own,
+    });
+  });
+
+  it("keeps a zone the owner picked", () => {
+    const initial = fromSavedCode(
+      savedRow({
+        qr_type: "business",
+        destination: null,
+        content: { name: "Bakery", timeZone: "Asia/Tokyo" },
+      }),
+    );
+    const page = { ...initial.code.pages.business, tagline: "Fresh bread" };
+    const current = after(initial, {
+      type: "code",
+      action: { type: "setPage", pageType: "business", content: page },
+    });
+    expect(toCodePatch(initial, current, keepName(initial)).patch.content).toMatchObject({
+      timeZone: "Asia/Tokyo",
+    });
+  });
+});

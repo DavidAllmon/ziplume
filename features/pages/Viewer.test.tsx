@@ -26,12 +26,18 @@ describe("Gallery and Viewer", () => {
     const user = userEvent.setup();
     render(<Gallery images={three} label="Photos" />);
     await user.click(screen.getByRole("button", { name: "Open photo 1 of 3" }));
-    expect(screen.getByRole("button", { name: "Previous photo" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous photo" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     await user.keyboard("{ArrowRight}");
     expect(screen.getByRole("dialog", { name: "Photo 2 of 3" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next photo" }));
     expect(screen.getByRole("dialog", { name: "Photo 3 of 3" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Next photo" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next photo" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     await user.keyboard("{ArrowLeft}");
     expect(screen.getByRole("dialog", { name: "Photo 2 of 3" })).toBeInTheDocument();
   });
@@ -71,5 +77,28 @@ describe("Gallery and Viewer", () => {
     render(<Gallery images={three} label="Photos" preview />);
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.getByRole("list", { name: "Photos" })).toBeInTheDocument();
+  });
+
+  it("keeps focus on Next at the last photo, so it never falls out of the viewer", async () => {
+    const user = userEvent.setup();
+    render(<Gallery images={three} label="Photos" />);
+    await user.click(screen.getByRole("button", { name: "Open photo 2 of 3" }));
+    const next = screen.getByRole("button", { name: "Next photo" });
+    next.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("dialog", { name: "Photo 3 of 3" })).toBeInTheDocument();
+    // A disabled button would drop focus to the page behind; this one stays focusable.
+    expect(next).not.toBeDisabled();
+    expect(next).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("dialog", { name: "Photo 3 of 3" })).toBeInTheDocument();
+  });
+
+  it("announces which photo is showing when it changes", async () => {
+    const user = userEvent.setup();
+    render(<Gallery images={three} label="Photos" />);
+    await user.click(screen.getByRole("button", { name: "Open photo 1 of 3" }));
+    const title = screen.getByText("Photo 1 of 3");
+    expect(title).toHaveAttribute("aria-live", "polite");
   });
 });

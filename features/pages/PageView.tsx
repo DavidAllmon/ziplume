@@ -36,7 +36,15 @@ import type {
 } from "@/lib/pages/types";
 import { DAY_NAMES, formatTime, rangesOf } from "@/lib/pages/hours";
 import { isShown, linkHref, linkIcon } from "@/lib/pages/links";
-import { mailHref, mediaUrl, safeHref, smsHref, telHref, videoEmbed } from "@/lib/pages/urls";
+import {
+  mailHref,
+  mediaUrl,
+  safeHref,
+  smsHref,
+  telHref,
+  videoEmbed,
+  whatsappHref,
+} from "@/lib/pages/urls";
 import type { PageTypeId } from "@/lib/qr/types";
 
 import { CopyCode } from "./CopyCode";
@@ -191,7 +199,7 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
   const socials = <SocialRow socials={page.socials} look={look} preview={preview} />;
   // The quick buttons use the first phone and email that work (spec item 12).
   const phone = page.phones.find((p) => telHref(p.number));
-  const whatsapp = page.phones.find((p) => p.whatsapp && telHref(p.number));
+  const whatsapp = page.phones.map((p) => p.whatsapp && whatsappHref(p.number)).find(Boolean);
   const email = page.emails.find((e) => mailHref(e.address));
   const actions = [
     page.showCall &&
@@ -203,7 +211,7 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
     page.showWhatsapp &&
       whatsapp && {
         label: "WhatsApp",
-        href: `https://wa.me/${whatsapp.number.replace(/\D/g, "")}`,
+        href: whatsapp,
         icon: <SocialIcon network="whatsapp" />,
       },
     page.showDirections &&

@@ -17,7 +17,7 @@ export interface ViewerImage {
 // A sideways move shorter than this is a tap, not a swipe.
 const SWIPE = 50;
 const control =
-  "grid size-11 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-30";
+  "grid size-11 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white aria-disabled:opacity-30";
 
 /** Full-screen photos: swipe or arrow keys to move, Escape to close (spec item 18). */
 export function Viewer({
@@ -56,7 +56,8 @@ export function Viewer({
       <div className="fixed inset-0 bg-black/95" aria-hidden />
       <DialogPanel className="fixed inset-0 flex flex-col text-white">
         <div className="flex items-center justify-between gap-3 px-3 pt-[max(env(safe-area-inset-top),0.75rem)]">
-          <DialogTitle className="text-sm font-medium tabular-nums">
+          {/* Read out again as the photo changes. */}
+          <DialogTitle aria-live="polite" className="text-sm font-medium tabular-nums">
             Photo {at + 1} of {images.length}
           </DialogTitle>
           <button type="button" aria-label="Close" onClick={onClose} className={control}>
@@ -89,7 +90,8 @@ export function Viewer({
             <button
               type="button"
               aria-label="Previous photo"
-              disabled={at === 0}
+              // aria-disabled, not disabled: a disabled button drops focus out of the viewer.
+              aria-disabled={at === 0}
               onClick={() => go(at - 1)}
               className={control}
             >
@@ -101,7 +103,7 @@ export function Viewer({
             <button
               type="button"
               aria-label="Next photo"
-              disabled={at === images.length - 1}
+              aria-disabled={at === images.length - 1}
               onClick={() => go(at + 1)}
               className={control}
             >
