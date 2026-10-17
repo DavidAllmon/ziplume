@@ -2,6 +2,7 @@ import type { PageTypeId } from "@/lib/qr/types";
 import { isTimeZone, zonedTimeToUtc } from "@/lib/time/zone";
 
 import { overLimit } from "./sanitize";
+import { barcodeProblem } from "./scan";
 import type { LinkItem, PageContentMap, SocialItem } from "./types";
 import { linkHref } from "./links";
 import { mailHref, safeHref, socialHref, telHref, videoEmbed, whatsappHref } from "./urls";
@@ -104,8 +105,25 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
   menu: (p) => {
     const errors: PageErrors = {};
     if (!p.name.trim()) errors.name = "Add the restaurant name";
-    const items = p.sections.flatMap((s) => s.items).filter((item) => item.name.trim());
-    if (!items.length) errors["sections.0.items.0.name"] = "Add at least one dish or drink";
+    const named = p.sections
+      .flatMap((s, si) => s.items.map((item, ii) => ({ item, at: `sections.${si}.items.${ii}` })))
+      .filter(({ item }) => item.name.trim());
+    if (!named.length) errors["sections.0.items.0.name"] = "Add at least one dish or drink";
+    else if (!named.some(({ item }) => item.on)) {
+      // A hidden dish is parked, like a link that's off: the page needs one that shows.
+      errors[`${named[0]!.at}.name`] = "Show at least one dish or drink";
+    }
+    p.sections.forEach((s, si) =>
+      s.items.forEach((item, ii) =>
+        // A hidden dish is parked: its unfinished options don't block saving.
+        (item.on ? item.options : []).forEach((o, oi) => {
+          const at = `sections.${si}.items.${ii}.options.${oi}`;
+          if (o.price.trim() && !o.label.trim())
+            errors[`${at}.label`] = "Name this option, like Small";
+          if (o.label.trim() && !o.price.trim()) errors[`${at}.price`] = "Add its price";
+        }),
+      ),
+    );
     return errors;
   },
   coupon: (p) => {
@@ -114,6 +132,13 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     if (p.validUntil && !/^\d{4}-\d{2}-\d{2}$/.test(p.validUntil))
       errors.validUntil = "Pick a date";
     if (p.buttonLabel.trim() && !p.buttonUrl.trim()) errors.buttonUrl = "Add the button’s link";
+    if (p.scan !== "text") {
+      if (!p.code.trim()) errors.code = "Add the code to scan";
+      else if (p.scan === "barcode") {
+        const problem = barcodeProblem(p.code.trim());
+        if (problem) errors.code = problem;
+      }
+    }
     checkUrl(errors, "buttonUrl", p.buttonUrl);
     return errors;
   },
@@ -133,6 +158,23 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
       errors.start = "Pick when the event starts";
     }
     checkUrl(errors, "ticketUrl", p.ticketUrl);
+    // A join link left from when it was online isn't checked once it's off: the box is hidden.
+    if (p.online) {
+      if (!p.joinUrl.trim()) errors.joinUrl = "Add the link to join";
+      else checkUrl(errors, "joinUrl", p.joinUrl);
+    }
+    p.agenda.forEach((a, i) => {
+      if ((a.time || a.note.trim()) && !a.title.trim()) {
+        errors[`agenda.${i}.title`] = "Add what’s happening";
+      }
+      if (a.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(a.time)) {
+        errors[`agenda.${i}.time`] = "Pick a time";
+      }
+    });
+    p.hosts.forEach((h, i) => {
+      if ((h.role.trim() || h.photo) && !h.name.trim())
+        errors[`hosts.${i}.name`] = "Add their name";
+    });
     return errors;
   },
   feedback: (p) => {

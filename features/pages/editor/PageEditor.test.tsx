@@ -12,6 +12,7 @@ import {
   type PageContentMap,
 } from "@/lib/pages/types";
 import { newLink } from "@/lib/pages/links";
+import { newDish } from "@/lib/pages/menu";
 import { limitAt } from "@/lib/pages/sanitize";
 import { validatePage } from "@/lib/pages/validate";
 import { PAGE_TYPE_IDS, type PageTypeId } from "@/lib/qr/types";
@@ -60,7 +61,6 @@ const LABELS: Record<PageTypeId, string[]> = {
     "Dishes and drinks",
     "Name",
     "Price",
-    "Tags",
     "Note",
   ],
   coupon: [
@@ -210,13 +210,13 @@ describe("PageEditor lists", () => {
   it("moves a menu section with its dishes", async () => {
     const user = userEvent.setup();
     const onUpdate = vi.fn();
-    const dish = (name: string) => ({ name, description: "", price: "", tags: "" });
+    const dish = (name: string) => ({ ...newDish(), name });
     const menu: MenuPage = {
       ...PAGE_DEFAULTS.menu(),
       name: "Diner",
       sections: [
-        { name: "Starters", items: [dish("Soup")] },
-        { name: "Mains", items: [dish("Pie"), dish("Fish")] },
+        { name: "Starters", description: "", items: [dish("Soup")] },
+        { name: "Mains", description: "", items: [dish("Pie"), dish("Fish")] },
       ],
     };
     render(<PageEditor type="menu" page={menu} errors={{}} onUpdate={onUpdate} />);
@@ -254,7 +254,7 @@ const CARDS: Record<PageTypeId, string[]> = {
   ],
   menu: ["Header", "Sections and dishes", "Currency and note"],
   coupon: ["Header", "Offer", "Button", "Terms"],
-  event: ["Header", "When", "Where", "Details", "Tickets"],
+  event: ["Header", "When", "Where", "Details", "Agenda", "Hosts and speakers", "Tickets"],
   feedback: ["Header", "Question", "After sending"],
   pdf: ["File", "Details", "Opening"],
   images: ["Details", "Images"],
@@ -299,13 +299,13 @@ function Stateful<K extends PageTypeId>({
 }
 
 describe("PageEditor focus", () => {
-  const dish = (name: string) => ({ name, description: "", price: "", tags: "" });
+  const dish = (name: string) => ({ ...newDish(), name });
   const menu: MenuPage = {
     ...PAGE_DEFAULTS.menu(),
     name: "Diner",
     sections: [
-      { name: "Starters", items: [dish("Soup")] },
-      { name: "Mains", items: [dish("Pie")] },
+      { name: "Starters", description: "", items: [dish("Soup")] },
+      { name: "Mains", description: "", items: [dish("Pie")] },
     ],
   };
 
@@ -440,16 +440,31 @@ describe("text limits in the editor", () => {
     const page = PAGE_DEFAULTS[type]() as unknown as Record<string, unknown>;
     // One of everything in lists, so their rows render.
     if (type === "menu") {
-      page.sections = [{ name: "", items: [{ name: "", description: "", price: "", tags: "" }] }];
+      page.sections = [
+        {
+          name: "",
+          description: "",
+          items: [{ ...newDish(), options: [{ label: "", price: "" }] }],
+        },
+      ];
     }
     if (type === "business" || type === "links") {
       page.socials = [{ network: "instagram", url: "" }];
     }
     if (type === "business") page.buttons = [{ label: "", url: "", on: true }];
     if (type === "vcard") page.socials = [{ network: "instagram", url: "" }];
+    if (type === "event") {
+      page.online = true;
+      page.agenda = [{ time: "", title: "", note: "" }];
+      page.hosts = [{ photo: null, name: "", role: "" }];
+    }
     const { container } = render(
       <PageEditor type={type} page={page as never} errors={{}} onUpdate={vi.fn()} reveal />,
     );
+    // Open every More options panel, so the boxes inside are checked too.
+    for (const more of screen.queryAllByRole("button", { name: /^More options for/ })) {
+      fireEvent.click(more);
+    }
     const boxes = [
       ...container.querySelectorAll<HTMLElement>("input:not([type=file]), textarea"),
     ].filter(
@@ -612,5 +627,236 @@ describe("Business opening hours", () => {
     expect(screen.queryByText("Closing time must be after opening")).toBeNull();
     fireEvent.blur(opens);
     expect(screen.getByText("Closing time must be after opening")).toBeInTheDocument();
+  });
+});
+
+describe("Menu editor extras", () => {
+  function Menu() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.menu());
+    return (
+      <>
+        <PageEditor
+          type="menu"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+  const dish = () => saved().sections[0].items[0];
+
+  it("marks a dish sold out or popular, and hides it from the page", async () => {
+    const user = userEvent.setup();
+    render(<Menu />);
+    await user.click(screen.getByRole("checkbox", { name: "Sold out" }));
+    await user.click(screen.getByRole("checkbox", { name: "Popular" }));
+    await user.click(screen.getByRole("switch", { name: "Show item 1 on the page" }));
+    expect(dish()).toMatchObject({ soldOut: true, popular: true, on: false });
+  });
+
+  it("adds dietary labels, other notes and price options under More options", async () => {
+    const user = userEvent.setup();
+    render(<Menu />);
+    await user.click(screen.getByRole("button", { name: "More options for item 1" }));
+    await user.click(screen.getByRole("checkbox", { name: "Gluten-free" }));
+    await user.click(screen.getByRole("checkbox", { name: "Vegan" }));
+    await user.type(screen.getByRole("textbox", { name: /^Other notes/ }), "Contains egg");
+    await user.click(screen.getByRole("button", { name: "Add price option" }));
+    await user.type(screen.getByRole("textbox", { name: /^Option name/ }), "Small");
+    await user.type(screen.getByRole("textbox", { name: /^Option price/ }), "8");
+    // Labels keep the list's order, whatever order they're ticked in.
+    expect(dish()).toMatchObject({
+      labels: ["vegan", "gluten-free"],
+      tags: "Contains egg",
+      options: [{ label: "Small", price: "8" }],
+    });
+    expect(screen.getByRole("button", { name: "More options for item 1" })).toHaveTextContent(
+      "Vegan, Gluten-free, Notes, 1 price",
+    );
+  });
+
+  it("gives each section a description, and each dish a photo", async () => {
+    const user = userEvent.setup();
+    render(<Menu />);
+    await user.type(
+      screen.getByRole("textbox", { name: /^Section description/ }),
+      "Served all day",
+    );
+    expect(saved().sections[0].description).toBe("Served all day");
+    await user.click(screen.getByRole("button", { name: "More options for item 1" }));
+    expect(screen.getByText("Photo")).toBeInTheDocument();
+  });
+
+  it("opens More options by itself when an option inside needs fixing", () => {
+    const page = PAGE_DEFAULTS.menu();
+    page.sections[0]!.items[0] = {
+      ...newDish(),
+      name: "Pizza",
+      options: [{ label: "", price: "8" }],
+    };
+    render(
+      <PageEditor
+        type="menu"
+        page={page}
+        errors={validatePage("menu", page)}
+        onUpdate={vi.fn()}
+        reveal
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: /^Option name/ })).toBeInTheDocument();
+  });
+});
+
+describe("Coupon editor extras", () => {
+  function Coupon() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.coupon());
+    return (
+      <>
+        <PageEditor
+          type="coupon"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("adds a badge and chooses how the code shows", async () => {
+    const user = userEvent.setup();
+    render(<Coupon />);
+    await user.type(screen.getByRole("textbox", { name: /^Badge/ }), "NEW");
+    await user.click(screen.getByRole("radio", { name: "Barcode" }));
+    expect(saved()).toMatchObject({ badge: "NEW", scan: "barcode" });
+  });
+});
+
+describe("Event editor extras", () => {
+  function Event() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.event());
+    return (
+      <>
+        <PageEditor
+          type="event"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("turns on Online event for a join link, and adds agenda rows and hosts", async () => {
+    const user = userEvent.setup();
+    render(<Event />);
+    expect(screen.queryByRole("textbox", { name: /^Join link/ })).toBeNull();
+    await user.click(screen.getByRole("switch", { name: /^Online event/ }));
+    await user.type(screen.getByRole("textbox", { name: /^Join link/ }), "meet.example.com/x");
+    await user.click(screen.getByRole("button", { name: "Add agenda item" }));
+    await user.type(screen.getByRole("textbox", { name: /^What’s happening/ }), "Doors open");
+    await user.click(screen.getByRole("button", { name: "Add host" }));
+    await user.type(screen.getByRole("textbox", { name: /^Name/ }), "Ana");
+    expect(saved()).toMatchObject({
+      online: true,
+      joinUrl: "meet.example.com/x",
+      agenda: [{ title: "Doors open" }],
+      hosts: [{ name: "Ana" }],
+    });
+  });
+});
+
+describe("a photo that finishes uploading in a list row", () => {
+  function Editing<K extends "event" | "menu">({
+    type,
+    initial,
+  }: {
+    type: K;
+    initial: PageContentMap[K];
+  }) {
+    const [page, setPage] = useState(initial);
+    return (
+      <>
+        <PageEditor
+          type={type}
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+  const photo = { path: `${UID}/me.png`, name: "me.png", type: "image/png", size: 1 };
+  function slowUpload() {
+    let finish!: (result: Awaited<ReturnType<typeof uploadMedia>>) => void;
+    vi.mocked(uploadMedia).mockImplementation(() => new Promise((r) => (finish = r)));
+    return () => act(async () => finish({ ok: true, media: photo }));
+  }
+  const host = (name: string) => ({ photo: null, name, role: "" });
+  const lastFileInput = (container: HTMLElement) =>
+    [...container.querySelectorAll<HTMLInputElement>("input[type=file]")].at(-1)!;
+
+  it("keeps a host's name typed while their photo uploads", async () => {
+    const user = userEvent.setup();
+    const finish = slowUpload();
+    const { container } = render(
+      <Editing type="event" initial={{ ...PAGE_DEFAULTS.event(), hosts: [host("")] }} />,
+    );
+    await user.upload(lastFileInput(container), new File(["x"], "me.png", { type: "image/png" }));
+    await user.type(screen.getByRole("textbox", { name: /^Name/ }), "Ana");
+    await finish();
+    expect(saved().hosts).toEqual([{ photo, name: "Ana", role: "" }]);
+  });
+
+  it("puts the photo on its own host when an earlier host is removed meanwhile", async () => {
+    const user = userEvent.setup();
+    const finish = slowUpload();
+    const { container } = render(
+      <Editing
+        type="event"
+        initial={{ ...PAGE_DEFAULTS.event(), hosts: [host("A"), host("B")] }}
+      />,
+    );
+    await user.upload(lastFileInput(container), new File(["x"], "me.png", { type: "image/png" }));
+    await user.click(screen.getByRole("button", { name: "Actions for host “A”" }));
+    await user.click(screen.getByRole("menuitem", { name: "Remove" }));
+    await finish();
+    expect(saved().hosts).toEqual([{ photo, name: "B", role: "" }]);
+  });
+
+  it("keeps a dish's description typed while its photo uploads", async () => {
+    const user = userEvent.setup();
+    const finish = slowUpload();
+    const { container } = render(<Editing type="menu" initial={PAGE_DEFAULTS.menu()} />);
+    await user.click(screen.getByRole("button", { name: "More options for item 1" }));
+    await user.upload(lastFileInput(container), new File(["x"], "me.png", { type: "image/png" }));
+    await user.type(screen.getAllByRole("textbox", { name: /^Description/ }).at(-1)!, "Fresh");
+    await finish();
+    expect(saved().sections[0].items[0]).toMatchObject({ photo, description: "Fresh" });
+  });
+});
+
+describe("Menu dish checks", () => {
+  it("opens More options by itself for over-long other notes", () => {
+    const page = PAGE_DEFAULTS.menu();
+    page.sections[0]!.items[0] = { ...newDish(), name: "Pizza", tags: "x".repeat(90) };
+    render(
+      <PageEditor
+        type="menu"
+        page={page}
+        errors={validatePage("menu", page)}
+        onUpdate={vi.fn()}
+        reveal
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: /^Other notes/ })).toBeInTheDocument();
   });
 });

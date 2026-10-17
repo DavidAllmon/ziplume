@@ -276,6 +276,21 @@ export default function DevelopersPage() {
         <code>name</code>, <code>price</code> and <code>description</code>), and buttons with{" "}
         <code>icon</code> <code>review</code>, <code>book</code> or <code>order</code>.
       </p>
+      <p>
+        Menu dishes take a <code>photo</code>, <code>labels</code> (any of <code>vegan</code>,{" "}
+        <code>vegetarian</code>, <code>gluten-free</code>, <code>dairy-free</code>,{" "}
+        <code>spicy</code>, <code>nuts</code>, <code>halal</code> and <code>kosher</code>),{" "}
+        <code>on</code> (false hides the dish), <code>soldOut</code>, <code>popular</code>, and{" "}
+        <code>options</code> (up to 4, each a <code>label</code> and <code>price</code>, shown
+        instead of the price). <code>tags</code> holds other notes; an older dish’s tags that name a
+        label become that label. Sections take a <code>description</code>. Coupons take{" "}
+        <code>scan</code> (<code>text</code>, <code>qr</code> or <code>barcode</code>; a barcode
+        holds up to 20 plain characters) and a <code>badge</code> (up to 12 characters). Events take{" "}
+        <code>online</code> with a <code>joinUrl</code>, an <code>agenda</code> (up to 30, each a{" "}
+        <code>time</code> as <code>HH:mm</code>, a <code>title</code> and a <code>note</code>), and{" "}
+        <code>hosts</code> (up to 12, each a <code>photo</code>, <code>name</code> and{" "}
+        <code>role</code>).
+      </p>
       <Code>{`{
   "type": "links",
   "name": "Bio links",

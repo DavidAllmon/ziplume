@@ -94,6 +94,13 @@ export function SortableList<T>({
     row?.querySelector<HTMLElement>(want.target === "menu" ? OWN_MENU : newRowFocus)?.focus();
   });
 
+  // The list as last drawn. A row's edit can arrive late (a photo that finishes uploading), so it
+  // applies to the latest rows, not the ones from when it started.
+  const latest = useRef({ items, onChange, ids });
+  useLayoutEffect(() => {
+    latest.current = { items, onChange, ids };
+  });
+
   const register = useCallback((id: string, element: HTMLElement | null) => {
     if (element) rows.current.set(id, element);
     else rows.current.delete(id);
@@ -121,10 +128,18 @@ export function SortableList<T>({
     pending.current = { id: ids[index + 1] ?? ids[index - 1] ?? null, target: "menu" };
     commit(indexes().filter((i) => i !== index));
   }
+  // Found by the row's id, so an edit lands on its own row even after rows moved or were removed
+  // meanwhile (and nowhere once its row is gone).
+  const patchRow = useCallback((id: string, patch: Partial<T>) => {
+    const now = latest.current;
+    const at = now.ids.indexOf(id);
+    if (at === -1) return;
+    now.onChange(now.items.map((item, j) => (j === at ? { ...item, ...patch } : item)));
+  }, []);
   const update =
     (index: number): Update<T> =>
     (patch) =>
-      onChange(items.map((item, j) => (j === index ? { ...item, ...patch } : item)));
+      patchRow(ids[index]!, patch);
   const focus = (index: number) => {
     const id = ids[index];
     (id ? rows.current.get(id) : undefined)?.querySelector<HTMLElement>(FIRST_FIELD)?.focus();
@@ -158,6 +173,7 @@ export function SortableList<T>({
       {items.length > 0 && (
         <SortableArea ids={ids} names={names} onMove={move}>
           <ul className="flex flex-col gap-3">
+            {/* eslint-disable-next-line react-hooks/refs -- each row's update reads the latest list only when an edit arrives (a keystroke, a finished upload), never while drawing. */}
             {items.map((item, i) => (
               <SortableRow
                 key={ids[i]}

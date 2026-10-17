@@ -1,6 +1,7 @@
 import type { PageTypeId } from "@/lib/qr/types";
 
 import { themeLook, TYPE_THEME, type PageLook } from "./look";
+import { newDish, type DietLabel } from "./menu";
 import { SOCIAL_ICONS } from "./social-icons.data";
 
 // Content for hosted pages: what the owner edits and what scanners see at /p/<slug>.
@@ -84,15 +85,31 @@ export interface Closure {
   note: string;
 }
 
+export interface PriceOption {
+  label: string;
+  price: string;
+}
+
 export interface MenuItem {
   name: string;
   description: string;
   price: string;
+  /** Other notes the labels don't cover ("contains egg"); old tags that weren't a label. */
   tags: string;
+  /** Shown as a square on the row; opens the viewer (spec item 21). */
+  photo: Media | null;
+  labels: DietLabel[];
+  /** Off keeps the dish in the editor but not on the page (spec item 23). */
+  on: boolean;
+  soldOut: boolean;
+  popular: boolean;
+  /** Up to 4; shown instead of the price (spec item 24). */
+  options: PriceOption[];
 }
 
 export interface MenuSection {
   name: string;
+  description: string;
   items: MenuItem[];
 }
 
@@ -180,6 +197,23 @@ export interface CouponPage extends Themed {
   buttonLabel: string;
   buttonUrl: string;
   image: Media | null;
+  /** How the code shows for a till's scanner (spec item 26). */
+  scan: "text" | "qr" | "barcode";
+  /** A short stamp on the coupon's corner, like NEW (spec item 28, ruling 1). */
+  badge: string;
+}
+
+export interface AgendaItem {
+  /** HH:mm, or "" for no time. */
+  time: string;
+  title: string;
+  note: string;
+}
+
+export interface Host {
+  photo: Media | null;
+  name: string;
+  role: string;
 }
 
 export interface EventPage extends Themed {
@@ -195,6 +229,13 @@ export interface EventPage extends Themed {
   ticketUrl: string;
   ticketLabel: string;
   image: Media | null;
+  /** Adds the Join button (spec item 30). */
+  online: boolean;
+  joinUrl: string;
+  /** Up to 30 rows (spec item 31). */
+  agenda: AgendaItem[];
+  /** Up to 12 (spec item 32). */
+  hosts: Host[];
 }
 
 export interface FeedbackPage extends Themed {
@@ -269,6 +310,9 @@ export const LIMITS = {
   emails: 4,
   websites: 4,
   closures: 10,
+  options: 4,
+  agenda: 30,
+  hosts: 12,
   gallery: 6,
   services: 30,
   buttons: 6,
@@ -372,7 +416,7 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       description: "",
       logo: null,
       currency: "$",
-      sections: [{ name: "Starters", items: [{ name: "", description: "", price: "", tags: "" }] }],
+      sections: [{ name: "Starters", description: "", items: [newDish()] }],
       note: "",
     }),
   coupon: () =>
@@ -388,6 +432,8 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       buttonLabel: "",
       buttonUrl: "",
       image: null,
+      scan: "text",
+      badge: "",
     }),
   event: () =>
     withLook("event", {
@@ -403,6 +449,10 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       ticketUrl: "",
       ticketLabel: "Get tickets",
       image: null,
+      online: false,
+      joinUrl: "",
+      agenda: [],
+      hosts: [],
     }),
   feedback: () =>
     withLook("feedback", {

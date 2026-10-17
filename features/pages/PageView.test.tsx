@@ -1,7 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { newHeader, newLink } from "@/lib/pages/links";
+import { newDish } from "@/lib/pages/menu";
 import { themeLook } from "@/lib/pages/look";
 import { PAGE_DEFAULTS } from "@/lib/pages/types";
 import { PAGE_TYPE_IDS, type PageTypeId } from "@/lib/qr/types";
@@ -505,5 +507,186 @@ describe("WhatsApp quick button", () => {
     const actions = within(screen.getByRole("navigation", { name: "Quick actions" }));
     expect(actions.getByRole("link", { name: "Call" })).toBeInTheDocument();
     expect(actions.queryByRole("link", { name: "WhatsApp" })).toBeNull();
+  });
+});
+
+describe("Menu extras", () => {
+  const dish = (patch: object) => ({ ...newDish(), ...patch });
+  const menu = (items: object[]) => ({
+    ...PAGE_DEFAULTS.menu(),
+    name: "Diner",
+    sections: [{ name: "Mains", description: "Served all day", items }],
+  });
+
+  it("shows labels, Popular, Sold out and price options, and leaves hidden dishes out", () => {
+    view(
+      "menu",
+      menu([
+        dish({ name: "Chili", price: "9", labels: ["spicy", "vegan"], popular: true }),
+        dish({ name: "Pie", price: "5", soldOut: true }),
+        dish({ name: "Secret", price: "1", on: false }),
+        dish({
+          name: "Pizza",
+          price: "10",
+          options: [
+            { label: "Small", price: "8" },
+            { label: "Large", price: "12" },
+          ],
+        }),
+      ]),
+      false,
+    );
+    expect(screen.getByText("Served all day")).toBeInTheDocument();
+    const chili = screen.getByText("Chili").closest("li")!;
+    expect(within(chili).getByText("Spicy")).toBeInTheDocument();
+    expect(within(chili).getByText("Vegan")).toBeInTheDocument();
+    expect(within(chili).getByText("Popular")).toBeInTheDocument();
+    const pie = screen.getByText("Pie").closest("li")!;
+    expect(within(pie).getByText("Sold out")).toBeInTheDocument();
+    expect(screen.queryByText("Secret")).toBeNull();
+    const pizza = screen.getByText("Pizza").closest("li")!;
+    expect(within(pizza).getByText("Small $8")).toBeInTheDocument();
+    expect(within(pizza).getByText("Large $12")).toBeInTheDocument();
+    expect(within(pizza).queryByText("$10")).toBeNull();
+  });
+
+  it("opens a dish's photo full screen, captioned with its name, counting only dishes with one", async () => {
+    const user = userEvent.setup();
+    view(
+      "menu",
+      menu([
+        dish({ name: "Soup", price: "4" }),
+        dish({ name: "Hidden", price: "4", on: false, photo: media("h.jpg", "image/jpeg") }),
+        dish({ name: "Chili", price: "9", photo: media("chili.jpg", "image/jpeg") }),
+        dish({ name: "Pie", price: "5", photo: media("pie.jpg", "image/jpeg") }),
+      ]),
+      false,
+    );
+    await user.click(screen.getByRole("button", { name: "Photo of Pie" }));
+    const dialog = screen.getByRole("dialog", { name: "Photo 2 of 2" });
+    expect(within(dialog).getByText("Pie")).toBeInTheDocument();
+  });
+
+  it("shows dish photos but opens nothing in the editor's preview", () => {
+    view(
+      "menu",
+      menu([dish({ name: "Pie", price: "5", photo: media("pie.jpg", "image/jpeg") })]),
+      true,
+    );
+    expect(screen.queryByRole("button", { name: "Photo of Pie" })).toBeNull();
+    expect(screen.getByRole("img", { name: "Pie" })).toBeInTheDocument();
+  });
+});
+
+describe("Coupon extras", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("shows the badge, the code to scan, and the countdown", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2030, 0, 1, 12));
+    view(
+      "coupon",
+      {
+        ...PAGE_DEFAULTS.coupon(),
+        offer: "20% OFF",
+        badge: "NEW",
+        code: "SAVE20",
+        scan: "qr",
+        validUntil: "2030-01-04",
+      },
+      false,
+    );
+    expect(screen.getByText("NEW")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "QR code for SAVE20" })).toBeInTheDocument();
+    expect(screen.getByText("Ends in 3 days")).toBeInTheDocument();
+  });
+
+  it("keeps an old coupon's code as text only", () => {
+    view("coupon", { ...PAGE_DEFAULTS.coupon(), offer: "20% OFF", code: "SAVE20" }, false);
+    expect(screen.queryByRole("img", { name: /SAVE20/ })).toBeNull();
+    expect(screen.getByText("SAVE20")).toBeInTheDocument();
+  });
+});
+
+describe("Event extras", () => {
+  afterEach(() => vi.useRealTimers());
+  // 13:00 in New York is 18:00 UTC in January.
+  const event = (patch: object = {}) => ({
+    ...PAGE_DEFAULTS.event(),
+    title: "Launch",
+    start: "2030-01-10T13:00",
+    end: "2030-01-10T16:00",
+    timeZone: "America/New_York",
+    location: "1 Main St",
+    online: true,
+    joinUrl: "https://meet.example.com/launch",
+    ...patch,
+  });
+
+  it("counts down, and turns the Join button on 15 minutes before the start", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2030-01-10T17:35:00Z"));
+    const { unmount } = view("event", event(), false);
+    expect(screen.getByText("Starts in 25 minutes")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Join online/ })).toBeNull();
+    expect(screen.getByText("The link opens 15 minutes before the start")).toBeInTheDocument();
+    unmount();
+    vi.setSystemTime(new Date("2030-01-10T17:50:00Z"));
+    view("event", event(), false);
+    expect(screen.getByRole("link", { name: /Join online/ })).toHaveAttribute(
+      "href",
+      "https://meet.example.com/launch",
+    );
+  });
+
+  it("shows the online event, Directions to the place, the agenda and the hosts", () => {
+    view(
+      "event",
+      event({
+        agenda: [{ time: "13:00", title: "Doors open", note: "Coffee" }],
+        hosts: [{ photo: null, name: "Ana Rivera", role: "Host" }],
+      }),
+      false,
+    );
+    expect(screen.getByText("Online event")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Directions" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("maps"),
+    );
+    const agenda = within(screen.getByRole("region", { name: "Agenda" }));
+    expect(agenda.getByText("1:00 PM")).toBeInTheDocument();
+    expect(agenda.getByText("Doors open")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Hosts" })).getByText("Ana Rivera"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the Join button inert in the editor's preview", () => {
+    view("event", event(), true);
+    expect(screen.queryByRole("link", { name: /Join online/ })).toBeNull();
+  });
+});
+
+describe("An event in a time zone this browser doesn't know", () => {
+  it("shows the page without a countdown, and lets visitors join", () => {
+    view(
+      "event",
+      {
+        ...PAGE_DEFAULTS.event(),
+        title: "Launch",
+        start: "2030-01-10T13:00",
+        timeZone: "Mars/Base",
+        online: true,
+        joinUrl: "https://meet.example.com/launch",
+      },
+      false,
+    );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Launch");
+    expect(screen.queryByText(/^Starts in|Happening now|has ended/)).toBeNull();
+    // Without a time to check, the link can't be held back.
+    expect(screen.getByRole("link", { name: /Join online/ })).toHaveAttribute(
+      "href",
+      "https://meet.example.com/launch",
+    );
   });
 });

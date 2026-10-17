@@ -448,3 +448,80 @@ describe("WhatsApp quick button", () => {
     });
   });
 });
+
+describe("Coupon scan and badge", () => {
+  it("reads an old coupon as text only with no badge", () => {
+    expect(sanitizePage("coupon", { offer: "20% OFF", code: "X" })).toMatchObject({
+      scan: "text",
+      badge: "",
+    });
+    expect(sanitizePage("coupon", { offer: "X", scan: "laser" }).scan).toBe("text");
+  });
+
+  it("needs a code to scan, and one a barcode can hold", () => {
+    const coupon = { ...PAGE_DEFAULTS.coupon(), offer: "20% OFF" };
+    expect(validatePage("coupon", { ...coupon, scan: "qr", code: "" })).toEqual({
+      code: "Add the code to scan",
+    });
+    expect(validatePage("coupon", { ...coupon, scan: "qr", code: "CAFÉ" })).toEqual({});
+    expect(validatePage("coupon", { ...coupon, scan: "barcode", code: "CAFÉ" }).code).toMatch(
+      /QR code/,
+    );
+  });
+});
+
+describe("Event online, agenda and hosts", () => {
+  const event = {
+    ...PAGE_DEFAULTS.event(),
+    title: "Launch",
+    start: "2030-01-10T13:00",
+    timeZone: "America/New_York",
+  };
+
+  it("reads an old event as in person, with no agenda or hosts", () => {
+    expect(sanitizePage("event", { title: "Old" })).toMatchObject({
+      online: false,
+      joinUrl: "",
+      agenda: [],
+      hosts: [],
+    });
+  });
+
+  it("needs a join link for an online event, a title per agenda row, and a name per host", () => {
+    expect(validatePage("event", { ...event, online: true })).toEqual({
+      joinUrl: "Add the link to join",
+    });
+    expect(validatePage("event", { ...event, online: true, joinUrl: "not a link" })).toEqual({
+      joinUrl: "Enter a web address, like example.com",
+    });
+    // A join link left over from when it was online isn't checked once it's off.
+    expect(validatePage("event", { ...event, online: false, joinUrl: "not a link" })).toEqual({});
+    expect(
+      validatePage("event", {
+        ...event,
+        agenda: [
+          { time: "13:00", title: "", note: "" },
+          { time: "25:00", title: "Late", note: "" },
+        ],
+        hosts: [{ photo: null, name: "", role: "Speaker" }],
+      }),
+    ).toEqual({
+      "agenda.0.title": "Add what’s happening",
+      "agenda.1.time": "Pick a time",
+      "hosts.0.name": "Add their name",
+    });
+  });
+});
+
+describe("an event in a time zone this browser doesn't know", () => {
+  it("has no times, and its calendar links don't throw", () => {
+    const event = {
+      ...PAGE_DEFAULTS.event(),
+      title: "Launch",
+      start: "2030-01-10T13:00",
+      timeZone: "Mars/Base",
+    };
+    expect(eventTimes(event)).toBeNull();
+    expect(() => googleCalendarUrl(event, "https://ziplume.com/p/X")).not.toThrow();
+  });
+});

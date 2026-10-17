@@ -1,9 +1,11 @@
 "use client";
 
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { type CouponPage } from "@/lib/pages/types";
 
 import { AreaField, MediaField, TextField } from "../fields";
 import { FormCard } from "../FormCard";
+import { Labeled } from "../Labeled";
 import type { EditorProps } from "./shared";
 
 export function CouponEditor({ page, set, errors }: EditorProps<CouponPage>) {
@@ -45,6 +47,24 @@ export function CouponEditor({ page, set, errors }: EditorProps<CouponPage>) {
             placeholder="SPRING20"
           />
         </div>
+        <Labeled label="Show the code as">
+          <SegmentedControl
+            aria-label="Show the code as"
+            size="touch"
+            value={page.scan}
+            onChange={(scan) => set({ scan })}
+            options={[
+              { value: "text", label: "Text" },
+              { value: "qr", label: "QR code" },
+              { value: "barcode", label: "Barcode" },
+            ]}
+          />
+        </Labeled>
+        {page.scan !== "text" && (
+          <p className="text-sm text-fg-muted">
+            Shown with the code, for scanning at the till. Turn your screen brightness up.
+          </p>
+        )}
         <TextField
           path="headline"
           errors={errors}
@@ -53,6 +73,16 @@ export function CouponEditor({ page, set, errors }: EditorProps<CouponPage>) {
           value={page.headline}
           onChange={(headline) => set({ headline })}
           placeholder="On your next visit"
+        />
+        <TextField
+          path="badge"
+          errors={errors}
+          label="Badge"
+          optional
+          placeholder="NEW"
+          hint="A short stamp on the coupon’s corner"
+          value={page.badge}
+          onChange={(badge) => set({ badge })}
         />
         <AreaField
           path="description"

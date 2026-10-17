@@ -12,12 +12,15 @@ import {
   Phone,
   Play,
   Smartphone,
+  Star,
   Ticket,
   UserPlus,
+  Video,
 } from "lucide-react";
 
 import type { ReactNode } from "react";
 
+import { cn } from "@/lib/cn";
 import { googleCalendarUrl } from "@/lib/pages/files";
 import type {
   AppPage,
@@ -28,6 +31,7 @@ import type {
   FeedbackPage,
   ImagesPage,
   LinksPage,
+  MenuItem,
   MenuPage,
   PageContentMap,
   PdfPage,
@@ -36,6 +40,7 @@ import type {
 } from "@/lib/pages/types";
 import { DAY_NAMES, formatTime, rangesOf } from "@/lib/pages/hours";
 import { isShown, linkHref, linkIcon } from "@/lib/pages/links";
+import { priceText } from "@/lib/pages/menu";
 import {
   mailHref,
   mediaUrl,
@@ -48,9 +53,12 @@ import {
 import type { PageTypeId } from "@/lib/qr/types";
 
 import { CopyCode } from "./CopyCode";
+import { CouponDeadline, EventCountdown, JoinButton } from "./Countdowns";
 import { LinkIconMark } from "./LinkIcon";
+import { DietMark } from "./DietMark";
 import { FeedbackForm } from "./FeedbackForm";
-import { Gallery } from "./Viewer";
+import { ScanCode } from "./ScanCode";
+import { Gallery, ViewerGroup, ViewerThumb, type ViewerImage } from "./Viewer";
 import { OpenStatus } from "./OpenStatus";
 import {
   EmptyNote,
@@ -450,9 +458,86 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
 
 function MenuView({ page, preview }: ViewProps<MenuPage>) {
   const sections = page.sections
-    .map((s) => ({ ...s, items: s.items.filter((item) => item.name.trim()) }))
+    // Drawn as given, so a dish without the newer fields still shows (`on` unset is on).
+    .map((s) => ({
+      ...s,
+      items: s.items.filter((item) => item.on !== false && item.name.trim()),
+    }))
     .filter((s) => s.items.length);
+  // Every shown dish photo, in page order, for the viewer (spec item 21).
+  const photos: ViewerImage[] = sections.flatMap((s) =>
+    s.items.flatMap((item) =>
+      item.photo ? [{ media: item.photo, alt: item.name, caption: item.name }] : [],
+    ),
+  );
+  let photoAt = 0;
   const look = page.look;
+  const body = sections.length ? (
+    sections.map((section, i) => (
+      <PageCard key={i}>
+        <h2
+          id={`section-${i}`}
+          className="mb-3 scroll-mt-4 font-page-heading text-xl font-bold text-fg"
+        >
+          {section.name || "Menu"}
+        </h2>
+        {section.description?.trim() && (
+          <p className="-mt-2 mb-3 text-sm text-fg-muted">{section.description}</p>
+        )}
+        <ul className="divide-y divide-border">
+          {section.items.map((item, j) => (
+            <li key={j} className="flex gap-3 py-3">
+              {item.photo && (
+                <ViewerThumb
+                  index={photoAt++}
+                  label={`Photo of ${item.name}`}
+                  className="size-16 shrink-0 overflow-hidden rounded-(--pg-radius)"
+                >
+                  <MediaImage
+                    media={item.photo}
+                    alt={preview ? item.name : ""}
+                    className={cn("size-full object-cover", item.soldOut && "opacity-50")}
+                  />
+                </ViewerThumb>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold [overflow-wrap:anywhere]">
+                  {/* Sold out greys the name rather than fading it, so it stays readable. */}
+                  <span className={item.soldOut ? "text-fg-muted" : "text-fg"}>{item.name}</span>
+                  {item.popular && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-(--page-accent) px-2 py-0.5 text-xs font-semibold text-(--page-accent-fg)">
+                      <Star aria-hidden className="size-3" /> Popular
+                    </span>
+                  )}
+                  {item.soldOut && (
+                    <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-fg-muted">
+                      Sold out
+                    </span>
+                  )}
+                </p>
+                {item.description.trim() && (
+                  <p className="mt-0.5 text-sm text-fg-muted">{item.description}</p>
+                )}
+                {item.labels?.length > 0 && (
+                  <ul aria-label="Dietary" className="mt-1.5 flex flex-wrap gap-1">
+                    {item.labels.map((id) => (
+                      <li key={id}>
+                        <DietMark id={id} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {item.tags?.trim() && <p className="mt-1 text-xs text-fg-muted">{item.tags}</p>}
+              </div>
+              <DishPrice item={item} currency={page.currency} />
+            </li>
+          ))}
+        </ul>
+      </PageCard>
+    ))
+  ) : (
+    <EmptyNote>Dishes you add appear here.</EmptyNote>
+  );
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -487,75 +572,35 @@ function MenuView({ page, preview }: ViewProps<MenuPage>) {
           )}
         </nav>
       )}
-      {sections.length ? (
-        sections.map((section, i) => (
-          <PageCard key={i}>
-            <h2
-              id={`section-${i}`}
-              className="mb-3 scroll-mt-4 font-page-heading text-xl font-bold text-fg"
-            >
-              {section.name || "Menu"}
-            </h2>
-            <ul className="divide-y divide-border">
-              {section.items.map((item, j) => (
-                <li key={j} className="flex gap-3 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-fg">{item.name}</p>
-                    {item.description.trim() && (
-                      <p className="mt-0.5 text-sm text-fg-muted">{item.description}</p>
-                    )}
-                    {item.tags.trim() && (
-                      <p className="mt-1.5 flex flex-wrap gap-1">
-                        {item.tags
-                          .split(",")
-                          .map((tag) => tag.trim())
-                          .filter(Boolean)
-                          .map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-fg-muted"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                      </p>
-                    )}
-                  </div>
-                  {item.price.trim() && (
-                    <p className="shrink-0 font-semibold text-fg tabular-nums">
-                      {/^\d/.test(item.price.trim())
-                        ? `${page.currency}${item.price.trim()}`
-                        : item.price.trim()}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </PageCard>
-        ))
-      ) : (
-        <EmptyNote>Dishes you add appear here.</EmptyNote>
-      )}
+      {!preview && photos.length ? <ViewerGroup images={photos}>{body}</ViewerGroup> : body}
       {page.note.trim() && <Prose text={page.note} className="px-1 text-center text-sm" />}
     </PageFrame>
   );
 }
 
-function formatDate(value: string) {
-  const date = new Date(`${value}T12:00:00Z`);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString("en", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        timeZone: "UTC",
-      });
+/** A dish's price, or its options in its place (spec item 24); struck through when sold out. */
+function DishPrice({ item, currency }: { item: MenuItem; currency: string }) {
+  const options = (item.options ?? []).filter((o) => o.label.trim() && o.price.trim());
+  const style = cn(
+    "shrink-0 text-right font-semibold tabular-nums",
+    item.soldOut ? "text-fg-muted line-through" : "text-fg",
+  );
+  if (options.length) {
+    return (
+      <ul className={cn(style, "max-w-[45%] text-sm [overflow-wrap:anywhere]")}>
+        {options.map((o, k) => (
+          <li key={k}>{`${o.label.trim()} ${priceText(o.price, currency)}`}</li>
+        ))}
+      </ul>
+    );
+  }
+  return item.price.trim() ? <p className={style}>{priceText(item.price, currency)}</p> : null;
 }
 
 function CouponView({ page, preview }: ViewProps<CouponPage>) {
-  const expired = page.validUntil && page.validUntil < new Date().toISOString().slice(0, 10);
   const look = page.look;
+  const code = page.code.trim();
+  const badge = page.badge?.trim();
   const headline = page.headline.trim();
   return (
     <PageFrame look={look} preview={preview}>
@@ -567,24 +612,31 @@ function CouponView({ page, preview }: ViewProps<CouponPage>) {
         eyebrow={page.business.trim() || undefined}
         title={headline || page.offer.trim() || "Your offer"}
       />
-      <PageCard className="flex flex-col items-center gap-4 text-center">
+      <PageCard
+        className={cn("relative flex flex-col items-center gap-4 text-center", badge && "pt-9")}
+      >
+        {/* A stamp on the coupon's top corner (spec item 28). */}
+        {badge && (
+          <span className="absolute -top-4 right-4 rotate-3 rounded-full bg-(--page-accent) px-4 py-1.5 font-page-heading text-xl font-bold text-(--page-accent-fg) shadow-card">
+            {badge}
+          </span>
+        )}
         {headline && page.offer.trim() && (
           <p className="font-page-heading text-5xl font-bold tracking-tight text-[var(--page-accent)]">
             {page.offer}
           </p>
         )}
         {page.description.trim() && <Prose text={page.description} />}
-        {page.code.trim() && (
-          <div className="w-full">
-            <p className="mb-2 text-sm text-fg-muted">Use this code</p>
-            <CopyCode code={page.code.trim()} />
+        {code && (
+          <div className="flex w-full flex-col items-center gap-3">
+            <p className="text-sm text-fg-muted">Use this code</p>
+            {page.scan && page.scan !== "text" && <ScanCode kind={page.scan} value={code} />}
+            <div className="w-full">
+              <CopyCode code={code} />
+            </div>
           </div>
         )}
-        {page.validUntil && (
-          <p className={expired ? "font-semibold text-danger" : "text-sm text-fg-muted"}>
-            {expired ? "This offer has ended" : `Valid until ${formatDate(page.validUntil)}`}
-          </p>
-        )}
+        <CouponDeadline validUntil={page.validUntil} />
         {page.buttonUrl.trim() && (
           <PageLink href={safeHref(page.buttonUrl)} preview={preview}>
             {page.buttonLabel.trim() || "Redeem now"}
@@ -644,6 +696,9 @@ function EventView({ page, slug, pageUrl, preview }: ViewProps<EventPage>) {
   const when = eventWhen(page);
   const google = googleCalendarUrl(page, pageUrl);
   const look = page.look;
+  // Drawn as given, so an event without the newer fields reads as before.
+  const agenda = (page.agenda ?? []).filter((a) => a.title.trim());
+  const hosts = (page.hosts ?? []).filter((h) => h.name.trim());
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -655,6 +710,7 @@ function EventView({ page, slug, pageUrl, preview }: ViewProps<EventPage>) {
         title={page.title || "Your event"}
       />
       <PageCard className="flex flex-col gap-4">
+        <EventCountdown event={page} />
         <ul className="flex flex-col gap-3 text-[15px]">
           {when && (
             <li className="flex gap-3">
@@ -668,21 +724,34 @@ function EventView({ page, slug, pageUrl, preview }: ViewProps<EventPage>) {
               </span>
             </li>
           )}
+          {page.online && (
+            <li className="flex gap-3">
+              <Video aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--page-accent)]" />
+              <span className="font-medium text-fg">Online event</span>
+            </li>
+          )}
           {page.location.trim() && (
             <li className="flex gap-3">
               <MapPin aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--page-accent)]" />
-              <a
-                href={preview ? undefined : mapsHref(page.location)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-fg underline-offset-4 hover:underline"
-              >
-                {page.location}
-              </a>
+              <span className="flex min-w-0 flex-col gap-1">
+                <span className="font-medium [overflow-wrap:anywhere] text-fg">
+                  {page.location}
+                </span>
+                {/* One clear way to the map (spec item 30, ruling 11). */}
+                <a
+                  href={preview ? undefined : mapsHref(page.location)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-[var(--page-accent)] underline-offset-4 hover:underline sm:min-h-0"
+                >
+                  Directions
+                </a>
+              </span>
             </li>
           )}
         </ul>
         <div className="flex flex-col gap-2">
+          <JoinButton event={page} preview={preview} />
           {page.ticketUrl.trim() && (
             <PageLink href={safeHref(page.ticketUrl)} preview={preview}>
               <Ticket aria-hidden /> {page.ticketLabel.trim() || "Get tickets"}
@@ -709,6 +778,57 @@ function EventView({ page, slug, pageUrl, preview }: ViewProps<EventPage>) {
         <PageCard>
           <h2 className="mb-2 font-page-heading text-lg font-bold text-fg">About this event</h2>
           <Prose text={page.description} />
+        </PageCard>
+      )}
+      {agenda.length > 0 && (
+        <PageCard>
+          <section aria-label="Agenda">
+            <h2 className="mb-3 font-page-heading text-lg font-bold text-fg">Agenda</h2>
+            <ol className="divide-y divide-border">
+              {agenda.map((a, i) => (
+                <li key={i} className="grid grid-cols-[5rem_1fr] gap-3 py-3 first:pt-0 last:pb-0">
+                  <span className="font-semibold text-fg tabular-nums">
+                    {a.time && formatTime(a.time)}
+                  </span>
+                  <span className="min-w-0 [overflow-wrap:anywhere]">
+                    <span className="block font-medium text-fg">{a.title}</span>
+                    {a.note.trim() && <span className="block text-sm text-fg-muted">{a.note}</span>}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </PageCard>
+      )}
+      {hosts.length > 0 && (
+        <PageCard>
+          <section aria-label="Hosts">
+            <h2 className="mb-3 font-page-heading text-lg font-bold text-fg">Hosts</h2>
+            <ul className="grid grid-cols-1 gap-4 min-[22rem]:grid-cols-2">
+              {hosts.map((h, i) => (
+                <li key={i} className="flex min-w-0 items-center gap-3">
+                  {h.photo ? (
+                    <MediaImage
+                      media={h.photo}
+                      alt=""
+                      className="size-14 shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="grid size-14 shrink-0 place-items-center rounded-full bg-surface-2 font-semibold text-fg-muted"
+                    >
+                      {h.name.trim().charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="min-w-0 [overflow-wrap:anywhere]">
+                    <span className="block font-semibold text-fg">{h.name}</span>
+                    {h.role.trim() && <span className="block text-sm text-fg-muted">{h.role}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
         </PageCard>
       )}
     </PageFrame>

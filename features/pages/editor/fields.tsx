@@ -605,14 +605,17 @@ function ScheduleChip({ link }: { link: LinkItem }) {
 }
 
 /** A link's less-used settings, folded away under its fields. */
-function MoreOptions({
+export function MoreOptions({
   name,
   problem = false,
+  summary,
   children,
 }: {
   name: string;
   /** Something inside needs fixing: stay open so the person (and Show me) can reach it. */
   problem?: boolean;
+  /** What's set inside, shown with the button ("Photo, Vegan, 2 prices"). */
+  summary?: string;
   children: ReactNode;
 }) {
   const [toggled, setOpen] = useState(false);
@@ -633,6 +636,7 @@ function MoreOptions({
           className={cn("size-4 shrink-0 transition-transform", open && "rotate-90")}
         />
         More options
+        {summary && <span className="min-w-0 truncate font-normal text-fg-muted">· {summary}</span>}
       </button>
       {open && (
         <div id={panel} className="flex flex-col gap-4 border-t border-border px-3 pt-3 pb-4">
