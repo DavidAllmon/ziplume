@@ -43,4 +43,6 @@ next-env.d.ts
 /test-results/
 /blob-report/
 public/sw.js
+# pdf.js's browser files, copied from node_modules at build (scripts/copy-vendor.mjs)
+public/vendor/
 e2e/accounts/.auth/
