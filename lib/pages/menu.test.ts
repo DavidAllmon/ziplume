@@ -106,4 +106,22 @@ describe("menu dishes", () => {
       "Kosher",
     ]);
   });
+
+  it("leaves a hidden dish's unfinished price options alone, as it's parked", () => {
+    const page = {
+      ...PAGE_DEFAULTS.menu(),
+      name: "D",
+      sections: [
+        {
+          name: "S",
+          description: "",
+          items: [
+            { ...newDish(), name: "Soup" },
+            { ...newDish(), name: "Pizza", on: false, options: [{ label: "", price: "8" }] },
+          ],
+        },
+      ],
+    };
+    expect(validatePage("menu", page)).toEqual({});
+  });
 });

@@ -512,3 +512,16 @@ describe("Event online, agenda and hosts", () => {
     });
   });
 });
+
+describe("an event in a time zone this browser doesn't know", () => {
+  it("has no times, and its calendar links don't throw", () => {
+    const event = {
+      ...PAGE_DEFAULTS.event(),
+      title: "Launch",
+      start: "2030-01-10T13:00",
+      timeZone: "Mars/Base",
+    };
+    expect(eventTimes(event)).toBeNull();
+    expect(() => googleCalendarUrl(event, "https://ziplume.com/p/X")).not.toThrow();
+  });
+});

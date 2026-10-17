@@ -771,3 +771,92 @@ describe("Event editor extras", () => {
     });
   });
 });
+
+describe("a photo that finishes uploading in a list row", () => {
+  function Editing<K extends "event" | "menu">({
+    type,
+    initial,
+  }: {
+    type: K;
+    initial: PageContentMap[K];
+  }) {
+    const [page, setPage] = useState(initial);
+    return (
+      <>
+        <PageEditor
+          type={type}
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+  const photo = { path: `${UID}/me.png`, name: "me.png", type: "image/png", size: 1 };
+  function slowUpload() {
+    let finish!: (result: Awaited<ReturnType<typeof uploadMedia>>) => void;
+    vi.mocked(uploadMedia).mockImplementation(() => new Promise((r) => (finish = r)));
+    return () => act(async () => finish({ ok: true, media: photo }));
+  }
+  const host = (name: string) => ({ photo: null, name, role: "" });
+  const lastFileInput = (container: HTMLElement) =>
+    [...container.querySelectorAll<HTMLInputElement>("input[type=file]")].at(-1)!;
+
+  it("keeps a host's name typed while their photo uploads", async () => {
+    const user = userEvent.setup();
+    const finish = slowUpload();
+    const { container } = render(
+      <Editing type="event" initial={{ ...PAGE_DEFAULTS.event(), hosts: [host("")] }} />,
+    );
+    await user.upload(lastFileInput(container), new File(["x"], "me.png", { type: "image/png" }));
+    await user.type(screen.getByRole("textbox", { name: /^Name/ }), "Ana");
+    await finish();
+    expect(saved().hosts).toEqual([{ photo, name: "Ana", role: "" }]);
+  });
+
+  it("puts the photo on its own host when an earlier host is removed meanwhile", async () => {
+    const user = userEvent.setup();
+    const finish = slowUpload();
+    const { container } = render(
+      <Editing
+        type="event"
+        initial={{ ...PAGE_DEFAULTS.event(), hosts: [host("A"), host("B")] }}
+      />,
+    );
+    await user.upload(lastFileInput(container), new File(["x"], "me.png", { type: "image/png" }));
+    await user.click(screen.getByRole("button", { name: "Actions for host “A”" }));
+    await user.click(screen.getByRole("menuitem", { name: "Remove" }));
+    await finish();
+    expect(saved().hosts).toEqual([{ photo, name: "B", role: "" }]);
+  });
+
+  it("keeps a dish's description typed while its photo uploads", async () => {
+    const user = userEvent.setup();
+    const finish = slowUpload();
+    const { container } = render(<Editing type="menu" initial={PAGE_DEFAULTS.menu()} />);
+    await user.click(screen.getByRole("button", { name: "More options for item 1" }));
+    await user.upload(lastFileInput(container), new File(["x"], "me.png", { type: "image/png" }));
+    await user.type(screen.getAllByRole("textbox", { name: /^Description/ }).at(-1)!, "Fresh");
+    await finish();
+    expect(saved().sections[0].items[0]).toMatchObject({ photo, description: "Fresh" });
+  });
+});
+
+describe("Menu dish checks", () => {
+  it("opens More options by itself for over-long other notes", () => {
+    const page = PAGE_DEFAULTS.menu();
+    page.sections[0]!.items[0] = { ...newDish(), name: "Pizza", tags: "x".repeat(90) };
+    render(
+      <PageEditor
+        type="menu"
+        page={page}
+        errors={validatePage("menu", page)}
+        onUpdate={vi.fn()}
+        reveal
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: /^Other notes/ })).toBeInTheDocument();
+  });
+});

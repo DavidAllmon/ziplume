@@ -115,7 +115,8 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     }
     p.sections.forEach((s, si) =>
       s.items.forEach((item, ii) =>
-        item.options.forEach((o, oi) => {
+        // A hidden dish is parked: its unfinished options don't block saving.
+        (item.on ? item.options : []).forEach((o, oi) => {
           const at = `sections.${si}.items.${ii}.options.${oi}`;
           if (o.price.trim() && !o.label.trim())
             errors[`${at}.label`] = "Name this option, like Small";

@@ -666,3 +666,27 @@ describe("Event extras", () => {
     expect(screen.queryByRole("link", { name: /Join online/ })).toBeNull();
   });
 });
+
+describe("An event in a time zone this browser doesn't know", () => {
+  it("shows the page without a countdown, and lets visitors join", () => {
+    view(
+      "event",
+      {
+        ...PAGE_DEFAULTS.event(),
+        title: "Launch",
+        start: "2030-01-10T13:00",
+        timeZone: "Mars/Base",
+        online: true,
+        joinUrl: "https://meet.example.com/launch",
+      },
+      false,
+    );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Launch");
+    expect(screen.queryByText(/^Starts in|Happening now|has ended/)).toBeNull();
+    // Without a time to check, the link can't be held back.
+    expect(screen.getByRole("link", { name: /Join online/ })).toHaveAttribute(
+      "href",
+      "https://meet.example.com/launch",
+    );
+  });
+});

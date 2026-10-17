@@ -76,7 +76,8 @@ export function JoinButton({ event, preview }: { event: EventPage; preview?: boo
         <Video aria-hidden /> Join online
       </PageLink>
     );
-  if (now !== null && joinOpen(times, new Date(now))) {
+  // Without a time to check (a zone this browser doesn't know), the link can't be held back.
+  if (now !== null && (!times || joinOpen(times, new Date(now)))) {
     return (
       <PageLink href={href}>
         <Video aria-hidden /> Join online

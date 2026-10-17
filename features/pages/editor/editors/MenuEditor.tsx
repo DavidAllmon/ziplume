@@ -149,11 +149,14 @@ export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
                     <MoreOptions
                       name={rowName("item", item.name, i)}
                       summary={dishSummary(item)}
-                      problem={item.options.some(
-                        (_, o) =>
-                          errors.error(`sections.${s}.items.${i}.options.${o}.label`) ||
-                          errors.error(`sections.${s}.items.${i}.options.${o}.price`),
-                      )}
+                      problem={
+                        Boolean(errors.error(`sections.${s}.items.${i}.tags`)) ||
+                        item.options.some(
+                          (_, o) =>
+                            errors.error(`sections.${s}.items.${i}.options.${o}.label`) ||
+                            errors.error(`sections.${s}.items.${i}.options.${o}.price`),
+                        )
+                      }
                     >
                       <MediaField
                         label="Photo"

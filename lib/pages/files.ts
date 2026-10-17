@@ -1,6 +1,6 @@
 import { escapeVCard } from "@/lib/qr/escape";
 import { normalizePhone } from "@/lib/qr/normalize";
-import { zonedTimeToUtc } from "@/lib/time/zone";
+import { isTimeZone, zonedTimeToUtc } from "@/lib/time/zone";
 
 import type { EventPage, VcardPage } from "./types";
 import { mailHref, mediaUrl, safeHref, socialHref } from "./urls";
@@ -52,7 +52,8 @@ function allDayRange(event: EventPage): { first: string; last: string } {
 
 /** Start and end as instants; a timed event without an end lasts an hour. */
 export function eventTimes(event: EventPage): { start: Date; end: Date } | null {
-  if (!event.start || !event.timeZone) return null;
+  // A zone this browser (or server) doesn't know has no times, rather than throwing.
+  if (!event.start || !isTimeZone(event.timeZone)) return null;
   if (event.allDay) {
     const { first, last } = allDayRange(event);
     const start = zonedTimeToUtc(first, event.timeZone);
