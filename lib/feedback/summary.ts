@@ -52,7 +52,8 @@ function headline(
     const promoters = values.filter((v) => v >= 9).length;
     const detractors = values.filter((v) => v <= 6).length;
     return {
-      headline: `NPS ${pct(promoters, n) - pct(detractors, n)}`,
+      // From the counts: two rounded shares can be one off (-34 for 1 of 3 against 2 of 3).
+      headline: `NPS ${Math.round((100 * (promoters - detractors)) / n)}`,
       detail: `${pct(promoters, n)}% gave 9 or 10, ${pct(detractors, n)}% gave 0 to 6`,
     };
   }

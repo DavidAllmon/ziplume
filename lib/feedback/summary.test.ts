@@ -55,6 +55,9 @@ describe("feedback summary", () => {
     expect(nps([10, 9])).toBe("NPS 100");
     expect(nps([0, 6])).toBe("NPS -100");
     expect(nps([7, 8])).toBe("NPS 0");
+    // From the counts, not two rounded shares: one promoter and two detractors of three is -33.
+    expect(nps([10, 0, 0])).toBe("NPS -33");
+    expect(nps([10, 9, 0, 7, 7, 7, 7])).toBe("NPS 14");
   });
 
   it("counts an older star rating toward the first question while it's still stars", () => {

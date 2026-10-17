@@ -549,6 +549,8 @@ describe("hosted pages", () => {
       [q("stars", 4.5)],
       [q("stars", "4")],
       [q("hearts", 3)],
+      [{ question: "How was it?", value: 3 }],
+      [{ question: "How was it?", style: null, value: 3 }],
       [q("stars", 3, "x".repeat(201))],
       [],
       [q("stars", 1), q("stars", 1), q("stars", 1), q("stars", 1)],
@@ -567,6 +569,20 @@ describe("hosted pages", () => {
       { rating: 5, answers: [q("faces", 5)], comment: "Nice" },
       { rating: null, answers: [q("scale", 0)], comment: "Nice" },
     ]);
+    // Only what was checked is kept: extra keys are dropped.
+    expect((await send([{ ...q("stars", 2), extra: "junk" }], "answers-6"))[0]?.ok).toBe(true);
+    const [kept] = await asEve<{ answers: unknown }>(
+      `select answers from public.feedback_responses
+        where code_id = (select id from public.qr_codes where slug = 'EVEFB2') order by id desc limit 1`,
+    );
+    expect(kept?.answers).toEqual([q("stars", 2)]);
+    // A response needs a rating or answers.
+    await expect(
+      asService(
+        `insert into public.feedback_responses (code_id, visitor_hash)
+         values ((select id from public.qr_codes where slug = 'EVEFB2'), 'v')`,
+      ),
+    ).rejects.toThrow(/check/);
     // The old one-rating function still works, and its rows have no answers.
     expect(
       (

@@ -371,10 +371,17 @@ const UPGRADES: Partial<
         }
       : raw,
   // Feedback pages asked one star question before they could ask several (spec item 37).
-  feedback: (raw) =>
-    !("questions" in raw) && typeof raw.question === "string"
-      ? { ...raw, questions: [{ text: raw.question, style: "stars" }] }
-      : raw,
+  feedback: (raw) => {
+    if (typeof raw.question !== "string") return raw;
+    if (!("questions" in raw))
+      return { ...raw, questions: [{ text: raw.question, style: "stars" }] };
+    // The app never sends `question` now, so it's an older API client sending back what it
+    // fetched with a new wording: that rewords the first question, keeping its style.
+    const [first, ...rest] = Array.isArray(raw.questions) ? raw.questions : [];
+    return isObject(first)
+      ? { ...raw, questions: [{ ...first, text: raw.question }, ...rest] }
+      : raw;
+  },
   // PDF pages had one file before they had several (spec item 39).
   pdf: (raw) => {
     if (!("file" in raw)) return raw;

@@ -72,4 +72,19 @@ describe("feedback questions", () => {
       reviewUrl: "Enter a web address, like example.com",
     });
   });
+
+  it("lets an older API client's question replace the first one when sent with what it fetched", () => {
+    const page = sanitizePage("feedback", {
+      business: "Cafe",
+      questions: [
+        { text: "How was your visit?", style: "faces" },
+        { text: "Back?", style: "thumbs" },
+      ],
+      question: "How was your meal?",
+    });
+    expect(page.questions).toEqual([
+      { text: "How was your meal?", style: "faces" },
+      { text: "Back?", style: "thumbs" },
+    ]);
+  });
 });

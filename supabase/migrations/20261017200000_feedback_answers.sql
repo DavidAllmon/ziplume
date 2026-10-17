@@ -6,7 +6,9 @@
 alter table public.feedback_responses
   alter column rating drop not null,
   add column answers jsonb
-    check (answers is null or (jsonb_typeof(answers) = 'array' and jsonb_array_length(answers) between 1 and 3));
+    check (answers is null or (jsonb_typeof(answers) = 'array' and jsonb_array_length(answers) between 1 and 3)),
+  -- Every response says something: a rating (one-rating form) or answers (several questions).
+  add constraint feedback_responses_rated check (rating is not null or answers is not null);
 
 -- Called by the app server with answers it built from the page's own questions. Returns whether
 -- the response was stored: the page must be an active feedback page, every answer must fit its
@@ -29,6 +31,8 @@ declare
   v_answer jsonb;
   v_style text;
   v_value int;
+  -- The answers as checked: just the question, style and value of each, nothing else sent.
+  v_answers jsonb := '[]'::jsonb;
 begin
   select c.id into v_id
     from public.qr_codes c
@@ -50,13 +54,17 @@ begin
     end if;
     v_style := v_answer ->> 'style';
     v_value := (v_answer ->> 'value')::int;
-    if not (
+    -- A missing style is refused outright: compared with null, the checks below would be null.
+    if v_style is null or not (
       (v_style in ('stars', 'faces') and v_value between 1 and 5)
       or (v_style = 'thumbs' and v_value in (0, 1))
       or (v_style = 'scale' and v_value between 0 and 10)
     ) then
       return false;
     end if;
+    v_answers := v_answers || jsonb_build_array(
+      jsonb_build_object('question', v_answer ->> 'question', 'style', v_style, 'value', v_value)
+    );
   end loop;
 
   select count(*) into v_recent
@@ -72,8 +80,8 @@ begin
   values (
     v_id,
     -- The first answer's stars or faces, for anything that reads the one rating.
-    case when p_answers -> 0 ->> 'style' in ('stars', 'faces') then (p_answers -> 0 ->> 'value')::int end,
-    p_answers,
+    case when v_answers -> 0 ->> 'style' in ('stars', 'faces') then (v_answers -> 0 ->> 'value')::int end,
+    v_answers,
     nullif(left(btrim(p_comment), 2000), ''),
     nullif(left(btrim(p_contact), 200), ''),
     left(coalesce(nullif(p_visitor_hash, ''), 'unknown'), 128)

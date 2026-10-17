@@ -27,6 +27,19 @@ test.describe("Feedback with several questions", () => {
     );
   });
 
+  test("every 0 to 10 button is a 44px target on a small phone", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.goto("p/PHONE-FEEDBACK-PLUS");
+    const options = page.getByRole("group", { name: /recommend us/ }).locator("label");
+    await expect(options).toHaveCount(11);
+    for (const box of await options.evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect()).map((r) => ({ w: r.width, h: r.height })),
+    )) {
+      expect(box.w).toBeGreaterThanOrEqual(44);
+      expect(box.h).toBeGreaterThanOrEqual(44);
+    }
+  });
+
   test.describe("the owner", () => {
     test.use({ storageState: MAKER.state });
 

@@ -62,7 +62,9 @@ function Rating({
   if (question.style === "scale") {
     return (
       <div className="flex flex-col gap-2">
-        <div className="grid grid-cols-6 gap-1.5 min-[26rem]:grid-cols-11">
+        {/* By the page's own width, so every button stays a 44px target (ruling 9): 4 a row on a
+            small phone, 6 from 23rem. Eleven in one row never fit at 44px. */}
+        <div className="grid grid-cols-4 gap-1.5 @min-[23rem]:grid-cols-6">
           {Array.from({ length: 11 }, (_, v) => (
             <label
               key={v}
