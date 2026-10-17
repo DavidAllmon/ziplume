@@ -29,8 +29,10 @@ import type {
   CouponPage,
   EventPage,
   FeedbackPage,
+  ImageItem,
   ImagesPage,
   LinksPage,
+  Media,
   MenuItem,
   MenuPage,
   PageContentMap,
@@ -58,6 +60,7 @@ import { LinkIconMark } from "./LinkIcon";
 import { DietMark } from "./DietMark";
 import { FeedbackForm } from "./FeedbackForm";
 import { ScanCode } from "./ScanCode";
+import { Carousel } from "./Carousel";
 import { Gallery, ViewerGroup, ViewerThumb, type ViewerImage } from "./Viewer";
 import { OpenStatus } from "./OpenStatus";
 import {
@@ -897,6 +900,70 @@ function PdfView({ page, preview }: ViewProps<PdfPage>) {
 
 function ImagesView({ page, preview }: ViewProps<ImagesPage>) {
   const look = page.look;
+  // Drawn as given: an older page's images may still be plain files.
+  const items: ImageItem[] = (page.images ?? []).map((it) =>
+    "image" in it ? it : { image: it as unknown as Media, caption: "", link: "" },
+  );
+  const n = items.length;
+  // A caption is also the image's description; without one, its place (spec item 41).
+  const alt = (item: ImageItem, i: number) => item.caption?.trim() || `Image ${i + 1} of ${n}`;
+  const viewer: ViewerImage[] = items.map((item, i) => ({
+    media: item.image,
+    alt: alt(item, i),
+    caption: item.caption?.trim() || undefined,
+    link: safeHref(item.link ?? ""),
+  }));
+  const layout = page.layout ?? "grid2";
+  const tile = (item: ImageItem, i: number, className: string) => (
+    <ViewerThumb
+      index={i}
+      label={alt(item, i)}
+      className="block w-full overflow-hidden rounded-(--pg-radius) bg-surface-2"
+    >
+      <MediaImage
+        media={item.image}
+        alt={preview ? alt(item, i) : ""}
+        eager={i < 2}
+        className={className}
+      />
+    </ViewerThumb>
+  );
+  const body = !n ? (
+    <EmptyNote>Images you add appear here.</EmptyNote>
+  ) : layout === "carousel" ? (
+    <Carousel
+      items={items.map((item, i) => ({
+        media: item.image,
+        alt: alt(item, i),
+        caption: item.caption?.trim() || undefined,
+      }))}
+      preview={preview}
+    />
+  ) : layout === "single" ? (
+    <ul data-layout="single" className="flex flex-col gap-5">
+      {items.map((item, i) => (
+        <li key={item.image.path} className="flex flex-col gap-2">
+          {tile(item, i, "h-auto w-full")}
+          {item.caption?.trim() && <p className="text-sm text-fg-muted">{item.caption}</p>}
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <ul
+      data-layout={layout}
+      className={layout === "grid3" ? "grid grid-cols-3 gap-1.5" : "grid grid-cols-2 gap-2"}
+    >
+      {items.map((item, i) => (
+        <li
+          key={item.image.path}
+          // An old page's look: 2 columns, the first image wide when the count is odd.
+          className={layout === "grid2" && n % 2 === 1 && i === 0 ? "col-span-2" : undefined}
+        >
+          {tile(item, i, "aspect-square w-full object-cover")}
+        </li>
+      ))}
+    </ul>
+  );
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -907,32 +974,7 @@ function ImagesView({ page, preview }: ViewProps<ImagesPage>) {
         title={page.title || "Gallery"}
         sub={page.description || undefined}
       />
-      {page.images.length ? (
-        <ul className="grid grid-cols-2 gap-2">
-          {page.images.map(({ image }, i) => (
-            <li
-              key={image.path}
-              className={page.images.length % 2 === 1 && i === 0 ? "col-span-2" : undefined}
-            >
-              <a
-                href={preview ? undefined : mediaUrl(image.path)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block overflow-hidden rounded-(--pg-radius) bg-surface-2"
-              >
-                <MediaImage
-                  media={image}
-                  alt={`Image ${i + 1} of ${page.images.length}`}
-                  eager={i < 2}
-                  className="aspect-square w-full object-cover"
-                />
-              </a>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <EmptyNote>Images you add appear here.</EmptyNote>
-      )}
+      {!preview && n ? <ViewerGroup images={viewer}>{body}</ViewerGroup> : body}
     </PageFrame>
   );
 }

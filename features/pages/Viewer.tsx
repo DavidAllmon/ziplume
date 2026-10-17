@@ -1,7 +1,7 @@
 "use client";
 
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
@@ -13,6 +13,8 @@ export interface ViewerImage {
   media: Media;
   alt: string;
   caption?: string;
+  /** An "Open link" button in the viewer (spec item 44). */
+  link?: string | null;
 }
 
 // A sideways move shorter than this is a tap, not a swipe.
@@ -99,7 +101,19 @@ export function Viewer({
               <ChevronLeft aria-hidden className="size-6" />
             </button>
           )}
-          <p className="min-w-0 flex-1 text-center text-sm text-white/90">{image?.caption}</p>
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
+            {image?.caption && <p className="text-sm text-white/90">{image.caption}</p>}
+            {image?.link && (
+              <a
+                href={image.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                <ExternalLink aria-hidden className="size-4" /> Open link
+              </a>
+            )}
+          </div>
           {many && (
             <button
               type="button"

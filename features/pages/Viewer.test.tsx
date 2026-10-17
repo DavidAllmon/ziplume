@@ -101,4 +101,21 @@ describe("Gallery and Viewer", () => {
     const title = screen.getByText("Photo 1 of 3");
     expect(title).toHaveAttribute("aria-live", "polite");
   });
+
+  it("offers an image's link", async () => {
+    const user = userEvent.setup();
+    render(
+      <Gallery
+        images={[{ ...photo(1), link: "https://example.com/1" }, photo(3)]}
+        label="Photos"
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Open photo 1 of 2" }));
+    expect(screen.getByRole("link", { name: "Open link" })).toHaveAttribute(
+      "href",
+      "https://example.com/1",
+    );
+    await user.keyboard("{ArrowRight}");
+    expect(screen.queryByRole("link", { name: "Open link" })).toBeNull();
+  });
 });

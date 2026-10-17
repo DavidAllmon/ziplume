@@ -690,3 +690,75 @@ describe("An event in a time zone this browser doesn't know", () => {
     );
   });
 });
+
+describe("Images extras", () => {
+  const item = (n: number, patch: object = {}) => ({
+    image: media(`${n}.jpg`, "image/jpeg"),
+    caption: "",
+    link: "",
+    ...patch,
+  });
+  const images = (list: object[], layout = "grid2") => ({
+    ...PAGE_DEFAULTS.images(),
+    title: "Trip",
+    images: list,
+    layout,
+  });
+
+  it("names each image by its caption or its place, and opens it in the viewer with its link", async () => {
+    const user = userEvent.setup();
+    view(
+      "images",
+      images([item(1, { caption: "Sunset", link: "example.com/sunset" }), item(2)]),
+      false,
+    );
+    expect(screen.getByRole("button", { name: "Image 2 of 2" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Sunset" }));
+    const dialog = screen.getByRole("dialog", { name: "Photo 1 of 2" });
+    expect(within(dialog).getByText("Sunset")).toBeInTheDocument();
+    expect(within(dialog).getByRole("link", { name: "Open link" })).toHaveAttribute(
+      "href",
+      "https://example.com/sunset",
+    );
+  });
+
+  it("lays images out in 2 or 3 columns, or one column with captions", () => {
+    const list = [item(1, { caption: "Sunset" }), item(2), item(3)];
+    const { container, unmount } = view("images", images(list, "grid3"), false);
+    expect(container.querySelector("[data-layout=grid3]")).not.toBeNull();
+    expect(screen.queryByText("Sunset")).toBeNull();
+    unmount();
+    const one = view("images", images(list, "single"), false);
+    expect(one.container.querySelector("[data-layout=single]")).not.toBeNull();
+    expect(screen.getByText("Sunset")).toBeInTheDocument();
+  });
+
+  it("shows a carousel with dots for a few images, and a counter for more", async () => {
+    const user = userEvent.setup();
+    const { unmount } = view("images", images([item(1), item(2), item(3)], "carousel"), false);
+    expect(screen.getByRole("button", { name: "Go to image 2 of 3" })).toBeInTheDocument();
+    unmount();
+    view(
+      "images",
+      images(
+        [1, 2, 3, 4, 5, 6, 7].map((n) => item(n)),
+        "carousel",
+      ),
+      false,
+    );
+    expect(screen.queryByRole("button", { name: /^Go to image/ })).toBeNull();
+    expect(screen.getByText("1 of 7")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous image" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await user.click(screen.getByRole("button", { name: "Next image" }));
+    expect(screen.getByText("2 of 7")).toBeInTheDocument();
+  });
+
+  it("keeps images still in the editor's preview", () => {
+    view("images", images([item(1, { caption: "Sunset" })], "carousel"), true);
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByRole("img", { name: "Sunset" })).toBeInTheDocument();
+  });
+});
