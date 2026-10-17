@@ -521,6 +521,65 @@ describe("hosted pages", () => {
     expect(await asFrank("select * from public.feedback_responses")).toEqual([]);
   });
 
+  it("store up to three answers per response, each checked for its rating style", async () => {
+    await asEve(
+      `insert into public.qr_codes (name, qr_type, is_dynamic, slug, content) values ('FB2', 'feedback', true, 'EVEFB2', '{}')`,
+    );
+    await expect(
+      asAnon("select public.submit_feedback_answers('EVEFB2', '[]'::jsonb, null, null, 'v')"),
+    ).rejects.toThrow(/permission denied/);
+    const send = (answers: unknown, visitor = "answers-1", slug = "EVEFB2") =>
+      asService<{ ok: boolean }>(
+        "select public.submit_feedback_answers($1, $2::jsonb, 'Nice', null, $3) as ok",
+        [slug, JSON.stringify(answers), visitor],
+      );
+    const q = (style: string, value: unknown, question = "How was it?") => ({
+      question,
+      style,
+      value,
+    });
+
+    expect((await send([q("stars", 4), q("thumbs", 1), q("scale", 9)]))[0]?.ok).toBe(true);
+    expect((await send([q("faces", 5)], "answers-2"))[0]?.ok).toBe(true);
+    expect((await send([q("scale", 0)], "answers-3"))[0]?.ok).toBe(true);
+    for (const bad of [
+      [q("thumbs", 2)],
+      [q("scale", 11)],
+      [q("stars", 0)],
+      [q("stars", 4.5)],
+      [q("stars", "4")],
+      [q("hearts", 3)],
+      [q("stars", 3, "x".repeat(201))],
+      [],
+      [q("stars", 1), q("stars", 1), q("stars", 1), q("stars", 1)],
+      { question: "Q", style: "stars", value: 3 },
+    ]) {
+      expect((await send(bad, "answers-4"))[0]?.ok, JSON.stringify(bad)).toBe(false);
+    }
+    expect((await send([q("stars", 5)], "answers-5", "EVEMENU"))[0]?.ok).toBe(false); // not feedback
+
+    const rows = await asEve<{ rating: number | null; answers: unknown; comment: string }>(
+      `select rating, answers, comment from public.feedback_responses
+        where code_id = (select id from public.qr_codes where slug = 'EVEFB2') order by id`,
+    );
+    expect(rows).toEqual([
+      { rating: 4, answers: [q("stars", 4), q("thumbs", 1), q("scale", 9)], comment: "Nice" },
+      { rating: 5, answers: [q("faces", 5)], comment: "Nice" },
+      { rating: null, answers: [q("scale", 0)], comment: "Nice" },
+    ]);
+    // The old one-rating function still works, and its rows have no answers.
+    expect(
+      (
+        await asService<{ ok: boolean }>(
+          "select public.submit_feedback('EVEFB2', 3, null, null, 'old-1') as ok",
+        )
+      )[0]?.ok,
+    ).toBe(true);
+    // The daily limit counts every response, either way.
+    for (const visitor of ["limit", "limit", "limit"]) await send([q("stars", 3)], visitor);
+    expect((await send([q("stars", 3)], "limit"))[0]?.ok).toBe(false);
+  });
+
   it("store media only in the owner's folder", async () => {
     await asEve(`insert into storage.objects (bucket_id, name) values ('page-media', $1)`, [
       `${EVE}/menu.pdf`,

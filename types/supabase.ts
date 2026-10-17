@@ -141,7 +141,10 @@ export interface Database {
           id: number;
           code_id: string;
           created_at: string;
-          rating: number;
+          /** The first answer's stars or faces; null when it was another style. */
+          rating: number | null;
+          /** Up to three: the question as asked, its rating style, and the value given. */
+          answers: Json | null;
           comment: string | null;
           contact: string | null;
           visitor_hash: string;
@@ -269,6 +272,16 @@ export interface Database {
         Args: {
           p_slug: string;
           p_rating: number;
+          p_comment: string | null;
+          p_contact: string | null;
+          p_visitor_hash: string;
+        };
+        Returns: boolean;
+      };
+      submit_feedback_answers: {
+        Args: {
+          p_slug: string;
+          p_answers: Json;
           p_comment: string | null;
           p_contact: string | null;
           p_visitor_hash: string;

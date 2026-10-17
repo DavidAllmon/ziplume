@@ -61,7 +61,7 @@ export function FeedbackResponses({ codeId }: { codeId: string }) {
     setRows((list) => list?.filter((r) => r.id !== id) ?? null);
   }
 
-  const average = rows?.length ? rows.reduce((sum, r) => sum + r.rating, 0) / rows.length : 0;
+  const average = rows?.length ? rows.reduce((sum, r) => sum + (r.rating ?? 0), 0) / rows.length : 0;
   const csv = rows?.length
     ? `data:text/csv;charset=utf-8,${encodeURIComponent(
         [
@@ -105,7 +105,7 @@ export function FeedbackResponses({ codeId }: { codeId: string }) {
               <li key={r.id} className="flex gap-3 py-3">
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <Stars rating={r.rating} />
+                    <Stars rating={r.rating ?? 0} />
                     <span className="text-xs text-fg-muted">{relativeTime(r.created_at)}</span>
                   </div>
                   {r.comment && <p className="text-sm whitespace-pre-line text-fg">{r.comment}</p>}
