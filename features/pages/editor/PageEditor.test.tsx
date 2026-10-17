@@ -453,6 +453,15 @@ describe("text limits in the editor", () => {
     }
     if (type === "business") page.buttons = [{ label: "", url: "", on: true }];
     if (type === "vcard") page.socials = [{ network: "instagram", url: "" }];
+    if (type === "images") {
+      page.images = [
+        {
+          image: { path: `${UID}/a.png`, name: "a.png", type: "image/png", size: 1 },
+          caption: "",
+          link: "",
+        },
+      ];
+    }
     if (type === "event") {
       page.online = true;
       page.agenda = [{ time: "", title: "", note: "" }];
@@ -858,5 +867,48 @@ describe("Menu dish checks", () => {
       />,
     );
     expect(screen.getByRole("textbox", { name: /^Other notes/ })).toBeInTheDocument();
+  });
+});
+
+describe("Images editor extras", () => {
+  const img = (n: number) => ({
+    image: { path: `${UID}/${n}.png`, name: `${n}.png`, type: "image/png", size: 1 },
+    caption: "",
+    link: "",
+  });
+  function Gallery() {
+    const [page, setPage] = useState({ ...PAGE_DEFAULTS.images(), images: [img(1), img(2)] });
+    return (
+      <>
+        <PageEditor
+          type="images"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("chooses a layout, and gives each image a caption and a link", async () => {
+    const user = userEvent.setup();
+    render(<Gallery />);
+    await user.selectOptions(screen.getByRole("combobox", { name: /^Layout/ }), "carousel");
+    await user.type(screen.getByRole("textbox", { name: /^Image 2 caption/ }), "Sunset");
+    await user.type(screen.getByRole("textbox", { name: /^Image 2 link/ }), "example.com");
+    expect(saved().layout).toBe("carousel");
+    expect(saved().images[1]).toMatchObject({ caption: "Sunset", link: "example.com" });
+  });
+
+  it("keeps each caption with its own image when the images move", async () => {
+    const user = userEvent.setup();
+    render(<Gallery />);
+    await user.type(screen.getByRole("textbox", { name: /^Image 1 caption/ }), "First");
+    await user.click(screen.getByRole("button", { name: "Actions for image 1" }));
+    await user.click(screen.getByRole("menuitem", { name: "Move later" }));
+    expect(saved().images.map((i: { caption: string }) => i.caption)).toEqual(["", "First"]);
+    expect(screen.getByRole("textbox", { name: /^Image 2 caption/ })).toHaveValue("First");
   });
 });
