@@ -902,7 +902,12 @@ describe("PDF extras", () => {
     type: "application/pdf",
     size,
   });
-  const row = (name: string, patch: object = {}) => ({ file: pdf(name), title: "", preview: null, ...patch });
+  const row = (name: string, patch: object = {}) => ({
+    file: pdf(name),
+    title: "",
+    preview: null,
+    ...patch,
+  });
 
   it("keeps one PDF's page as it was, with its first page shown when there is one", () => {
     view(
@@ -925,7 +930,11 @@ describe("PDF extras", () => {
       {
         ...PAGE_DEFAULTS.pdf(),
         title: "Menus",
-        files: [row("food.pdf", { title: "Food" }), row("wine-list.pdf"), { file: null, title: "", preview: null }],
+        files: [
+          row("food.pdf", { title: "Food" }),
+          row("wine-list.pdf"),
+          { file: null, title: "", preview: null },
+        ],
       },
       false,
     );

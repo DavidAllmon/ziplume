@@ -233,6 +233,8 @@ interface MediaFieldProps {
   error?: string;
   /** Marks the file input for "Show me". */
   field?: string;
+  /** After an upload, with the original file (a PDF's first page is drawn from it). */
+  onFile?: (file: File, media: Media) => void;
 }
 
 /** Upload, preview, replace and remove one file. */
@@ -246,6 +248,7 @@ export function MediaField({
   round,
   error,
   field,
+  onFile,
 }: MediaFieldProps) {
   const inputId = useId();
   const ownerId = useContext(MediaOwnerContext);
@@ -259,8 +262,10 @@ export function MediaField({
     setProblem(null);
     const result = await uploadMedia(file, kind, { maxSide, ownerId });
     setBusy(false);
-    if (result.ok) onChange(result.media);
-    else setProblem(result.error);
+    if (result.ok) {
+      onChange(result.media);
+      onFile?.(file, result.media);
+    } else setProblem(result.error);
   }
 
   return (
