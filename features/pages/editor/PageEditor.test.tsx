@@ -261,7 +261,7 @@ const CARDS: Record<PageTypeId, string[]> = {
   pdf: ["PDFs", "Details", "Opening"],
   images: ["Details", "Images"],
   video: ["Videos", "Details"],
-  audio: ["Audio", "Header", "Details"],
+  audio: ["Audio", "Listen on", "Tracks", "Header", "Details"],
   app: ["Header", "Store links", "Screenshots", "Features", "Website"],
 };
 
@@ -456,6 +456,10 @@ describe("text limits in the editor", () => {
     if (type === "business") page.buttons = [{ label: "", url: "", on: true }];
     if (type === "vcard") page.socials = [{ network: "instagram", url: "" }];
     if (type === "app") page.features = [{ text: "" }];
+    if (type === "audio") {
+      page.listen = [{ url: "" }];
+      page.tracks = [{ title: "", file: null, link: "" }];
+    }
     if (type === "images") {
       page.images = [
         {
@@ -1060,5 +1064,44 @@ describe("PDF editor extras", () => {
     await user.type(screen.getAllByRole("textbox", { name: /^PDF title/ })[1]!, "Wine list");
     expect(saved().files[1]).toMatchObject({ title: "Wine list" });
     expect(screen.getByText(/with several, scanning shows the list/)).toBeInTheDocument();
+  });
+});
+
+describe("Audio editor extras", () => {
+  function Audio() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.audio());
+    return (
+      <>
+        <PageEditor
+          type="audio"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("adds a Listen on link, naming its service, and a track with a link", async () => {
+    const user = userEvent.setup();
+    render(<Audio />);
+    await user.click(screen.getByRole("button", { name: "Add Listen on link" }));
+    await user.type(
+      screen.getByRole("textbox", { name: /^Listen on link/ }),
+      "music.apple.com/us/album/x/1",
+    );
+    expect(screen.getByText("Shows as Listen on Apple Music")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add track" }));
+    await user.type(screen.getByRole("textbox", { name: /^Track title/ }), "Intro");
+    await user.type(
+      screen.getByRole("textbox", { name: /^Or the track’s link/ }),
+      "example.com/intro",
+    );
+    expect(saved()).toMatchObject({
+      listen: [{ url: "music.apple.com/us/album/x/1" }],
+      tracks: [{ title: "Intro", file: null, link: "example.com/intro" }],
+    });
   });
 });
