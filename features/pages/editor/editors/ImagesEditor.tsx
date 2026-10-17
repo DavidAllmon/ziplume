@@ -34,10 +34,27 @@ export function ImagesEditor({
       </FormCard>
       <FormCard title="Images">
         <ImagesField
-          value={page.images}
-          onChange={(images) => set({ images })}
+          value={page.images.map((item) => item.image)}
+          // Each image keeps its caption and link through moves and removals, found by its file.
+          onChange={(files) =>
+            set((latest) => ({
+              images: files.map(
+                (file) =>
+                  latest.images.find((it) => it.image.path === file.path) ?? {
+                    image: file,
+                    caption: "",
+                    link: "",
+                  },
+              ),
+            }))
+          }
           onAdd={(media) =>
-            set((latest) => ({ images: [...latest.images, media].slice(0, LIMITS.images) }))
+            set((latest) => ({
+              images: [...latest.images, { image: media, caption: "", link: "" }].slice(
+                0,
+                LIMITS.images,
+              ),
+            }))
           }
           max={LIMITS.images}
           field="images"

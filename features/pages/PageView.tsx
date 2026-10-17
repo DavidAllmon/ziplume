@@ -909,7 +909,7 @@ function ImagesView({ page, preview }: ViewProps<ImagesPage>) {
       />
       {page.images.length ? (
         <ul className="grid grid-cols-2 gap-2">
-          {page.images.map((image, i) => (
+          {page.images.map(({ image }, i) => (
             <li
               key={image.path}
               className={page.images.length % 2 === 1 && i === 0 ? "col-span-2" : undefined}

@@ -184,7 +184,12 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     return errors;
   },
   pdf: (p): PageErrors => (p.file ? {} : { file: "Upload a PDF" }),
-  images: (p): PageErrors => (p.images.length ? {} : { images: "Add at least one image" }),
+  images: (p) => {
+    const errors: PageErrors = {};
+    if (!p.images.length) errors.images = "Add at least one image";
+    p.images.forEach((item, i) => checkUrl(errors, `images.${i}.link`, item.link));
+    return errors;
+  },
   video: (p): PageErrors => {
     if (!p.url.trim()) return { url: "Paste a YouTube or Vimeo link" };
     return videoEmbed(p.url) || safeHref(p.url) ? {} : { url: URL_MESSAGE };

@@ -54,7 +54,7 @@ describe("sanitizePage", () => {
     const gallery = sanitizePage("images", {
       images: [media("1.png"), { path: "bad" }, media("2.png")],
     });
-    expect(gallery.images.map((m) => m.name)).toEqual(["1.png", "2.png"]);
+    expect(gallery.images.map((item) => item.image.name)).toEqual(["1.png", "2.png"]);
   });
 
   it("repairs opening hours", () => {
@@ -523,5 +523,42 @@ describe("an event in a time zone this browser doesn't know", () => {
     };
     expect(eventTimes(event)).toBeNull();
     expect(() => googleCalendarUrl(event, "https://ziplume.com/p/X")).not.toThrow();
+  });
+});
+
+describe("Images page items", () => {
+  const item = (name: string, patch: object = {}) => ({
+    image: media(name),
+    caption: "",
+    link: "",
+    ...patch,
+  });
+
+  it("reads an old page's images as items with no caption or link, in a 2-column grid", () => {
+    const page = sanitizePage("images", { title: "G", images: [media("a.png"), media("b.png")] });
+    expect(page.layout).toBe("grid2");
+    expect(page.images).toEqual([item("a.png"), item("b.png")]);
+    // Read again, it's the same.
+    expect(sanitizePage("images", page)).toEqual(page);
+  });
+
+  it("drops an item without an image, and keeps captions, links and the layout", () => {
+    const page = sanitizePage("images", {
+      images: [
+        { image: null, caption: "x" },
+        item("a.png", { caption: "Sunset", link: "example.com" }),
+      ],
+      layout: "carousel",
+    });
+    expect(page.images).toEqual([item("a.png", { caption: "Sunset", link: "example.com" })]);
+    expect(page.layout).toBe("carousel");
+    expect(sanitizePage("images", { layout: "mosaic" }).layout).toBe("grid2");
+  });
+
+  it("checks each image's link", () => {
+    const page = { ...PAGE_DEFAULTS.images(), images: [item("a.png", { link: "not a link" })] };
+    expect(validatePage("images", page)).toEqual({
+      "images.0.link": "Enter a web address, like example.com",
+    });
   });
 });

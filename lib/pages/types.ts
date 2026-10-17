@@ -255,10 +255,22 @@ export interface PdfPage extends Themed {
   direct: boolean;
 }
 
+export interface ImageItem {
+  image: Media;
+  /** Shown in the viewer and one-column layouts; also the image's description (spec item 41). */
+  caption: string;
+  /** An "Open link" button in the viewer (spec item 44). */
+  link: string;
+}
+
+/** spec item 42; an old page is "grid2" (2 columns, the first wide when the count is odd). */
+export type ImagesLayout = "grid2" | "grid3" | "single" | "carousel";
+
 export interface ImagesPage extends Themed {
   title: string;
   description: string;
-  images: Media[];
+  images: ImageItem[];
+  layout: ImagesLayout;
 }
 
 export interface VideoPage extends Themed {
@@ -473,7 +485,13 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       direct: false,
     }),
   images: () =>
-    withLook("images", { color: DEFAULT_PAGE_COLOR, title: "", description: "", images: [] }),
+    withLook("images", {
+      color: DEFAULT_PAGE_COLOR,
+      title: "",
+      description: "",
+      images: [],
+      layout: "grid2",
+    }),
   video: () =>
     withLook("video", {
       color: "#DC2626",
