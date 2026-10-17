@@ -13,7 +13,11 @@ export function copyVendor(out = join(root, "public", "vendor")) {
   const dir = join(out, "pdfjs");
   mkdirSync(dir, { recursive: true });
   for (const name of VENDOR_FILES) {
-    copyFileSync(join(root, "node_modules", "pdfjs-dist", "build", name), join(dir, name));
+    // The legacy build: the modern one needs JavaScript newer than many phones and browsers have.
+    copyFileSync(
+      join(root, "node_modules", "pdfjs-dist", "legacy", "build", name),
+      join(dir, name),
+    );
   }
 }
 
