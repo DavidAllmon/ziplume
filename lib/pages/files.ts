@@ -133,7 +133,11 @@ export function contactVcard(card: VcardPage): string {
     `N:${escapeVCard(last)};${escapeVCard(first)};;;`,
     `FN:${escapeVCard(fullName)}`,
   ];
-  if (card.company.trim()) lines.push(`ORG:${escapeVCard(card.company.trim())}`);
+  const company = card.company.trim();
+  const department = card.department.trim();
+  if (company || department) {
+    lines.push(`ORG:${escapeVCard(company)}${department ? `;${escapeVCard(department)}` : ""}`);
+  }
   if (card.jobTitle.trim()) lines.push(`TITLE:${escapeVCard(card.jobTitle.trim())}`);
   for (const phone of card.phones) {
     const number = normalizePhone(phone.number);
@@ -150,10 +154,15 @@ export function contactVcard(card: VcardPage): string {
     const type = /home|personal/i.test(email.label) ? "HOME" : "WORK";
     lines.push(`EMAIL;TYPE=INTERNET,${type}:${email.address.trim()}`);
   }
-  const website = safeHref(card.website);
-  if (website) lines.push(`URL:${website}`);
+  for (const site of card.websites) {
+    const href = safeHref(site.url);
+    if (href) lines.push(`URL:${href}`);
+  }
   if (card.address.trim()) lines.push(`ADR;TYPE=WORK:;;${escapeVCard(card.address.trim())};;;;`);
-  if (card.bio.trim()) lines.push(`NOTE:${escapeVCard(card.bio.trim())}`);
+  // Contact cards have no pronouns field phones read, so they lead the note.
+  const pronouns = card.pronouns.trim();
+  const note = [pronouns && `Pronouns: ${pronouns}`, card.bio.trim()].filter(Boolean).join("\n");
+  if (note) lines.push(`NOTE:${escapeVCard(note)}`);
   if (card.photo) lines.push(`PHOTO;VALUE=URI:${mediaUrl(card.photo.path)}`);
   for (const social of card.socials) {
     const href = socialHref(social.network, social.url);

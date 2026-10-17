@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { newHeader, newLink } from "@/lib/pages/links";
@@ -340,6 +340,88 @@ describe("Link list extras", () => {
     expect(screen.getByRole("link", { name: "Blog" })).toHaveAttribute(
       "href",
       "https://example.com/",
+    );
+  });
+});
+
+describe("Contact page extras", () => {
+  const ana = (patch: object = {}) => ({
+    ...PAGE_DEFAULTS.vcard(),
+    firstName: "Ana",
+    jobTitle: "Designer",
+    department: "Brand",
+    company: "Acme",
+    pronouns: "she/her",
+    phones: [
+      { label: "Mobile", number: "+1 555 010 2030", whatsapp: false },
+      { label: "Work", number: "+1 555 010 4040", whatsapp: true },
+    ],
+    emails: [{ label: "Work", address: "ana@acme.com" }],
+    address: "1 Main St",
+    ...patch,
+  });
+
+  it("draws Call, Text, Email, WhatsApp and Directions from the first details", () => {
+    view("vcard", ana(), false);
+    const actions = within(screen.getByRole("navigation", { name: "Quick actions" }));
+    expect(actions.getByRole("link", { name: "Call" })).toHaveAttribute("href", "tel:+15550102030");
+    expect(actions.getByRole("link", { name: "Text" })).toHaveAttribute("href", "sms:+15550102030");
+    expect(actions.getByRole("link", { name: "Email" })).toHaveAttribute(
+      "href",
+      "mailto:ana@acme.com",
+    );
+    expect(actions.getByRole("link", { name: "WhatsApp" })).toHaveAttribute(
+      "href",
+      "https://wa.me/15550104040",
+    );
+    expect(actions.getByRole("link", { name: "Directions" })).toBeInTheDocument();
+  });
+
+  it("leaves out buttons that are off or can't work, and the whole row when none can", () => {
+    const { unmount } = view(
+      "vcard",
+      ana({ showText: false, phones: [{ label: "", number: "+1 555 010 2030", whatsapp: false }] }),
+      false,
+    );
+    const actions = within(screen.getByRole("navigation", { name: "Quick actions" }));
+    expect(actions.queryByRole("link", { name: "Text" })).toBeNull();
+    expect(actions.queryByRole("link", { name: "WhatsApp" })).toBeNull();
+    unmount();
+    view("vcard", ana({ phones: [], emails: [], address: "" }), false);
+    expect(screen.queryByRole("navigation", { name: "Quick actions" })).toBeNull();
+  });
+
+  it("shows pronouns by the name, and the department in the role", () => {
+    view("vcard", ana(), false);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Ana (she/her)");
+    expect(screen.getByText("Designer · Brand · Acme")).toBeInTheDocument();
+  });
+
+  it("draws the cover across the top with the photo over it", () => {
+    const { container } = view(
+      "vcard",
+      ana({ cover: media("cover.jpg", "image/jpeg"), photo: media("me.jpg", "image/jpeg") }),
+      false,
+    );
+    expect(container.querySelector("[data-header=banner]")).not.toBeNull();
+    expect(container.querySelector("[data-header=banner] [data-badge]")).not.toBeNull();
+  });
+
+  it("lists each website with its label", () => {
+    view(
+      "vcard",
+      ana({
+        websites: [
+          { label: "Portfolio", url: "ana.dev" },
+          { label: "", url: "acme.com" },
+        ],
+      }),
+      false,
+    );
+    expect(screen.getByText("Portfolio")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /ana\.dev/ })).toHaveAttribute(
+      "href",
+      "https://ana.dev/",
     );
   });
 });

@@ -72,7 +72,7 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
       if (e.address.trim() && !mailHref(e.address))
         errors[`emails.${i}.address`] = "Enter a valid email";
     });
-    checkUrl(errors, "website", p.website);
+    p.websites.forEach((w, i) => checkUrl(errors, `websites.${i}.url`, w.url));
     checkSocials(errors, p.socials);
     return errors;
   },

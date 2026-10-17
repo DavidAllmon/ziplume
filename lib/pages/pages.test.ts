@@ -209,12 +209,12 @@ describe("downloads", () => {
       firstName: "Ada",
       lastName: "Lovelace",
       company: "Analytical, Ltd",
-      phones: [{ label: "Work", number: "+1 (555) 010-9999" }],
+      phones: [{ label: "Work", number: "+1 (555) 010-9999", whatsapp: false }],
       emails: [
         { label: "Work", address: "ada@example.com" },
         { label: "", address: "not-an-email" },
       ],
-      website: "example.com",
+      websites: [{ label: "", url: "example.com" }],
       socials: [{ network: "github", url: "@ada" }],
     };
     const vcf = contactVcard(card);
@@ -329,5 +329,59 @@ describe("video pages take links only", () => {
     expect(page).not.toHaveProperty("source");
     expect(page).not.toHaveProperty("file");
     expect(validatePage("video", page)).toEqual({ url: "Paste a YouTube or Vimeo link" });
+  });
+});
+
+describe("Contact page details", () => {
+  it("turns an old single website into the first of the websites", () => {
+    const page = sanitizePage("vcard", { firstName: "Ana", website: "ana.dev" });
+    expect(page.websites).toEqual([{ label: "", url: "ana.dev" }]);
+    expect(page).not.toHaveProperty("website");
+    expect(page).toMatchObject({
+      showCall: true,
+      showText: true,
+      showEmail: true,
+      showWhatsapp: true,
+      showDirections: true,
+      pronouns: "",
+      department: "",
+      cover: null,
+    });
+    // A page that already has websites keeps them.
+    const kept = sanitizePage("vcard", {
+      websites: [{ label: "Blog", url: "b.dev" }],
+      website: "x.dev",
+    });
+    expect(kept.websites).toEqual([{ label: "Blog", url: "b.dev" }]);
+  });
+
+  it("puts department, every website and pronouns in the saved contact card", () => {
+    const card = contactVcard({
+      ...PAGE_DEFAULTS.vcard(),
+      firstName: "Ana",
+      company: "Acme",
+      department: "Design",
+      pronouns: "she/her",
+      bio: "Hi",
+      websites: [
+        { label: "Blog", url: "b.dev" },
+        { label: "", url: "ana.dev" },
+      ],
+    });
+    expect(card).toContain("ORG:Acme;Design");
+    expect(card).toContain("URL:https://b.dev/");
+    expect(card).toContain("URL:https://ana.dev/");
+    expect(card).toContain("NOTE:Pronouns: she/her\\nHi");
+  });
+
+  it("checks each website", () => {
+    const page = {
+      ...PAGE_DEFAULTS.vcard(),
+      firstName: "Ana",
+      websites: [{ label: "", url: "not a url" }],
+    };
+    expect(validatePage("vcard", page)).toEqual({
+      "websites.0.url": "Enter a web address, like example.com",
+    });
   });
 });

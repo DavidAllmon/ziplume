@@ -77,7 +77,7 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
           path="phones"
           errors={errors}
           itemLabel={(item, i) => rowName("phone", item.number, i)}
-          newItem={() => ({ label: "Mobile", number: "" })}
+          newItem={() => ({ label: "Mobile", number: "", whatsapp: false })}
           render={(item, update, i) => (
             <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">
               <TextField
@@ -144,9 +144,11 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
           optional
           type="url"
           inputMode="url"
-          value={page.website}
-          onChange={(website) => set({ website })}
-          path="website"
+          value={page.websites[0]?.url ?? ""}
+          onChange={(url) =>
+            set((latest) => ({ websites: [{ label: "", url }, ...latest.websites.slice(1)] }))
+          }
+          path="websites.0.url"
           errors={errors}
           placeholder="example.com"
         />

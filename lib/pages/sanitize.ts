@@ -59,15 +59,27 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
   vcard: {
     firstName: str(60),
     lastName: str(60),
+    pronouns: str(60),
     jobTitle: str(),
+    department: str(60),
     company: str(),
     bio: str(LIMITS.text),
     photo: media,
-    phones: { kind: "list", max: LIMITS.phones, item: { label: str(30), number: str(40) } },
+    cover: media,
+    phones: {
+      kind: "list",
+      max: LIMITS.phones,
+      item: { label: str(30), number: str(40), whatsapp: bool },
+    },
     emails: { kind: "list", max: LIMITS.emails, item: { label: str(30), address: str(254) } },
-    website: str(2048),
+    websites: { kind: "list", max: LIMITS.websites, item: { label: str(30), url: str(2048) } },
     address: str(LIMITS.medium),
     socials: social,
+    showCall: { kind: "bool", fallback: true },
+    showText: { kind: "bool", fallback: true },
+    showEmail: { kind: "bool", fallback: true },
+    showWhatsapp: { kind: "bool", fallback: true },
+    showDirections: { kind: "bool", fallback: true },
   },
   business: {
     name: str(),
@@ -242,6 +254,17 @@ function cleanObject(
   return out;
 }
 
+/** Older content shapes, brought up to date before the schema reads them. */
+const UPGRADES: Partial<
+  Record<PageTypeId, (raw: Record<string, unknown>) => Record<string, unknown>>
+> = {
+  // Contact pages had one website before they had several (spec item 13).
+  vcard: (raw) =>
+    !("websites" in raw) && typeof raw.website === "string" && raw.website.trim()
+      ? { ...raw, websites: [{ label: "", url: raw.website }] }
+      : raw,
+};
+
 /**
  * A valid page of the given type from any stored or edited JSON. It always has a look: a saved
  * page without one keeps how it looked (spec 6.9), garbage gets the type's defaults, and an API
@@ -258,7 +281,9 @@ export function sanitizePage<K extends PageTypeId>(
   }: { missingLook?: "legacy" | "theme"; keepLongText?: boolean } = {},
 ): PageContentMap[K] {
   const defaults = PAGE_DEFAULTS[type]() as unknown as Record<string, unknown>;
-  const page = cleanObject(SCHEMAS[type], raw, defaults, { keepLongText });
+  const upgrade = UPGRADES[type];
+  const upgraded = upgrade && isObject(raw) ? upgrade(raw) : raw;
+  const page = cleanObject(SCHEMAS[type], upgraded, defaults, { keepLongText });
   const source = isObject(raw) ? raw : null;
   const fallback = !source
     ? (defaults.look as PageLook)

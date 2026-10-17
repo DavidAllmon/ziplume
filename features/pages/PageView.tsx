@@ -7,6 +7,7 @@ import {
   Globe,
   Mail,
   MapPin,
+  MessageSquare,
   Music,
   Phone,
   Play,
@@ -34,7 +35,7 @@ import type {
   VideoPage,
 } from "@/lib/pages/types";
 import { isShown, linkHref, linkIcon } from "@/lib/pages/links";
-import { mailHref, mediaUrl, safeHref, telHref, videoEmbed } from "@/lib/pages/urls";
+import { mailHref, mediaUrl, safeHref, smsHref, telHref, videoEmbed } from "@/lib/pages/urls";
 import type { PageTypeId } from "@/lib/qr/types";
 
 import { CopyCode } from "./CopyCode";
@@ -49,6 +50,8 @@ import {
   PageHeader,
   PageLink,
   Prose,
+  QuickActions,
+  SocialIcon,
   SocialRow,
 } from "./parts";
 
@@ -176,24 +179,68 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
       .join(" ") ||
     page.company ||
     "Your name";
-  const role = [page.jobTitle.trim(), page.company.trim()].filter(Boolean).join(" · ");
-  const website = safeHref(page.website);
+  const role = [page.jobTitle, page.department, page.company]
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(" · ");
+  const pronouns = page.pronouns.trim();
   const look = page.look;
   const socials = <SocialRow socials={page.socials} look={look} preview={preview} />;
+  // The quick buttons use the first phone and email that work (spec item 12).
+  const phone = page.phones.find((p) => telHref(p.number));
+  const whatsapp = page.phones.find((p) => p.whatsapp && telHref(p.number));
+  const email = page.emails.find((e) => mailHref(e.address));
+  const actions = [
+    page.showCall &&
+      phone && { label: "Call", href: telHref(phone.number)!, icon: <Phone aria-hidden /> },
+    page.showText &&
+      phone && { label: "Text", href: smsHref(phone.number)!, icon: <MessageSquare aria-hidden /> },
+    page.showEmail &&
+      email && { label: "Email", href: mailHref(email.address)!, icon: <Mail aria-hidden /> },
+    page.showWhatsapp &&
+      whatsapp && {
+        label: "WhatsApp",
+        href: `https://wa.me/${whatsapp.number.replace(/\D/g, "")}`,
+        icon: <SocialIcon network="whatsapp" />,
+      },
+    page.showDirections &&
+      page.address.trim() && {
+        label: "Directions",
+        href: mapsHref(page.address),
+        icon: <MapPin aria-hidden />,
+      },
+  ];
+  const websites = page.websites
+    .map((w) => ({ ...w, href: safeHref(w.url) }))
+    .filter((w) => w.href);
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
         look={look}
-        layout={look.header}
-        image={page.photo}
-        imageAlt={name}
-        title={name}
+        // With a cover, it runs across the top and the photo sits over it (spec item 11).
+        layout={page.cover ? "banner" : look.header}
+        image={page.cover ?? page.photo}
+        imageAlt={page.cover ? "" : name}
+        badge={page.cover ? page.photo : null}
+        badgeRound={look.shape === "circle"}
+        title={
+          <>
+            {name}
+            {pronouns && (
+              <>
+                {" "}
+                <span className="align-middle text-lg font-medium text-fg-muted">({pronouns})</span>
+              </>
+            )}
+          </>
+        }
         sub={role || undefined}
       />
       {look.socials === "top" && socials}
       <PageLink href={`/p/${encodeURIComponent(slug)}/contact.vcf`} download preview={preview}>
         <UserPlus aria-hidden /> Save contact
       </PageLink>
+      <QuickActions actions={actions} preview={preview} />
       <PageCard>
         {page.bio.trim() && <Prose text={page.bio} className="mb-3" />}
         <ul className="divide-y divide-border">
@@ -221,15 +268,16 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
                 preview={preview}
               />
             ))}
-          {website && (
+          {websites.map((w, i) => (
             <ContactRow
+              key={`w${i}`}
               icon={Globe}
-              label="Website"
-              value={page.website.replace(/^https?:\/\//, "")}
-              href={website}
+              label={w.label.trim() || "Website"}
+              value={w.url.trim().replace(/^https?:\/\//, "")}
+              href={w.href}
               preview={preview}
             />
-          )}
+          ))}
           {page.address.trim() && (
             <ContactRow
               icon={MapPin}
@@ -265,14 +313,14 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
   const hero = look.header === "hero" && page.cover !== null;
   const socials = <SocialRow socials={page.socials} look={look} preview={preview} />;
   const actions = [
-    { href: phone, icon: Phone, label: "Call" },
-    { href: email, icon: Mail, label: "Email" },
-    {
-      href: page.address.trim() ? mapsHref(page.address) : null,
-      icon: MapPin,
+    phone && { label: "Call", href: phone, icon: <Phone aria-hidden /> },
+    email && { label: "Email", href: email, icon: <Mail aria-hidden /> },
+    page.address.trim() && {
       label: "Directions",
+      href: mapsHref(page.address),
+      icon: <MapPin aria-hidden />,
     },
-  ].filter((action) => action.href);
+  ];
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -286,25 +334,7 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
         sub={page.tagline || undefined}
       />
       {look.socials === "top" && socials}
-      {actions.length > 0 && (
-        <PageCard className="flex flex-col items-center gap-4 text-center">
-          <div className="grid w-full grid-cols-3 gap-2">
-            {actions.map(({ href, icon: Icon, label }) => (
-              <a
-                key={label}
-                href={preview ? undefined : href!}
-                {...(href!.startsWith("http")
-                  ? { target: "_blank", rel: "noopener noreferrer" }
-                  : {})}
-                className="flex flex-col items-center gap-1 rounded-2xl bg-surface-2 px-2 py-3 text-sm font-semibold text-fg focus-visible:outline-2 focus-visible:outline-[var(--page-accent)]"
-              >
-                <Icon aria-hidden className="size-5 text-[var(--page-accent)]" />
-                {label}
-              </a>
-            ))}
-          </div>
-        </PageCard>
-      )}
+      <QuickActions actions={actions} preview={preview} />
       {page.buttons
         .filter((b) => b.kind !== "header" && b.on && linkHref(b))
         .map((b, i) => (

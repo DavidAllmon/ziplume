@@ -53,6 +53,8 @@ export interface SocialItem {
 export interface PhoneItem {
   label: string;
   number: string;
+  /** This number is on WhatsApp. */
+  whatsapp: boolean;
 }
 
 export interface EmailItem {
@@ -96,15 +98,26 @@ export interface LinksPage extends Themed {
 export interface VcardPage extends Themed {
   firstName: string;
   lastName: string;
+  pronouns: string;
   jobTitle: string;
+  department: string;
   company: string;
   bio: string;
   photo: Media | null;
+  /** A wide photo across the top (spec item 11). */
+  cover: Media | null;
   phones: PhoneItem[];
   emails: EmailItem[];
-  website: string;
+  /** Up to 4; an old page's single website becomes the first. */
+  websites: { label: string; url: string }[];
   address: string;
   socials: SocialItem[];
+  /** The quick buttons under the name (spec item 12); each can be turned off. */
+  showCall: boolean;
+  showText: boolean;
+  showEmail: boolean;
+  showWhatsapp: boolean;
+  showDirections: boolean;
 }
 
 export interface BusinessPage extends Themed {
@@ -231,6 +244,7 @@ export const LIMITS = {
   socials: 16,
   phones: 4,
   emails: 4,
+  websites: 4,
   buttons: 6,
   sections: 20,
   items: 60,
@@ -286,15 +300,23 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       color: DEFAULT_PAGE_COLOR,
       firstName: "",
       lastName: "",
+      pronouns: "",
       jobTitle: "",
+      department: "",
       company: "",
       bio: "",
       photo: null,
-      phones: [{ label: "Mobile", number: "" }],
+      cover: null,
+      phones: [{ label: "Mobile", number: "", whatsapp: false }],
       emails: [{ label: "Work", address: "" }],
-      website: "",
+      websites: [],
       address: "",
       socials: [],
+      showCall: true,
+      showText: true,
+      showEmail: true,
+      showWhatsapp: true,
+      showDirections: true,
     }),
   business: () =>
     withLook("business", {
