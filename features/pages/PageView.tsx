@@ -37,6 +37,7 @@ import type {
   MenuItem,
   MenuPage,
   PageContentMap,
+  PdfFile,
   PdfPage,
   VcardPage,
   VideoItem,
@@ -867,37 +868,104 @@ function FeedbackView({ page, slug, preview }: ViewProps<FeedbackPage>) {
   );
 }
 
+// A round 44px link with just an icon (a PDF's View and Download in a list).
+const iconLink =
+  "grid size-11 shrink-0 place-items-center rounded-full border border-border text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring)";
+
 function PdfView({ page, preview }: ViewProps<PdfPage>) {
-  const file = page.files?.[0]?.file ?? null;
-  const href = file ? mediaUrl(file.path) : null;
   const look = page.look;
+  // Drawn as given: an old page may still have one `file`.
+  const old = (page as unknown as { file?: Media | null }).file ?? null;
+  const files = (page.files ?? [{ file: old, title: "", preview: null }]).filter(
+    (f): f is PdfFile & { file: Media } => Boolean(f.file),
+  );
+  const name = (f: PdfFile & { file: Media }) => f.title.trim() || f.file.name;
+  const first = files[0];
   return (
     <PageFrame look={look} preview={preview}>
-      <span className="grid size-20 place-items-center self-center rounded-(--pg-radius) bg-[var(--page-accent)] text-[var(--page-accent-fg)]">
-        <FileText aria-hidden className="size-10" />
-      </span>
+      {!first?.preview && (
+        <span className="grid size-20 place-items-center self-center rounded-(--pg-radius) bg-[var(--page-accent)] text-[var(--page-accent-fg)]">
+          <FileText aria-hidden className="size-10" />
+        </span>
+      )}
       <PageHeader
         look={look}
         layout="classic"
         image={null}
         imageAlt=""
-        title={page.title || file?.name || "Document"}
+        title={page.title || first?.file.name || "Document"}
         sub={page.description || undefined}
       />
-      <PageCard className="flex flex-col items-center gap-4 text-center">
-        {file ? (
-          <>
-            <PageLink href={href} preview={preview}>
-              <ExternalLink aria-hidden /> Open PDF
-            </PageLink>
-            <PageLink href={href} variant="secondary" download={file.name} preview={preview}>
-              <Download aria-hidden /> Download · {fileSize(file.size)}
-            </PageLink>
-          </>
-        ) : (
-          <EmptyNote>Your PDF appears here.</EmptyNote>
-        )}
-      </PageCard>
+      {files.length > 1 ? (
+        <PageCard>
+          <ul aria-label="PDFs" className="divide-y divide-border">
+            {files.map((f) => {
+              const href = mediaUrl(f.file.path);
+              return (
+                <li key={f.file.path} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  {f.preview ? (
+                    <MediaImage
+                      media={f.preview}
+                      alt=""
+                      className="h-16 w-12 shrink-0 rounded border border-border bg-white object-cover object-top"
+                    />
+                  ) : (
+                    <FileText aria-hidden className="size-8 shrink-0 text-[var(--page-accent)]" />
+                  )}
+                  <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                    <span className="block font-medium text-fg">{name(f)}</span>
+                    <span className="block text-sm text-fg-muted">{fileSize(f.file.size)}</span>
+                  </span>
+                  <a
+                    href={preview ? undefined : href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`View ${name(f)}`}
+                    className={iconLink}
+                  >
+                    <ExternalLink aria-hidden className="size-5" />
+                  </a>
+                  <a
+                    href={preview ? undefined : href}
+                    download={f.file.name}
+                    aria-label={`Download ${name(f)}, ${fileSize(f.file.size)}`}
+                    className={iconLink}
+                  >
+                    <Download aria-hidden className="size-5" />
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </PageCard>
+      ) : (
+        <PageCard className="flex flex-col items-center gap-4 text-center">
+          {first ? (
+            <>
+              {first.preview && (
+                <MediaImage
+                  media={first.preview}
+                  alt={`First page of ${page.title.trim() || name(first)}`}
+                  className="w-full max-w-xs rounded border border-border bg-white shadow-card"
+                />
+              )}
+              <PageLink href={mediaUrl(first.file.path)} preview={preview}>
+                <ExternalLink aria-hidden /> Open PDF
+              </PageLink>
+              <PageLink
+                href={mediaUrl(first.file.path)}
+                variant="secondary"
+                download={first.file.name}
+                preview={preview}
+              >
+                <Download aria-hidden /> Download · {fileSize(first.file.size)}
+              </PageLink>
+            </>
+          ) : (
+            <EmptyNote>Your PDF appears here.</EmptyNote>
+          )}
+        </PageCard>
+      )}
     </PageFrame>
   );
 }

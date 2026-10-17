@@ -894,3 +894,46 @@ describe("Images and Video fixes", () => {
     ).toBeTruthy();
   });
 });
+
+describe("PDF extras", () => {
+  const pdf = (name: string, size = 2048) => ({
+    path: `00000000-0000-0000-0000-000000000000/${name}`,
+    name,
+    type: "application/pdf",
+    size,
+  });
+  const row = (name: string, patch: object = {}) => ({ file: pdf(name), title: "", preview: null, ...patch });
+
+  it("keeps one PDF's page as it was, with its first page shown when there is one", () => {
+    view(
+      "pdf",
+      {
+        ...PAGE_DEFAULTS.pdf(),
+        title: "Menu",
+        files: [row("menu.pdf", { preview: media("p.webp", "image/webp") })],
+      },
+      false,
+    );
+    expect(screen.getByRole("img", { name: "First page of Menu" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Open PDF/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Download/ })).toBeInTheDocument();
+  });
+
+  it("lists several PDFs, each with View and Download, named by title or file", () => {
+    view(
+      "pdf",
+      {
+        ...PAGE_DEFAULTS.pdf(),
+        title: "Menus",
+        files: [row("food.pdf", { title: "Food" }), row("wine-list.pdf"), { file: null, title: "", preview: null }],
+      },
+      false,
+    );
+    const list = within(screen.getByRole("list", { name: "PDFs" }));
+    expect(list.getAllByRole("listitem")).toHaveLength(2);
+    expect(list.getByText("Food")).toBeInTheDocument();
+    expect(list.getByText("wine-list.pdf")).toBeInTheDocument();
+    expect(list.getByRole("link", { name: "View Food" })).toBeInTheDocument();
+    expect(list.getByRole("link", { name: "Download Food, 2 KB" })).toBeInTheDocument();
+  });
+});
