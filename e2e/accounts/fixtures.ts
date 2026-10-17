@@ -67,6 +67,8 @@ export interface Seed {
   /** Ray's team, which Sky leaves in a test. */
   rayId: string;
   skyId: string;
+  /** Maker's feedback page (MAKER-FEEDBACK): stars, thumbs and 0 to 10. */
+  makerFeedbackId: string;
 }
 
 /** Ids created by the global setup. Read it inside tests, not at import time. */
@@ -367,6 +369,22 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
       allowComment: true,
       askContact: true,
       thanks: "Thank you!",
+    },
+  },
+  {
+    type: "feedback",
+    slug: "PHONE-FEEDBACK-PLUS",
+    content: {
+      business: "Phone Bistro",
+      questions: [
+        { text: "How was the food, the service and the atmosphere this evening?", style: "faces" },
+        { text: "Would you come back?", style: "thumbs" },
+        { text: "How likely are you to recommend us to a friend?", style: "scale" },
+      ],
+      allowComment: true,
+      askContact: true,
+      thanks: "Thank you!",
+      reviewUrl: "https://g.page/r/abc/review",
     },
   },
   {
