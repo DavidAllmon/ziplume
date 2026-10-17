@@ -157,6 +157,23 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
       errors.start = "Pick when the event starts";
     }
     checkUrl(errors, "ticketUrl", p.ticketUrl);
+    // A join link left from when it was online isn't checked once it's off: the box is hidden.
+    if (p.online) {
+      if (!p.joinUrl.trim()) errors.joinUrl = "Add the link to join";
+      else checkUrl(errors, "joinUrl", p.joinUrl);
+    }
+    p.agenda.forEach((a, i) => {
+      if ((a.time || a.note.trim()) && !a.title.trim()) {
+        errors[`agenda.${i}.title`] = "Add what’s happening";
+      }
+      if (a.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(a.time)) {
+        errors[`agenda.${i}.time`] = "Pick a time";
+      }
+    });
+    p.hosts.forEach((h, i) => {
+      if ((h.role.trim() || h.photo) && !h.name.trim())
+        errors[`hosts.${i}.name`] = "Add their name";
+    });
     return errors;
   },
   feedback: (p) => {

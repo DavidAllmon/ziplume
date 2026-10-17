@@ -15,6 +15,7 @@ import {
   Star,
   Ticket,
   UserPlus,
+  Video,
 } from "lucide-react";
 
 import type { ReactNode } from "react";
@@ -52,7 +53,7 @@ import {
 import type { PageTypeId } from "@/lib/qr/types";
 
 import { CopyCode } from "./CopyCode";
-import { CouponDeadline } from "./Countdowns";
+import { CouponDeadline, EventCountdown, JoinButton } from "./Countdowns";
 import { LinkIconMark } from "./LinkIcon";
 import { DietMark } from "./DietMark";
 import { FeedbackForm } from "./FeedbackForm";
@@ -695,6 +696,9 @@ function EventView({ page, slug, pageUrl, preview }: ViewProps<EventPage>) {
   const when = eventWhen(page);
   const google = googleCalendarUrl(page, pageUrl);
   const look = page.look;
+  // Drawn as given, so an event without the newer fields reads as before.
+  const agenda = (page.agenda ?? []).filter((a) => a.title.trim());
+  const hosts = (page.hosts ?? []).filter((h) => h.name.trim());
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -706,6 +710,7 @@ function EventView({ page, slug, pageUrl, preview }: ViewProps<EventPage>) {
         title={page.title || "Your event"}
       />
       <PageCard className="flex flex-col gap-4">
+        <EventCountdown event={page} />
         <ul className="flex flex-col gap-3 text-[15px]">
           {when && (
             <li className="flex gap-3">
@@ -719,21 +724,34 @@ function EventView({ page, slug, pageUrl, preview }: ViewProps<EventPage>) {
               </span>
             </li>
           )}
+          {page.online && (
+            <li className="flex gap-3">
+              <Video aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--page-accent)]" />
+              <span className="font-medium text-fg">Online event</span>
+            </li>
+          )}
           {page.location.trim() && (
             <li className="flex gap-3">
               <MapPin aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--page-accent)]" />
-              <a
-                href={preview ? undefined : mapsHref(page.location)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-fg underline-offset-4 hover:underline"
-              >
-                {page.location}
-              </a>
+              <span className="flex min-w-0 flex-col gap-1">
+                <span className="font-medium [overflow-wrap:anywhere] text-fg">
+                  {page.location}
+                </span>
+                {/* One clear way to the map (spec item 30, ruling 11). */}
+                <a
+                  href={preview ? undefined : mapsHref(page.location)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-[var(--page-accent)] underline-offset-4 hover:underline sm:min-h-0"
+                >
+                  Directions
+                </a>
+              </span>
             </li>
           )}
         </ul>
         <div className="flex flex-col gap-2">
+          <JoinButton event={page} preview={preview} />
           {page.ticketUrl.trim() && (
             <PageLink href={safeHref(page.ticketUrl)} preview={preview}>
               <Ticket aria-hidden /> {page.ticketLabel.trim() || "Get tickets"}
@@ -760,6 +778,57 @@ function EventView({ page, slug, pageUrl, preview }: ViewProps<EventPage>) {
         <PageCard>
           <h2 className="mb-2 font-page-heading text-lg font-bold text-fg">About this event</h2>
           <Prose text={page.description} />
+        </PageCard>
+      )}
+      {agenda.length > 0 && (
+        <PageCard>
+          <section aria-label="Agenda">
+            <h2 className="mb-3 font-page-heading text-lg font-bold text-fg">Agenda</h2>
+            <ol className="divide-y divide-border">
+              {agenda.map((a, i) => (
+                <li key={i} className="grid grid-cols-[5rem_1fr] gap-3 py-3 first:pt-0 last:pb-0">
+                  <span className="font-semibold text-fg tabular-nums">
+                    {a.time && formatTime(a.time)}
+                  </span>
+                  <span className="min-w-0 [overflow-wrap:anywhere]">
+                    <span className="block font-medium text-fg">{a.title}</span>
+                    {a.note.trim() && <span className="block text-sm text-fg-muted">{a.note}</span>}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </PageCard>
+      )}
+      {hosts.length > 0 && (
+        <PageCard>
+          <section aria-label="Hosts">
+            <h2 className="mb-3 font-page-heading text-lg font-bold text-fg">Hosts</h2>
+            <ul className="grid grid-cols-1 gap-4 min-[22rem]:grid-cols-2">
+              {hosts.map((h, i) => (
+                <li key={i} className="flex min-w-0 items-center gap-3">
+                  {h.photo ? (
+                    <MediaImage
+                      media={h.photo}
+                      alt=""
+                      className="size-14 shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="grid size-14 shrink-0 place-items-center rounded-full bg-surface-2 font-semibold text-fg-muted"
+                    >
+                      {h.name.trim().charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="min-w-0 [overflow-wrap:anywhere]">
+                    <span className="block font-semibold text-fg">{h.name}</span>
+                    {h.role.trim() && <span className="block text-sm text-fg-muted">{h.role}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
         </PageCard>
       )}
     </PageFrame>

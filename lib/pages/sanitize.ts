@@ -168,6 +168,18 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     ticketUrl: str(2048),
     ticketLabel: str(40),
     image: media,
+    online: bool,
+    joinUrl: str(2048),
+    agenda: {
+      kind: "list",
+      max: LIMITS.agenda,
+      item: { time: str(5), title: str(LIMITS.short), note: str(LIMITS.medium) },
+    },
+    hosts: {
+      kind: "list",
+      max: LIMITS.hosts,
+      item: { photo: media, name: str(80), role: str(80) },
+    },
   },
   feedback: {
     business: str(),

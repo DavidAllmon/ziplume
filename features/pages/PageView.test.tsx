@@ -607,3 +607,62 @@ describe("Coupon extras", () => {
     expect(screen.getByText("SAVE20")).toBeInTheDocument();
   });
 });
+
+describe("Event extras", () => {
+  afterEach(() => vi.useRealTimers());
+  // 13:00 in New York is 18:00 UTC in January.
+  const event = (patch: object = {}) => ({
+    ...PAGE_DEFAULTS.event(),
+    title: "Launch",
+    start: "2030-01-10T13:00",
+    end: "2030-01-10T16:00",
+    timeZone: "America/New_York",
+    location: "1 Main St",
+    online: true,
+    joinUrl: "https://meet.example.com/launch",
+    ...patch,
+  });
+
+  it("counts down, and turns the Join button on 15 minutes before the start", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2030-01-10T17:35:00Z"));
+    const { unmount } = view("event", event(), false);
+    expect(screen.getByText("Starts in 25 minutes")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Join online/ })).toBeNull();
+    expect(screen.getByText("The link opens 15 minutes before the start")).toBeInTheDocument();
+    unmount();
+    vi.setSystemTime(new Date("2030-01-10T17:50:00Z"));
+    view("event", event(), false);
+    expect(screen.getByRole("link", { name: /Join online/ })).toHaveAttribute(
+      "href",
+      "https://meet.example.com/launch",
+    );
+  });
+
+  it("shows the online event, Directions to the place, the agenda and the hosts", () => {
+    view(
+      "event",
+      event({
+        agenda: [{ time: "13:00", title: "Doors open", note: "Coffee" }],
+        hosts: [{ photo: null, name: "Ana Rivera", role: "Host" }],
+      }),
+      false,
+    );
+    expect(screen.getByText("Online event")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Directions" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("maps"),
+    );
+    const agenda = within(screen.getByRole("region", { name: "Agenda" }));
+    expect(agenda.getByText("1:00 PM")).toBeInTheDocument();
+    expect(agenda.getByText("Doors open")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Hosts" })).getByText("Ana Rivera"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the Join button inert in the editor's preview", () => {
+    view("event", event(), true);
+    expect(screen.queryByRole("link", { name: /Join online/ })).toBeNull();
+  });
+});

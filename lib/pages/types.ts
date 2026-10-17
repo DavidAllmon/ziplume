@@ -203,6 +203,19 @@ export interface CouponPage extends Themed {
   badge: string;
 }
 
+export interface AgendaItem {
+  /** HH:mm, or "" for no time. */
+  time: string;
+  title: string;
+  note: string;
+}
+
+export interface Host {
+  photo: Media | null;
+  name: string;
+  role: string;
+}
+
 export interface EventPage extends Themed {
   title: string;
   /** Local date and time, YYYY-MM-DDTHH:mm, in timeZone. */
@@ -216,6 +229,13 @@ export interface EventPage extends Themed {
   ticketUrl: string;
   ticketLabel: string;
   image: Media | null;
+  /** Adds the Join button (spec item 30). */
+  online: boolean;
+  joinUrl: string;
+  /** Up to 30 rows (spec item 31). */
+  agenda: AgendaItem[];
+  /** Up to 12 (spec item 32). */
+  hosts: Host[];
 }
 
 export interface FeedbackPage extends Themed {
@@ -291,6 +311,8 @@ export const LIMITS = {
   websites: 4,
   closures: 10,
   options: 4,
+  agenda: 30,
+  hosts: 12,
   gallery: 6,
   services: 30,
   buttons: 6,
@@ -427,6 +449,10 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       ticketUrl: "",
       ticketLabel: "Get tickets",
       image: null,
+      online: false,
+      joinUrl: "",
+      agenda: [],
+      hosts: [],
     }),
   feedback: () =>
     withLook("feedback", {

@@ -35,3 +35,26 @@ export function couponDeadlineText(validUntil: string, today: string): string {
   if (days <= 7) return `Ends in ${days} days`;
   return `Valid until ${formatDay(validUntil)}`;
 }
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** "Starts in 3 days 4 hours", "Happening now" or "This event has ended" (spec item 34). */
+export function eventCountdownText(times: { start: Date; end: Date } | null, now: Date): string {
+  if (!times) return "";
+  if (now >= times.end) return "This event has ended";
+  if (now >= times.start) return "Happening now";
+  const minutes = Math.floor((times.start.getTime() - now.getTime()) / 60_000);
+  if (minutes < 1) return "Starts in less than a minute";
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const mins = minutes % 60;
+  if (days) return `Starts in ${plural(days, "day")}${hours ? ` ${plural(hours, "hour")}` : ""}`;
+  if (hours) return `Starts in ${plural(hours, "hour")}${mins ? ` ${plural(mins, "minute")}` : ""}`;
+  return `Starts in ${plural(mins, "minute")}`;
+}
+
+/** How early the join link opens (spec item 30). */
+export const JOIN_EARLY = 15 * 60_000;
+
+export const joinOpen = (times: { start: Date; end: Date } | null, now: Date) =>
+  times !== null && now.getTime() >= times.start.getTime() - JOIN_EARLY && now < times.end;
