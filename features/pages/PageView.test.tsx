@@ -766,3 +766,73 @@ describe("Images extras", () => {
     expect(screen.getByRole("img", { name: "Sunset" })).toBeInTheDocument();
   });
 });
+
+describe("Video extras", () => {
+  const video = (videos: object[], description = "About these") => ({
+    ...PAGE_DEFAULTS.video(),
+    title: "Clips",
+    description,
+    videos,
+  });
+  const v = (url: string, patch: object = {}) => ({ title: "", url, start: "", ...patch });
+
+  it("holds a TikTok back until it's tapped", async () => {
+    const user = userEvent.setup();
+    const { container } = view(
+      "video",
+      video([v("https://www.tiktok.com/@cafe/video/7234567890123456789")]),
+      false,
+    );
+    expect(container.querySelector("iframe")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Tap to play from TikTok" }));
+    expect(container.querySelector("iframe")).toHaveAttribute(
+      "src",
+      "https://www.tiktok.com/embed/v2/7234567890123456789",
+    );
+  });
+
+  it("plays YouTube in place from its start time", () => {
+    const { container } = view(
+      "video",
+      video([v("https://youtu.be/dQw4w9WgXcQ", { start: "1:23" })]),
+      false,
+    );
+    expect(container.querySelector("iframe")).toHaveAttribute(
+      "src",
+      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=83",
+    );
+  });
+
+  it("gives each of several videos its own card and title, with the description at the top", () => {
+    view(
+      "video",
+      video([
+        v("https://youtu.be/dQw4w9WgXcQ", { title: "Trailer" }),
+        v("https://www.loom.com/share/0123456789abcdef0123456789abcdef", {
+          title: "Behind the scenes",
+        }),
+      ]),
+      false,
+    );
+    expect(screen.getByRole("heading", { level: 2, name: "Trailer" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Behind the scenes" }),
+    ).toBeInTheDocument();
+    // Under the page title, before the first video.
+    const description = screen.getByText("About these");
+    const first = screen.getByRole("heading", { level: 2, name: "Trailer" });
+    expect(
+      description.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("keeps players still in the editor's preview", () => {
+    const { container } = view(
+      "video",
+      video([v("https://www.tiktok.com/@cafe/video/7234567890123456789")]),
+      true,
+    );
+    expect(container.querySelector("iframe")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Tap to play/ })).toBeNull();
+  });
+});

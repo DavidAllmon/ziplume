@@ -258,7 +258,7 @@ const CARDS: Record<PageTypeId, string[]> = {
   feedback: ["Header", "Question", "After sending"],
   pdf: ["File", "Details", "Opening"],
   images: ["Details", "Images"],
-  video: ["Video", "Details"],
+  video: ["Videos", "Details"],
   audio: ["Audio", "Header", "Details"],
   app: ["Header", "Store links", "Website"],
 };
@@ -910,5 +910,35 @@ describe("Images editor extras", () => {
     await user.click(screen.getByRole("menuitem", { name: "Move later" }));
     expect(saved().images.map((i: { caption: string }) => i.caption)).toEqual(["", "First"]);
     expect(screen.getByRole("textbox", { name: /^Image 2 caption/ })).toHaveValue("First");
+  });
+});
+
+describe("Video editor extras", () => {
+  function Video() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.video());
+    return (
+      <>
+        <PageEditor
+          type="video"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("adds a second video with a title and a start time", async () => {
+    const user = userEvent.setup();
+    render(<Video />);
+    await user.type(screen.getByRole("textbox", { name: /^Video link/ }), "youtu.be/dQw4w9WgXcQ");
+    await user.click(screen.getByRole("button", { name: "Add video" }));
+    const links = screen.getAllByRole("textbox", { name: /^Video link/ });
+    await user.type(links[1]!, "loom.com/share/0123456789abcdef0123456789abcdef");
+    await user.type(screen.getAllByRole("textbox", { name: /^Start at/ })[1]!, "0:10");
+    expect(saved().videos).toHaveLength(2);
+    expect(saved().videos[1]).toMatchObject({ start: "0:10" });
   });
 });

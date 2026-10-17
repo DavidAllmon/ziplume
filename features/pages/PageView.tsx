@@ -38,6 +38,7 @@ import type {
   PageContentMap,
   PdfPage,
   VcardPage,
+  VideoItem,
   VideoPage,
 } from "@/lib/pages/types";
 import { DAY_NAMES, formatTime, rangesOf } from "@/lib/pages/hours";
@@ -60,6 +61,7 @@ import { LinkIconMark } from "./LinkIcon";
 import { DietMark } from "./DietMark";
 import { FeedbackForm } from "./FeedbackForm";
 import { ScanCode } from "./ScanCode";
+import { TapToPlay } from "./TapToPlay";
 import { Carousel } from "./Carousel";
 import { Gallery, ViewerGroup, ViewerThumb, type ViewerImage } from "./Viewer";
 import { OpenStatus } from "./OpenStatus";
@@ -991,11 +993,59 @@ function StillMedia({ icon }: { icon: ReactNode }) {
   );
 }
 
+function VideoPlayer({
+  video,
+  title,
+  preview,
+}: {
+  video: VideoItem;
+  title: string;
+  preview?: boolean;
+}) {
+  const embed = videoEmbed(video.url, video.start);
+  const link = !embed ? safeHref(video.url) : null;
+  return (
+    <>
+      {/* The player sits inside the card's padding: no overhang on phones. */}
+      <div className="overflow-hidden rounded-(--pg-radius) bg-black">
+        {preview && embed ? (
+          <StillMedia icon={<Play aria-hidden className="size-12" />} />
+        ) : embed?.tap ? (
+          <TapToPlay embed={embed} title={title} />
+        ) : embed ? (
+          <iframe
+            src={embed.src}
+            title={title}
+            className="aspect-video w-full"
+            allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+            loading="lazy"
+          />
+        ) : (
+          <div className="grid aspect-video place-items-center text-white/80">
+            <Play aria-hidden className="size-14" />
+          </div>
+        )}
+      </div>
+      {link && (
+        <PageLink href={link} preview={preview}>
+          <Play aria-hidden /> Watch video
+        </PageLink>
+      )}
+    </>
+  );
+}
+
 function VideoView({ page, preview }: ViewProps<VideoPage>) {
-  const first = page.videos?.[0]?.url ?? "";
-  const embed = videoEmbed(first);
-  const link = !embed ? safeHref(first) : null;
   const look = page.look;
+  // Drawn as given: an old page with only a link shows it as its one video.
+  const all = page.videos ?? [
+    { title: "", url: (page as unknown as { url?: string }).url ?? "", start: "" },
+  ];
+  const videos = all.filter((v) => v.url.trim());
+  const many = videos.length > 1;
+  const description = page.description.trim() && <Prose text={page.description} />;
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -1005,34 +1055,20 @@ function VideoView({ page, preview }: ViewProps<VideoPage>) {
         imageAlt=""
         title={page.title || "Video"}
       />
-      <PageCard className="flex flex-col gap-4">
-        {/* The player sits inside the card's padding: no overhang on phones. */}
-        <div className="overflow-hidden rounded-(--pg-radius) bg-black">
-          {preview && embed ? (
-            <StillMedia icon={<Play aria-hidden className="size-12" />} />
-          ) : embed ? (
-            <iframe
-              src={embed.src}
-              title={page.title || "Video"}
-              className="aspect-video w-full"
-              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-              loading="lazy"
-            />
-          ) : (
-            <div className="grid aspect-video place-items-center text-white/80">
-              <Play aria-hidden className="size-14" />
-            </div>
+      {many && description && <div className="px-1">{description}</div>}
+      {(videos.length ? videos : [{ title: "", url: "", start: "" }]).map((video, i) => (
+        <PageCard key={i} className="flex flex-col gap-4">
+          {video.title.trim() && (
+            <h2 className="font-page-heading text-lg font-bold text-fg">{video.title}</h2>
           )}
-        </div>
-        {page.description.trim() && <Prose text={page.description} />}
-        {link && (
-          <PageLink href={link} preview={preview}>
-            <Play aria-hidden /> Watch video
-          </PageLink>
-        )}
-      </PageCard>
+          <VideoPlayer
+            video={video}
+            title={video.title.trim() || page.title || "Video"}
+            preview={preview}
+          />
+          {!many && description}
+        </PageCard>
+      ))}
     </PageFrame>
   );
 }
