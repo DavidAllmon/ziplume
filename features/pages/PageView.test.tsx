@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { newHeader, newLink } from "@/lib/pages/links";
 import { themeLook } from "@/lib/pages/look";
@@ -423,5 +423,29 @@ describe("Contact page extras", () => {
       "href",
       "https://ana.dev/",
     );
+  });
+});
+
+describe("Business hours", () => {
+  it("lists a split day's two ranges in the opening hours", () => {
+    const hours = PAGE_DEFAULTS.business().hours.map((h) => ({ ...h, from2: "", to2: "" }));
+    hours[0] = { open: true, from: "09:00", to: "12:00", from2: "13:00", to2: "17:00" };
+    view("business", { ...PAGE_DEFAULTS.business(), name: "Bakery", hours }, false);
+    expect(screen.getByText("9:00 AM – 12:00 PM, 1:00 PM – 5:00 PM")).toBeInTheDocument();
+  });
+});
+
+describe("Open now", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("shows on the live page in the business's time zone, never in the editor's preview", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2030-01-07T15:00:00Z")); // Monday 10:00 in New York
+    const page = { ...PAGE_DEFAULTS.business(), name: "Bakery", timeZone: "America/New_York" };
+    const { unmount } = view("business", page, false);
+    expect(screen.getByText("Open now · closes 5:00 PM")).toBeInTheDocument();
+    unmount();
+    view("business", page, true);
+    expect(screen.queryByText(/Open now|Closed ·/)).toBeNull();
   });
 });

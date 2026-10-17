@@ -93,6 +93,8 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     address: str(LIMITS.medium),
     hours: { kind: "hours" },
     showHours: bool,
+    timeZone: str(64),
+    closures: { kind: "list", max: LIMITS.closures, item: { date: str(10), note: str(60) } },
     buttons: { kind: "list", max: LIMITS.buttons, item: link },
     socials: social,
   },
@@ -188,6 +190,8 @@ function sanitizeHours(raw: unknown, fallback: DayHours[]): DayHours[] {
       open: typeof d.open === "boolean" ? d.open : def.open,
       from: typeof d.from === "string" && TIME.test(d.from) ? d.from : def.from,
       to: typeof d.to === "string" && TIME.test(d.to) ? d.to : def.to,
+      from2: typeof d.from2 === "string" && TIME.test(d.from2) ? d.from2 : "",
+      to2: typeof d.to2 === "string" && TIME.test(d.to2) ? d.to2 : "",
     };
   });
 }

@@ -85,7 +85,17 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     p.buttons.forEach((b, i) => checkLink(errors, `buttons.${i}`, b));
     p.hours.forEach((h, i) => {
       if (h.open && h.from >= h.to) errors[`hours.${i}`] = "Closing time must be after opening";
+      else if (h.open && (h.from2 || h.to2)) {
+        if (!h.from2 || !h.to2 || h.from2 >= h.to2 || h.from2 < h.to) {
+          errors[`hours.${i}`] =
+            "The second hours must start after the first and end after they start";
+        }
+      }
     });
+    p.closures.forEach((c, i) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(c.date)) errors[`closures.${i}.date`] = "Pick a date";
+    });
+    if (p.timeZone && !isTimeZone(p.timeZone)) errors.timeZone = "Choose a time zone";
     checkSocials(errors, p.socials);
     return errors;
   },

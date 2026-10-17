@@ -34,6 +34,7 @@ import type {
   VcardPage,
   VideoPage,
 } from "@/lib/pages/types";
+import { DAY_NAMES, formatTime, rangesOf } from "@/lib/pages/hours";
 import { isShown, linkHref, linkIcon } from "@/lib/pages/links";
 import { mailHref, mediaUrl, safeHref, smsHref, telHref, videoEmbed } from "@/lib/pages/urls";
 import type { PageTypeId } from "@/lib/qr/types";
@@ -41,6 +42,7 @@ import type { PageTypeId } from "@/lib/qr/types";
 import { CopyCode } from "./CopyCode";
 import { LinkIconMark } from "./LinkIcon";
 import { FeedbackForm } from "./FeedbackForm";
+import { OpenStatus } from "./OpenStatus";
 import {
   EmptyNote,
   fileSize,
@@ -294,17 +296,6 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
   );
 }
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-function formatTime(value: string) {
-  const [h = 0, m = 0] = value.split(":").map(Number);
-  return new Date(Date.UTC(2000, 0, 1, h, m)).toLocaleTimeString("en", {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "UTC",
-  });
-}
-
 function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
   const phone = telHref(page.phone);
   const email = mailHref(page.email);
@@ -353,12 +344,18 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
           <h2 className="mb-3 flex items-center gap-2 font-page-heading text-lg font-bold text-fg">
             <Clock aria-hidden className="size-5" /> Opening hours
           </h2>
+          {/* Clock-dependent, so never in the editor's preview. */}
+          {!preview && (
+            <OpenStatus hours={page.hours} closures={page.closures} timeZone={page.timeZone} />
+          )}
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[15px]">
             {page.hours.map((h, i) => (
-              <div key={DAYS[i]} className="contents">
-                <dt className="text-fg-muted">{DAYS[i]}</dt>
+              <div key={DAY_NAMES[i]} className="contents">
+                <dt className="text-fg-muted">{DAY_NAMES[i]}</dt>
                 <dd className="text-right font-medium text-fg tabular-nums">
-                  {h.open ? `${formatTime(h.from)} – ${formatTime(h.to)}` : "Closed"}
+                  {rangesOf(h)
+                    .map(([from, to]) => `${formatTime(from)} – ${formatTime(to)}`)
+                    .join(", ") || "Closed"}
                 </dd>
               </div>
             ))}

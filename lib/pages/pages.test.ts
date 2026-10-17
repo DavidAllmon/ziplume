@@ -60,7 +60,7 @@ describe("sanitizePage", () => {
   it("repairs opening hours", () => {
     const page = sanitizePage("business", { hours: [{ open: false, from: "25:00", to: "18:30" }] });
     expect(page.hours).toHaveLength(7);
-    expect(page.hours[0]).toEqual({ open: false, from: "09:00", to: "18:30" });
+    expect(page.hours[0]).toEqual({ open: false, from: "09:00", to: "18:30", from2: "", to2: "" });
   });
 
   it("lists every file a page uses", () => {
@@ -383,5 +383,42 @@ describe("Contact page details", () => {
     expect(validatePage("vcard", page)).toEqual({
       "websites.0.url": "Enter a web address, like example.com",
     });
+  });
+});
+
+describe("Business hours, closures and time zone", () => {
+  it("reads old hours as one range a day, and drops a bad second range", () => {
+    const page = sanitizePage("business", {
+      name: "B",
+      hours: [
+        { open: true, from: "08:00", to: "16:00" },
+        { open: true, from2: "25:00", to2: "x" },
+      ],
+    });
+    expect(page.hours[0]).toEqual({ open: true, from: "08:00", to: "16:00", from2: "", to2: "" });
+    expect(page.hours[1]).toMatchObject({ from2: "", to2: "" });
+    expect(page).toMatchObject({ timeZone: "", closures: [] });
+  });
+
+  it("checks the second hours, closure dates and the time zone", () => {
+    const hours = PAGE_DEFAULTS.business().hours;
+    hours[0] = { open: true, from: "09:00", to: "12:00", from2: "11:00", to2: "17:00" };
+    hours[1] = { open: true, from: "09:00", to: "12:00", from2: "13:00", to2: "" };
+    hours[2] = { open: true, from: "09:00", to: "12:00", from2: "13:00", to2: "17:00" };
+    const errors = validatePage("business", {
+      ...PAGE_DEFAULTS.business(),
+      name: "B",
+      hours,
+      closures: [{ date: "", note: "Holiday" }],
+      timeZone: "Mars/Base",
+    });
+    const second = "The second hours must start after the first and end after they start";
+    expect(errors).toMatchObject({
+      "hours.0": second,
+      "hours.1": second,
+      "closures.0.date": "Pick a date",
+      timeZone: "Choose a time zone",
+    });
+    expect(errors).not.toHaveProperty("hours.2");
   });
 });

@@ -66,6 +66,16 @@ export interface DayHours {
   open: boolean;
   from: string;
   to: string;
+  /** A second range the same day ("" for none). */
+  from2: string;
+  to2: string;
+}
+
+/** A day the business is closed (spec item 17). */
+export interface Closure {
+  /** YYYY-MM-DD */
+  date: string;
+  note: string;
 }
 
 export interface MenuItem {
@@ -133,6 +143,9 @@ export interface BusinessPage extends Themed {
   /** Monday first. */
   hours: DayHours[];
   showHours: boolean;
+  /** IANA zone for Open now; "" means each visitor's own (spec item 16). */
+  timeZone: string;
+  closures: Closure[];
   buttons: LinkItem[];
   socials: SocialItem[];
 }
@@ -245,6 +258,7 @@ export const LIMITS = {
   phones: 4,
   emails: 4,
   websites: 4,
+  closures: 10,
   buttons: 6,
   sections: 20,
   items: 60,
@@ -262,7 +276,7 @@ const MB = 1024 * 1024;
 /** Ziplume is free, so files stay small: images are also resized before they're stored. */
 export const UPLOAD_CAPS = { image: 15 * MB, pdf: 10 * MB, audio: 15 * MB } as const;
 
-const day = (open: boolean): DayHours => ({ open, from: "09:00", to: "17:00" });
+const day = (open: boolean): DayHours => ({ open, from: "09:00", to: "17:00", from2: "", to2: "" });
 
 export const DEFAULT_PAGE_COLOR = "#0A1330";
 
@@ -332,6 +346,8 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       address: "",
       hours: [day(true), day(true), day(true), day(true), day(true), day(false), day(false)],
       showHours: true,
+      timeZone: "",
+      closures: [],
       buttons: [],
       socials: [],
     }),
