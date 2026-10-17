@@ -51,10 +51,12 @@ export function Carousel({
                 className="aspect-[4/3] w-full object-cover"
               />
             </ViewerThumb>
-            {item.caption && <p className="mt-2 text-sm text-fg-muted">{item.caption}</p>}
           </li>
         ))}
       </ul>
+      {/* The showing image's caption, under the row rather than on every slide, so it's never
+          drawn off screen. */}
+      {items[at]?.caption && <p className="text-sm text-fg-muted">{items[at]!.caption}</p>}
       {items.length > 1 &&
         !preview &&
         (items.length <= MAX_DOTS ? (

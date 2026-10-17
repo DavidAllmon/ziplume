@@ -376,6 +376,68 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
     slug: "PHONE-IMAGES",
     content: { title: "Phone gallery", description: "No images yet.", images: [] },
   },
+  {
+    type: "images",
+    slug: "PHONE-IMAGES-GRID3",
+    content: {
+      title: "Phone grid",
+      layout: "grid3",
+      images: Array.from({ length: 7 }, (_, i) => ({
+        image: photo(`grid-${i}`),
+        caption: i === 0 ? "A long caption that describes the first picture in detail" : "",
+        link: i === 0 ? "https://example.com/first" : "",
+      })),
+    },
+  },
+  {
+    type: "images",
+    slug: "PHONE-IMAGES-CAROUSEL",
+    content: {
+      title: "Phone carousel",
+      layout: "carousel",
+      images: Array.from({ length: 4 }, (_, i) => ({
+        image: photo(`slide-${i}`),
+        caption: `Slide ${i + 1}`,
+        link: "",
+      })),
+    },
+  },
+  {
+    type: "video",
+    slug: "PHONE-VIDEO-PLUS",
+    content: {
+      title: "Phone clips",
+      description: "Three ways to watch.",
+      videos: [
+        {
+          title: "On TikTok",
+          url: "https://www.tiktok.com/@cafe/video/7234567890123456789",
+          start: "",
+        },
+        {
+          title: "On Loom",
+          url: "https://www.loom.com/share/0123456789abcdef0123456789abcdef",
+          start: "0:10",
+        },
+        { title: "Elsewhere", url: "https://example.com/video", start: "" },
+      ],
+    },
+  },
+  {
+    type: "app",
+    slug: "PHONE-APP-PLUS",
+    content: {
+      name: "Phone app plus",
+      iosUrl: "https://apps.apple.com/app/id1",
+      androidUrl: "https://play.google.com/store/apps/details?id=com.example",
+      storeRedirect: false,
+      screenshots: Array.from({ length: 5 }, (_, i) => photo(`shot-${i}`)),
+      features: [
+        { text: "Works offline" },
+        { text: "Syncs across every device you own, even very old ones" },
+      ],
+    },
+  },
   // No video link, so the page shows its placeholder instead of loading a player.
   {
     type: "video",
