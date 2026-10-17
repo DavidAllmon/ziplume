@@ -61,7 +61,6 @@ const LABELS: Record<PageTypeId, string[]> = {
     "Dishes and drinks",
     "Name",
     "Price",
-    "Tags",
     "Note",
   ],
   coupon: [
@@ -441,7 +440,13 @@ describe("text limits in the editor", () => {
     const page = PAGE_DEFAULTS[type]() as unknown as Record<string, unknown>;
     // One of everything in lists, so their rows render.
     if (type === "menu") {
-      page.sections = [{ name: "", items: [{ name: "", description: "", price: "", tags: "" }] }];
+      page.sections = [
+        {
+          name: "",
+          description: "",
+          items: [{ ...newDish(), options: [{ label: "", price: "" }] }],
+        },
+      ];
     }
     if (type === "business" || type === "links") {
       page.socials = [{ network: "instagram", url: "" }];
@@ -451,6 +456,10 @@ describe("text limits in the editor", () => {
     const { container } = render(
       <PageEditor type={type} page={page as never} errors={{}} onUpdate={vi.fn()} reveal />,
     );
+    // Open every More options panel, so the boxes inside are checked too.
+    for (const more of screen.queryAllByRole("button", { name: /^More options for/ })) {
+      fireEvent.click(more);
+    }
     const boxes = [
       ...container.querySelectorAll<HTMLElement>("input:not([type=file]), textarea"),
     ].filter(
@@ -613,5 +622,85 @@ describe("Business opening hours", () => {
     expect(screen.queryByText("Closing time must be after opening")).toBeNull();
     fireEvent.blur(opens);
     expect(screen.getByText("Closing time must be after opening")).toBeInTheDocument();
+  });
+});
+
+describe("Menu editor extras", () => {
+  function Menu() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.menu());
+    return (
+      <>
+        <PageEditor
+          type="menu"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+  const dish = () => saved().sections[0].items[0];
+
+  it("marks a dish sold out or popular, and hides it from the page", async () => {
+    const user = userEvent.setup();
+    render(<Menu />);
+    await user.click(screen.getByRole("checkbox", { name: "Sold out" }));
+    await user.click(screen.getByRole("checkbox", { name: "Popular" }));
+    await user.click(screen.getByRole("switch", { name: "Show item 1 on the page" }));
+    expect(dish()).toMatchObject({ soldOut: true, popular: true, on: false });
+  });
+
+  it("adds dietary labels, other notes and price options under More options", async () => {
+    const user = userEvent.setup();
+    render(<Menu />);
+    await user.click(screen.getByRole("button", { name: "More options for item 1" }));
+    await user.click(screen.getByRole("checkbox", { name: "Gluten-free" }));
+    await user.click(screen.getByRole("checkbox", { name: "Vegan" }));
+    await user.type(screen.getByRole("textbox", { name: /^Other notes/ }), "Contains egg");
+    await user.click(screen.getByRole("button", { name: "Add price option" }));
+    await user.type(screen.getByRole("textbox", { name: /^Option name/ }), "Small");
+    await user.type(screen.getByRole("textbox", { name: /^Option price/ }), "8");
+    // Labels keep the list's order, whatever order they're ticked in.
+    expect(dish()).toMatchObject({
+      labels: ["vegan", "gluten-free"],
+      tags: "Contains egg",
+      options: [{ label: "Small", price: "8" }],
+    });
+    expect(screen.getByRole("button", { name: "More options for item 1" })).toHaveTextContent(
+      "Vegan, Gluten-free, Notes, 1 price",
+    );
+  });
+
+  it("gives each section a description, and each dish a photo", async () => {
+    const user = userEvent.setup();
+    render(<Menu />);
+    await user.type(
+      screen.getByRole("textbox", { name: /^Section description/ }),
+      "Served all day",
+    );
+    expect(saved().sections[0].description).toBe("Served all day");
+    await user.click(screen.getByRole("button", { name: "More options for item 1" }));
+    expect(screen.getByText("Photo")).toBeInTheDocument();
+  });
+
+  it("opens More options by itself when an option inside needs fixing", () => {
+    const page = PAGE_DEFAULTS.menu();
+    page.sections[0]!.items[0] = {
+      ...newDish(),
+      name: "Pizza",
+      options: [{ label: "", price: "8" }],
+    };
+    render(
+      <PageEditor
+        type="menu"
+        page={page}
+        errors={validatePage("menu", page)}
+        onUpdate={vi.fn()}
+        reveal
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: /^Option name/ })).toBeInTheDocument();
   });
 });
