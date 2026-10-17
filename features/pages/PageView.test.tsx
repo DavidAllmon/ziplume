@@ -449,3 +449,44 @@ describe("Open now", () => {
     expect(screen.queryByText(/Open now|Closed ·/)).toBeNull();
   });
 });
+
+describe("Business extras", () => {
+  it("shows a gallery row that opens the viewer, and the services under About", () => {
+    view(
+      "business",
+      {
+        ...PAGE_DEFAULTS.business(),
+        name: "Bakery",
+        about: "Fresh bread",
+        gallery: [media("1.jpg", "image/jpeg"), media("2.jpg", "image/jpeg")],
+        services: [
+          { name: "Cake order", price: "$40", description: "Two days' notice" },
+          { name: "", price: "$1", description: "" },
+        ],
+      },
+      false,
+    );
+    expect(screen.getByRole("button", { name: "Open photo 1 of 2" })).toBeInTheDocument();
+    const services = within(screen.getByRole("region", { name: "Services" }));
+    expect(services.getByText("Cake order")).toBeInTheDocument();
+    expect(services.getByText("$40")).toBeInTheDocument();
+    expect(services.getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("draws a ready-made button with its icon", () => {
+    const { container } = view(
+      "business",
+      {
+        ...PAGE_DEFAULTS.business(),
+        name: "Bakery",
+        buttons: [
+          { ...newLink(), label: "Leave a Google review", url: "g.page/r/abc", icon: "review" },
+        ],
+      },
+      false,
+    );
+    const button = screen.getByRole("link", { name: /Leave a Google review/ });
+    expect(button.querySelector("[data-link-icon]")).not.toBeNull();
+    expect(container.querySelector("[data-link-icon]")).not.toBeNull();
+  });
+});

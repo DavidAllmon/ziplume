@@ -5,13 +5,17 @@ import { LIMITS, type BusinessPage } from "@/lib/pages/types";
 import {
   AreaField,
   HoursField,
+  ImagesField,
   LinksField,
   MediaField,
+  rowName,
   SocialsField,
   TextField,
+  TimeZoneField,
   ToggleField,
 } from "../fields";
 import { FormCard } from "../FormCard";
+import { SortableList } from "../sortable/SortableList";
 import type { EditorProps } from "./shared";
 
 export function BusinessEditor({ page, set, errors }: EditorProps<BusinessPage>) {
@@ -92,6 +96,17 @@ export function BusinessEditor({ page, set, errors }: EditorProps<BusinessPage>)
           />
         </div>
       </FormCard>
+      <FormCard title="Photos" note="A row to swipe through; tapping one shows it full screen">
+        <ImagesField
+          value={page.gallery}
+          onChange={(gallery) => set({ gallery })}
+          onAdd={(media) =>
+            set((latest) => ({ gallery: [...latest.gallery, media].slice(0, LIMITS.gallery) }))
+          }
+          max={LIMITS.gallery}
+          field="gallery"
+        />
+      </FormCard>
       <FormCard title="About">
         <AreaField
           path="about"
@@ -103,6 +118,53 @@ export function BusinessEditor({ page, set, errors }: EditorProps<BusinessPage>)
           rows={4}
         />
       </FormCard>
+      <FormCard title="Services" note="Under About, with a price if you like">
+        <SortableList
+          label="Services"
+          showLabel={false}
+          items={page.services}
+          onChange={(services) => set({ services })}
+          max={LIMITS.services}
+          addLabel="Add service"
+          addAt="end"
+          newRowFocus="input[data-field$='.name']"
+          path="services"
+          errors={errors}
+          itemLabel={(item, i) => rowName("service", item.name, i)}
+          newItem={() => ({ name: "", price: "", description: "" })}
+          render={(item, update, i) => (
+            <div className="flex flex-col gap-3">
+              <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
+                <TextField
+                  path={`services.${i}.name`}
+                  errors={errors}
+                  label="Service"
+                  placeholder="Cake order"
+                  value={item.name}
+                  onChange={(name) => update({ name })}
+                />
+                <TextField
+                  path={`services.${i}.price`}
+                  errors={errors}
+                  label="Price"
+                  optional
+                  placeholder="$40"
+                  value={item.price}
+                  onChange={(price) => update({ price })}
+                />
+              </div>
+              <TextField
+                path={`services.${i}.description`}
+                errors={errors}
+                label="Description"
+                optional
+                value={item.description}
+                onChange={(description) => update({ description })}
+              />
+            </div>
+          )}
+        />
+      </FormCard>
       <FormCard title="Opening hours">
         <ToggleField
           label="Show opening hours"
@@ -110,7 +172,49 @@ export function BusinessEditor({ page, set, errors }: EditorProps<BusinessPage>)
           onChange={(showHours) => set({ showHours })}
         />
         {page.showHours && (
-          <HoursField hours={page.hours} onChange={(hours) => set({ hours })} errors={errors} />
+          <>
+            <TimeZoneField
+              value={page.timeZone}
+              onChange={(timeZone) => set({ timeZone })}
+              error={errors.error("timeZone")}
+              hint="For Open now. If it's not set, each visitor's own time is used."
+            />
+            <HoursField hours={page.hours} onChange={(hours) => set({ hours })} errors={errors} />
+            <SortableList
+              label="Closures"
+              items={page.closures}
+              onChange={(closures) => set({ closures })}
+              max={LIMITS.closures}
+              addLabel="Add closure"
+              addAt="end"
+              newRowFocus="input[type='date']"
+              path="closures"
+              errors={errors}
+              itemLabel={(item, i) => rowName("closure", item.note || item.date, i)}
+              newItem={() => ({ date: "", note: "" })}
+              render={(item, update, i) => (
+                <div className="grid gap-3 sm:grid-cols-[11rem_1fr]">
+                  <TextField
+                    path={`closures.${i}.date`}
+                    errors={errors}
+                    label="Date"
+                    type="date"
+                    value={item.date}
+                    onChange={(date) => update({ date })}
+                  />
+                  <TextField
+                    path={`closures.${i}.note`}
+                    errors={errors}
+                    label="Note"
+                    optional
+                    placeholder="Thanksgiving"
+                    value={item.note}
+                    onChange={(note) => update({ note })}
+                  />
+                </div>
+              )}
+            />
+          </>
         )}
       </FormCard>
       <FormCard title="Buttons">
@@ -122,6 +226,7 @@ export function BusinessEditor({ page, set, errors }: EditorProps<BusinessPage>)
           onChange={(buttons) => set({ buttons })}
           max={LIMITS.buttons}
           errors={errors}
+          presets
         />
       </FormCard>
       <FormCard title="Social icons">

@@ -242,7 +242,16 @@ const CARDS: Record<PageTypeId, string[]> = {
     "Websites and address",
     "Social icons",
   ],
-  business: ["Header", "Contact", "About", "Opening hours", "Buttons", "Social icons"],
+  business: [
+    "Header",
+    "Contact",
+    "Photos",
+    "About",
+    "Services",
+    "Opening hours",
+    "Buttons",
+    "Social icons",
+  ],
   menu: ["Header", "Sections and dishes", "Currency and note"],
   coupon: ["Header", "Offer", "Button", "Terms"],
   event: ["Header", "When", "Where", "Details", "Tickets"],
@@ -500,5 +509,56 @@ describe("Contact page editor extras", () => {
   it("offers a cover photo", () => {
     render(<Contact />);
     expect(screen.getByText("Cover photo")).toBeInTheDocument();
+  });
+});
+
+describe("Business editor extras", () => {
+  function Biz() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.business());
+    return (
+      <>
+        <PageEditor
+          type="business"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("adds a ready-made Google review button, and puts the cursor in its link", async () => {
+    const user = userEvent.setup();
+    render(<Biz />);
+    await user.click(screen.getByRole("button", { name: "Add Google review" }));
+    expect(saved().buttons[0]).toMatchObject({
+      label: "Leave a Google review",
+      icon: "review",
+      url: "",
+    });
+    expect(document.activeElement).toHaveAttribute("data-field", "buttons.0.url");
+  });
+
+  it("adds second hours to a day, a closure date, and a service", async () => {
+    const user = userEvent.setup();
+    render(<Biz />);
+    await user.click(screen.getByRole("button", { name: "Add second hours for Monday" }));
+    expect(saved().hours[0]).toMatchObject({ from2: "13:00", to2: "17:00" });
+    expect(screen.getByLabelText("Monday opens again")).toHaveValue("13:00");
+    await user.click(screen.getByRole("button", { name: "Remove second hours for Monday" }));
+    expect(saved().hours[0]).toMatchObject({ from2: "", to2: "" });
+    await user.click(screen.getByRole("button", { name: "Add closure" }));
+    expect(saved().closures).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Add service" }));
+    await user.type(screen.getByRole("textbox", { name: /^Service/ }), "Cake order");
+    expect(saved().services[0].name).toBe("Cake order");
+  });
+
+  it("offers a photo gallery and a time zone", () => {
+    render(<Biz />);
+    expect(screen.getByText("Photos")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /^Time zone/ })).toBeInTheDocument();
   });
 });

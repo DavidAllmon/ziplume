@@ -28,8 +28,8 @@ export interface LinkItem {
   /** A header is a text-only row between links. */
   kind: "link" | "header";
   type: LinkType;
-  /** Auto: a known site's icon, or the type's. */
-  icon: "auto" | "none" | "image";
+  /** Auto: a known site's icon, or the type's. A ready-made Business button has its own. */
+  icon: "auto" | "none" | "image" | "review" | "book" | "order";
   image: Media | null;
   /** Drawn taller, in the accent color; one per page. */
   featured: boolean;
@@ -69,6 +69,12 @@ export interface DayHours {
   /** A second range the same day ("" for none). */
   from2: string;
   to2: string;
+}
+
+export interface ServiceItem {
+  name: string;
+  price: string;
+  description: string;
 }
 
 /** A day the business is closed (spec item 17). */
@@ -146,6 +152,10 @@ export interface BusinessPage extends Themed {
   /** IANA zone for Open now; "" means each visitor's own (spec item 16). */
   timeZone: string;
   closures: Closure[];
+  /** Photos in a row that opens the full-screen viewer (spec item 18). */
+  gallery: Media[];
+  /** Under About (spec item 20). */
+  services: ServiceItem[];
   buttons: LinkItem[];
   socials: SocialItem[];
 }
@@ -259,6 +269,8 @@ export const LIMITS = {
   emails: 4,
   websites: 4,
   closures: 10,
+  gallery: 6,
+  services: 30,
   buttons: 6,
   sections: 20,
   items: 60,
@@ -348,6 +360,8 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       showHours: true,
       timeZone: "",
       closures: [],
+      gallery: [],
+      services: [],
       buttons: [],
       socials: [],
     }),

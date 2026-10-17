@@ -42,6 +42,7 @@ import type { PageTypeId } from "@/lib/qr/types";
 import { CopyCode } from "./CopyCode";
 import { LinkIconMark } from "./LinkIcon";
 import { FeedbackForm } from "./FeedbackForm";
+import { Gallery } from "./Viewer";
 import { OpenStatus } from "./OpenStatus";
 import {
   EmptyNote,
@@ -302,6 +303,7 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
   const website = safeHref(page.website);
   const look = page.look;
   const hero = look.header === "hero" && page.cover !== null;
+  const services = page.services.filter((service) => service.name.trim());
   const socials = <SocialRow socials={page.socials} look={look} preview={preview} />;
   const actions = [
     phone && { label: "Call", href: phone, icon: <Phone aria-hidden /> },
@@ -328,15 +330,62 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
       <QuickActions actions={actions} preview={preview} />
       {page.buttons
         .filter((b) => b.kind !== "header" && b.on && linkHref(b))
-        .map((b, i) => (
-          <PageLink key={i} href={linkHref(b)} preview={preview}>
-            {b.label.trim() || b.url.replace(/^(https?:\/\/|mailto:|tel:|sms:)/, "")}
-          </PageLink>
-        ))}
+        .map((b, i) => {
+          // A known site's icon, or a ready-made button's own, as on a Link list.
+          const icon = linkIcon(b);
+          return (
+            <PageLink
+              key={i}
+              href={linkHref(b)}
+              preview={preview}
+              icon={icon ? <LinkIconMark icon={icon} /> : undefined}
+            >
+              {b.label.trim() || b.url.replace(/^(https?:\/\/|mailto:|tel:|sms:)/, "")}
+            </PageLink>
+          );
+        })}
+      <Gallery
+        images={page.gallery.map((media, i) => ({
+          media,
+          alt: `Photo ${i + 1} of ${page.name.trim() || "the business"}`,
+        }))}
+        label="Photos"
+        preview={preview}
+      />
       {page.about.trim() && (
         <PageCard>
           <h2 className="mb-2 font-page-heading text-lg font-bold text-fg">About</h2>
           <Prose text={page.about} />
+        </PageCard>
+      )}
+      {services.length > 0 && (
+        <PageCard>
+          <section aria-labelledby="services-heading">
+            <h2 id="services-heading" className="mb-3 font-page-heading text-lg font-bold text-fg">
+              Services
+            </h2>
+            <ul className="divide-y divide-border">
+              {services.map((service, i) => (
+                <li key={i} className="flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0">
+                  <div className="flex min-w-0 items-baseline justify-between gap-3">
+                    <span className="min-w-0 font-medium [overflow-wrap:anywhere] text-fg">
+                      {service.name}
+                    </span>
+                    {service.price.trim() && (
+                      <span className="shrink-0 font-semibold text-fg tabular-nums">
+                        {service.price}
+                      </span>
+                    )}
+                  </div>
+                  {service.description.trim() && (
+                    <p className="text-sm [overflow-wrap:anywhere] text-fg-muted">
+                      {service.description}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
         </PageCard>
       )}
       {page.showHours && (

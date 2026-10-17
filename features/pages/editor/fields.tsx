@@ -29,6 +29,7 @@ import { Select, Textarea, TextInput } from "@/components/ui/inputs";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Toggle } from "@/components/ui/Toggle";
 import { cn } from "@/lib/cn";
+import { DAY_NAMES } from "@/lib/pages/hours";
 import { newHeader, newLink, scheduleNote } from "@/lib/pages/links";
 import type { DayHours, LinkItem, LinkType, Media, SocialItem } from "@/lib/pages/types";
 import { SOCIAL_NETWORKS } from "@/lib/pages/types";
@@ -651,6 +652,7 @@ export function LinksField({
   prefix = "links",
   itemName = "link",
   extras = false,
+  presets = false,
 }: {
   label?: string;
   items: LinkItem[];
@@ -662,9 +664,14 @@ export function LinksField({
   itemName?: string;
   /** The Link list's extras: types, icons, featured, schedules and headers. */
   extras?: boolean;
+  /** Business's ready-made buttons: Google review, Yelp, Book now, Order online (spec item 19). */
+  presets?: boolean;
 }) {
   const name = (item: LinkItem, i: number) =>
     rowName(item.kind === "header" ? "header" : itemName, item.label, i);
+  // A ready-made button already has its text, so the cursor goes to its link instead.
+  const [focusUrl, setFocusUrl] = useState(false);
+  const full = items.length >= max;
   return (
     <SortableList
       label={label}
@@ -678,38 +685,75 @@ export function LinksField({
       itemLabel={name}
       newItem={newLink}
       // A new link or header starts at its text, not the type picker above it.
-      newRowFocus="input[data-field$='.label']"
+      newRowFocus={focusUrl ? "input[data-field$='.url']" : "input[data-field$='.label']"}
       off={(item) => !item.on}
       adder={
-        extras
+        presets
           ? ({ add }) => (
               <div className="flex flex-col gap-2">
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    disabled={items.length >= max}
-                    onClick={() => add(newLink())}
+                    disabled={full}
+                    onClick={() => {
+                      setFocusUrl(false);
+                      add(newLink());
+                    }}
                     className={buttonClasses("outline", "md")}
                   >
                     <Plus aria-hidden /> Add {itemName}
                   </button>
-                  <button
-                    type="button"
-                    disabled={items.length >= max}
-                    onClick={() => add(newHeader())}
-                    className={buttonClasses("outline", "md")}
-                  >
-                    <Plus aria-hidden /> Add header
-                  </button>
+                  {PRESETS.map((preset) => (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      disabled={full}
+                      onClick={() => {
+                        setFocusUrl(true);
+                        add({ ...newLink(), label: preset.label, icon: preset.icon });
+                      }}
+                      className={buttonClasses("outline", "md")}
+                    >
+                      <Plus aria-hidden /> Add {preset.name}
+                    </button>
+                  ))}
                 </div>
-                {items.length >= max && (
+                {full && (
                   <p className="text-sm text-fg-muted">
-                    You can add up to {max} links and headers.
+                    You can add up to {max} {itemName}s.
                   </p>
                 )}
               </div>
             )
-          : undefined
+          : extras
+            ? ({ add }) => (
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={items.length >= max}
+                      onClick={() => add(newLink())}
+                      className={buttonClasses("outline", "md")}
+                    >
+                      <Plus aria-hidden /> Add {itemName}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={items.length >= max}
+                      onClick={() => add(newHeader())}
+                      className={buttonClasses("outline", "md")}
+                    >
+                      <Plus aria-hidden /> Add header
+                    </button>
+                  </div>
+                  {items.length >= max && (
+                    <p className="text-sm text-fg-muted">
+                      You can add up to {max} links and headers.
+                    </p>
+                  )}
+                </div>
+              )
+            : undefined
       }
       rowActions={(item, update, i) =>
         item.kind === "header" ? null : (
@@ -906,7 +950,13 @@ export function SocialsField({
   );
 }
 
-const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+// The Business page's ready-made buttons: their text and icon; the owner adds the link.
+const PRESETS = [
+  { name: "Google review", label: "Leave a Google review", icon: "review" },
+  { name: "Yelp", label: "Review us on Yelp", icon: "review" },
+  { name: "Book now", label: "Book now", icon: "book" },
+  { name: "Order online", label: "Order online", icon: "order" },
+] as const;
 
 export function HoursField({
   hours,
@@ -951,11 +1001,49 @@ export function HoursField({
                   onChange={(event) => update(i, { to: event.target.value })}
                   className="h-10 rounded-control border border-field-border bg-surface px-2 text-sm text-fg"
                 />
+                {!(h.from2 || h.to2) && (
+                  <button
+                    type="button"
+                    aria-label={`Add second hours for ${DAY_NAMES[i]}`}
+                    onClick={() => update(i, { from2: "13:00", to2: "17:00" })}
+                    className="inline-flex min-h-11 items-center gap-1 rounded-control px-2 text-sm font-medium text-primary focus-ring hover:bg-surface-2 sm:min-h-0 sm:py-2"
+                  >
+                    <Plus aria-hidden className="size-4" /> Add hours
+                  </button>
+                )}
               </>
             ) : (
               <span className="text-sm text-fg-muted">Closed</span>
             )}
           </div>
+          {/* A second range the same day, like a lunch break (spec item 17). */}
+          {h.open && (h.from2 || h.to2) && (
+            <div className="flex flex-wrap items-center gap-2 sm:pl-34">
+              <input
+                type="time"
+                aria-label={`${DAY_NAMES[i]} opens again`}
+                value={h.from2}
+                onChange={(event) => update(i, { from2: event.target.value })}
+                className="h-10 rounded-control border border-field-border bg-surface px-2 text-sm text-fg"
+              />
+              <span className="text-fg-muted">–</span>
+              <input
+                type="time"
+                aria-label={`${DAY_NAMES[i]} closes again`}
+                value={h.to2}
+                onChange={(event) => update(i, { to2: event.target.value })}
+                className="h-10 rounded-control border border-field-border bg-surface px-2 text-sm text-fg"
+              />
+              <button
+                type="button"
+                aria-label={`Remove second hours for ${DAY_NAMES[i]}`}
+                onClick={() => update(i, { from2: "", to2: "" })}
+                className="inline-flex min-h-11 items-center rounded-control px-2 text-sm font-medium text-fg-muted focus-ring hover:bg-surface-2 sm:min-h-0 sm:py-2"
+              >
+                Remove
+              </button>
+            </div>
+          )}
           {errors.error(`hours.${i}`) && (
             <p className="text-sm text-danger">{errors.error(`hours.${i}`)}</p>
           )}
@@ -970,10 +1058,12 @@ export function TimeZoneField({
   value,
   onChange,
   error,
+  hint,
 }: {
   value: string;
   onChange: (value: string) => void;
   error?: string;
+  hint?: ReactNode;
 }) {
   const zones = (() => {
     try {
@@ -983,7 +1073,7 @@ export function TimeZoneField({
     }
   })();
   return (
-    <Field label="Time zone" error={error}>
+    <Field label="Time zone" error={error} hint={hint}>
       {(control) => (
         <Select
           {...control}
