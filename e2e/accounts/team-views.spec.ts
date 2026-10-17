@@ -96,6 +96,9 @@ test.describe("a viewer in a team", () => {
     await expect(
       page.getByText("You’re in Olivia Owner’s team now. Switch between people here."),
     ).toBeVisible();
+    // The tip drops ?joined once the page is running in the browser; reload only after that,
+    // as a person would (a reload before it would rightly show the tip again).
+    await expect(page).not.toHaveURL(/joined=1/);
     await page.reload();
     await expect(page.getByRole("navigation", { name: "Whose codes" })).toBeVisible();
     await expect(page.getByText(/You’re in Olivia Owner’s team now/)).toHaveCount(0);
