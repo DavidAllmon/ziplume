@@ -90,7 +90,11 @@ describe("PageView", () => {
   });
 
   it("doesn't play video or audio in the preview", () => {
-    const video = { ...PAGE_DEFAULTS.video(), title: "Clip", url: "https://youtu.be/dQw4w9WgXcQ" };
+    const video = {
+      ...PAGE_DEFAULTS.video(),
+      title: "Clip",
+      videos: [{ title: "", url: "https://youtu.be/dQw4w9WgXcQ", start: "" }],
+    };
     const { container, getAllByText, unmount } = view("video", video);
     expect(container.querySelector("iframe, video")).toBeNull();
     expect(getAllByText("Plays on the live page").length).toBeGreaterThan(0);

@@ -273,11 +273,20 @@ export interface ImagesPage extends Themed {
   layout: ImagesLayout;
 }
 
+export interface VideoItem {
+  /** Heads its card when the page has several videos (spec item 46). */
+  title: string;
+  /** YouTube, Vimeo, TikTok, Instagram, Facebook or Loom. Ziplume is free, so no uploads. */
+  url: string;
+  /** "1:23", or "" to start at the beginning (spec item 47). */
+  start: string;
+}
+
 export interface VideoPage extends Themed {
   title: string;
   description: string;
-  /** A YouTube (Shorts included) or Vimeo link. Ziplume is free, so videos aren't uploaded. */
-  url: string;
+  /** Up to 10, one below the other; an old page's single link becomes the first. */
+  videos: VideoItem[];
 }
 
 export interface AudioPage extends Themed {
@@ -323,6 +332,7 @@ export const LIMITS = {
   websites: 4,
   closures: 10,
   options: 4,
+  videos: 10,
   agenda: 30,
   hosts: 12,
   gallery: 6,
@@ -497,7 +507,7 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       color: "#DC2626",
       title: "",
       description: "",
-      url: "",
+      videos: [{ title: "", url: "", start: "" }],
     }),
   audio: () =>
     withLook("audio", {

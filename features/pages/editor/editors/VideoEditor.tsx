@@ -14,9 +14,16 @@ export function VideoEditor({ page, set, errors }: EditorProps<VideoPage>) {
           label="Video link"
           type="url"
           inputMode="url"
-          value={page.url}
-          onChange={(url) => set({ url })}
-          path="url"
+          value={page.videos[0]?.url ?? ""}
+          onChange={(url) =>
+            set((latest) => ({
+              videos: [
+                { title: "", start: "", ...latest.videos[0], url },
+                ...latest.videos.slice(1),
+              ],
+            }))
+          }
+          path="videos.0.url"
           errors={errors}
           placeholder="https://youtu.be/…"
           hint="A YouTube or Vimeo link."

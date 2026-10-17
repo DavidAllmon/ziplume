@@ -992,8 +992,9 @@ function StillMedia({ icon }: { icon: ReactNode }) {
 }
 
 function VideoView({ page, preview }: ViewProps<VideoPage>) {
-  const embed = videoEmbed(page.url);
-  const link = !embed ? safeHref(page.url) : null;
+  const first = page.videos?.[0]?.url ?? "";
+  const embed = videoEmbed(first);
+  const link = !embed ? safeHref(first) : null;
   const look = page.look;
   return (
     <PageFrame look={look} preview={preview}>

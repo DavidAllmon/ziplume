@@ -6,7 +6,7 @@ import { contactVcard, eventIcs, eventTimes, googleCalendarUrl } from "./files";
 import { newLink } from "./links";
 import { mediaPaths, sanitizeMedia, sanitizePage } from "./sanitize";
 import { PAGE_DEFAULTS, type EventPage, type VcardPage } from "./types";
-import { safeHref, socialHref, videoEmbed, whatsappHref } from "./urls";
+import { safeHref, socialHref, startSeconds, videoEmbed, whatsappHref } from "./urls";
 import { pageSummary, validatePage } from "./validate";
 
 const UID = "11111111-1111-4111-8111-111111111111";
@@ -328,7 +328,7 @@ describe("video pages take links only", () => {
     });
     expect(page).not.toHaveProperty("source");
     expect(page).not.toHaveProperty("file");
-    expect(validatePage("video", page)).toEqual({ url: "Paste a YouTube or Vimeo link" });
+    expect(validatePage("video", page)).toEqual({ "videos.0.url": "Paste a video link" });
   });
 });
 
@@ -559,6 +559,98 @@ describe("Images page items", () => {
     const page = { ...PAGE_DEFAULTS.images(), images: [item("a.png", { link: "not a link" })] };
     expect(validatePage("images", page)).toEqual({
       "images.0.link": "Enter a web address, like example.com",
+    });
+  });
+});
+
+describe("video links", () => {
+  it("holds TikTok, Instagram, Facebook and Loom back until a tap", () => {
+    expect(
+      videoEmbed("https://www.tiktok.com/@cafe/video/7234567890123456789?lang=en"),
+    ).toMatchObject({
+      provider: "tiktok",
+      src: "https://www.tiktok.com/embed/v2/7234567890123456789",
+      name: "TikTok",
+      vertical: true,
+      tap: true,
+    });
+    expect(videoEmbed("https://www.instagram.com/reels/Cx1AbC2dE3f/")).toMatchObject({
+      provider: "instagram",
+      src: "https://www.instagram.com/reel/Cx1AbC2dE3f/embed",
+      tap: true,
+    });
+    expect(videoEmbed("https://m.facebook.com/watch/?v=1234567890")?.src).toBe(
+      "https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2Fwatch%2F%3Fv%3D1234567890&show_text=false",
+    );
+    expect(videoEmbed("https://www.loom.com/share/0123456789abcdef0123456789abcdef")).toMatchObject(
+      {
+        provider: "loom",
+        src: "https://www.loom.com/embed/0123456789abcdef0123456789abcdef",
+        vertical: false,
+        tap: true,
+      },
+    );
+    expect(videoEmbed("https://youtu.be/dQw4w9WgXcQ")).toMatchObject({
+      tap: false,
+      name: "YouTube",
+    });
+    // Short links and look-alikes aren't embedded.
+    expect(videoEmbed("https://vm.tiktok.com/ZMabc123/")).toBeNull();
+    expect(videoEmbed("https://fb.watch/abc123/")).toBeNull();
+    expect(videoEmbed("https://tiktok.com.evil.example/@a/video/7234567890123456789")).toBeNull();
+  });
+
+  it("starts YouTube, Vimeo and Loom at a time like 1:23", () => {
+    expect(startSeconds("1:23")).toBe(83);
+    expect(startSeconds("1:02:03")).toBe(3723);
+    expect(startSeconds("45")).toBe(45);
+    expect(startSeconds("1:2")).toBeNull();
+    expect(startSeconds("1:75")).toBeNull();
+    expect(startSeconds("1m23s")).toBeNull();
+    expect(startSeconds("")).toBeNull();
+    expect(videoEmbed("https://youtu.be/dQw4w9WgXcQ", "1:23")?.src).toBe(
+      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=83",
+    );
+    expect(videoEmbed("https://vimeo.com/76979871", "1:23")?.src).toBe(
+      "https://player.vimeo.com/video/76979871?dnt=1#t=83s",
+    );
+    expect(
+      videoEmbed("https://www.loom.com/share/0123456789abcdef0123456789abcdef", "0:10")?.src,
+    ).toBe("https://www.loom.com/embed/0123456789abcdef0123456789abcdef?t=10");
+    expect(videoEmbed("https://youtu.be/dQw4w9WgXcQ", "0")?.src).toBe(
+      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+    );
+  });
+
+  it("reads an old video page's link as its first video", () => {
+    expect(
+      sanitizePage("video", { title: "T", url: "https://youtu.be/dQw4w9WgXcQ" }).videos,
+    ).toEqual([{ title: "", url: "https://youtu.be/dQw4w9WgXcQ", start: "" }]);
+    expect(sanitizePage("video", { title: "T", url: "" }).videos).toEqual([
+      { title: "", url: "", start: "" },
+    ]);
+    expect(sanitizePage("video", { title: "T", url: "" })).not.toHaveProperty("url");
+  });
+
+  it("needs one video, checks each link, and each start time", () => {
+    const page = (videos: { title: string; url: string; start: string }[]) => ({
+      ...PAGE_DEFAULTS.video(),
+      videos,
+    });
+    expect(validatePage("video", page([{ title: "", url: "", start: "" }]))).toEqual({
+      "videos.0.url": "Paste a video link",
+    });
+    expect(
+      validatePage(
+        "video",
+        page([
+          { title: "", url: "https://youtu.be/dQw4w9WgXcQ", start: "1:75" },
+          { title: "", url: "not a link", start: "" },
+        ]),
+      ),
+    ).toEqual({
+      "videos.0.start": "Use minutes and seconds, like 1:23",
+      "videos.1.url": "Enter a web address, like example.com",
     });
   });
 });

@@ -202,7 +202,15 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     },
     layout: { kind: "enum", values: ["grid2", "grid3", "single", "carousel"] },
   },
-  video: { title: str(), description: str(LIMITS.text), url: str(2048) },
+  video: {
+    title: str(),
+    description: str(LIMITS.text),
+    videos: {
+      kind: "list",
+      max: LIMITS.videos,
+      item: { title: str(), url: str(2048), start: str(8) },
+    },
+  },
   audio: {
     title: str(),
     artist: str(),
@@ -336,6 +344,11 @@ const UPGRADES: Partial<
             isObject(m) && "path" in m && !("image" in m) ? { image: m } : m,
           ),
         }
+      : raw,
+  // Video pages had one link before they had several (spec item 46).
+  video: (raw) =>
+    !("videos" in raw) && typeof raw.url === "string"
+      ? { ...raw, videos: [{ title: "", url: raw.url, start: "" }] }
       : raw,
   // Dishes had free-text tags before they had dietary labels (spec item 22, ruling 8).
   menu: (raw) =>

@@ -5,7 +5,15 @@ import { overLimit } from "./sanitize";
 import { barcodeProblem } from "./scan";
 import type { LinkItem, PageContentMap, SocialItem } from "./types";
 import { linkHref } from "./links";
-import { mailHref, safeHref, socialHref, telHref, videoEmbed, whatsappHref } from "./urls";
+import {
+  mailHref,
+  safeHref,
+  socialHref,
+  startSeconds,
+  telHref,
+  videoEmbed,
+  whatsappHref,
+} from "./urls";
 
 /** Problems keyed by field path, e.g. "title" or "links.2.url". Empty = ready to save. */
 export type PageErrors = Record<string, string>;
@@ -190,9 +198,20 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     p.images.forEach((item, i) => checkUrl(errors, `images.${i}.link`, item.link));
     return errors;
   },
-  video: (p): PageErrors => {
-    if (!p.url.trim()) return { url: "Paste a YouTube or Vimeo link" };
-    return videoEmbed(p.url) || safeHref(p.url) ? {} : { url: URL_MESSAGE };
+  video: (p) => {
+    const errors: PageErrors = {};
+    if (!p.videos.some((v) => v.url.trim())) {
+      errors[p.videos.length ? "videos.0.url" : "videos"] = "Paste a video link";
+    }
+    p.videos.forEach((v, i) => {
+      if (v.url.trim() && !videoEmbed(v.url) && !safeHref(v.url)) {
+        errors[`videos.${i}.url`] = URL_MESSAGE;
+      }
+      if (v.start.trim() && startSeconds(v.start) === null) {
+        errors[`videos.${i}.start`] = "Use minutes and seconds, like 1:23";
+      }
+    });
+    return errors;
   },
   audio: (p) => {
     const errors: PageErrors = {};
