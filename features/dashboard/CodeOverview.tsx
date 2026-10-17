@@ -317,7 +317,9 @@ export function CodeOverview({
             </Card>
           )}
 
-          {code.qr_type === "feedback" && <FeedbackResponses codeId={code.id} />}
+          {code.qr_type === "feedback" && (
+            <FeedbackResponses codeId={code.id} content={code.content} />
+          )}
 
           <Card>
             <CardHeader title="Details" />
