@@ -61,7 +61,9 @@ export function FeedbackResponses({ codeId }: { codeId: string }) {
     setRows((list) => list?.filter((r) => r.id !== id) ?? null);
   }
 
-  const average = rows?.length ? rows.reduce((sum, r) => sum + (r.rating ?? 0), 0) / rows.length : 0;
+  const average = rows?.length
+    ? rows.reduce((sum, r) => sum + (r.rating ?? 0), 0) / rows.length
+    : 0;
   const csv = rows?.length
     ? `data:text/csv;charset=utf-8,${encodeURIComponent(
         [
