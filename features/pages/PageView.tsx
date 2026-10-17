@@ -861,7 +861,13 @@ function FeedbackView({ page, slug, preview }: ViewProps<FeedbackPage>) {
       <PageCard>
         <FeedbackForm
           slug={slug}
-          question={page.questions?.[0]?.text ?? ""}
+          // Drawn as given: an older page still has one `question`.
+          questions={
+            page.questions ?? [
+              { text: (page as unknown as { question?: string }).question ?? "", style: "stars" },
+            ]
+          }
+          reviewUrl={page.reviewUrl ?? ""}
           allowComment={page.allowComment}
           askContact={page.askContact}
           thanks={page.thanks}
