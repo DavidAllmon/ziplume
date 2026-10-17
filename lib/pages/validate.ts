@@ -2,6 +2,7 @@ import type { PageTypeId } from "@/lib/qr/types";
 import { isTimeZone, zonedTimeToUtc } from "@/lib/time/zone";
 
 import { overLimit } from "./sanitize";
+import { barcodeProblem } from "./scan";
 import type { LinkItem, PageContentMap, SocialItem } from "./types";
 import { linkHref } from "./links";
 import { mailHref, safeHref, socialHref, telHref, videoEmbed, whatsappHref } from "./urls";
@@ -130,6 +131,13 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     if (p.validUntil && !/^\d{4}-\d{2}-\d{2}$/.test(p.validUntil))
       errors.validUntil = "Pick a date";
     if (p.buttonLabel.trim() && !p.buttonUrl.trim()) errors.buttonUrl = "Add the button’s link";
+    if (p.scan !== "text") {
+      if (!p.code.trim()) errors.code = "Add the code to scan";
+      else if (p.scan === "barcode") {
+        const problem = barcodeProblem(p.code.trim());
+        if (problem) errors.code = problem;
+      }
+    }
     checkUrl(errors, "buttonUrl", p.buttonUrl);
     return errors;
   },

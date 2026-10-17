@@ -448,3 +448,24 @@ describe("WhatsApp quick button", () => {
     });
   });
 });
+
+describe("Coupon scan and badge", () => {
+  it("reads an old coupon as text only with no badge", () => {
+    expect(sanitizePage("coupon", { offer: "20% OFF", code: "X" })).toMatchObject({
+      scan: "text",
+      badge: "",
+    });
+    expect(sanitizePage("coupon", { offer: "X", scan: "laser" }).scan).toBe("text");
+  });
+
+  it("needs a code to scan, and one a barcode can hold", () => {
+    const coupon = { ...PAGE_DEFAULTS.coupon(), offer: "20% OFF" };
+    expect(validatePage("coupon", { ...coupon, scan: "qr", code: "" })).toEqual({
+      code: "Add the code to scan",
+    });
+    expect(validatePage("coupon", { ...coupon, scan: "qr", code: "CAFÉ" })).toEqual({});
+    expect(validatePage("coupon", { ...coupon, scan: "barcode", code: "CAFÉ" }).code).toMatch(
+      /QR code/,
+    );
+  });
+});

@@ -704,3 +704,29 @@ describe("Menu editor extras", () => {
     expect(screen.getByRole("textbox", { name: /^Option name/ })).toBeInTheDocument();
   });
 });
+
+describe("Coupon editor extras", () => {
+  function Coupon() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.coupon());
+    return (
+      <>
+        <PageEditor
+          type="coupon"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("adds a badge and chooses how the code shows", async () => {
+    const user = userEvent.setup();
+    render(<Coupon />);
+    await user.type(screen.getByRole("textbox", { name: /^Badge/ }), "NEW");
+    await user.click(screen.getByRole("radio", { name: "Barcode" }));
+    expect(saved()).toMatchObject({ badge: "NEW", scan: "barcode" });
+  });
+});

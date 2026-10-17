@@ -153,6 +153,8 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     buttonLabel: str(40),
     buttonUrl: str(2048),
     image: media,
+    scan: { kind: "enum", values: ["text", "qr", "barcode"] },
+    badge: str(12),
   },
   event: {
     title: str(),

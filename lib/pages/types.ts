@@ -197,6 +197,10 @@ export interface CouponPage extends Themed {
   buttonLabel: string;
   buttonUrl: string;
   image: Media | null;
+  /** How the code shows for a till's scanner (spec item 26). */
+  scan: "text" | "qr" | "barcode";
+  /** A short stamp on the coupon's corner, like NEW (spec item 28, ruling 1). */
+  badge: string;
 }
 
 export interface EventPage extends Themed {
@@ -406,6 +410,8 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       buttonLabel: "",
       buttonUrl: "",
       image: null,
+      scan: "text",
+      badge: "",
     }),
   event: () =>
     withLook("event", {

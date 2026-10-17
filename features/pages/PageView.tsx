@@ -52,9 +52,11 @@ import {
 import type { PageTypeId } from "@/lib/qr/types";
 
 import { CopyCode } from "./CopyCode";
+import { CouponDeadline } from "./Countdowns";
 import { LinkIconMark } from "./LinkIcon";
 import { DietMark } from "./DietMark";
 import { FeedbackForm } from "./FeedbackForm";
+import { ScanCode } from "./ScanCode";
 import { Gallery, ViewerGroup, ViewerThumb, type ViewerImage } from "./Viewer";
 import { OpenStatus } from "./OpenStatus";
 import {
@@ -594,21 +596,10 @@ function DishPrice({ item, currency }: { item: MenuItem; currency: string }) {
   return item.price.trim() ? <p className={style}>{priceText(item.price, currency)}</p> : null;
 }
 
-function formatDate(value: string) {
-  const date = new Date(`${value}T12:00:00Z`);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString("en", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        timeZone: "UTC",
-      });
-}
-
 function CouponView({ page, preview }: ViewProps<CouponPage>) {
-  const expired = page.validUntil && page.validUntil < new Date().toISOString().slice(0, 10);
   const look = page.look;
+  const code = page.code.trim();
+  const badge = page.badge?.trim();
   const headline = page.headline.trim();
   return (
     <PageFrame look={look} preview={preview}>
@@ -620,24 +611,31 @@ function CouponView({ page, preview }: ViewProps<CouponPage>) {
         eyebrow={page.business.trim() || undefined}
         title={headline || page.offer.trim() || "Your offer"}
       />
-      <PageCard className="flex flex-col items-center gap-4 text-center">
+      <PageCard
+        className={cn("relative flex flex-col items-center gap-4 text-center", badge && "pt-9")}
+      >
+        {/* A stamp on the coupon's top corner (spec item 28). */}
+        {badge && (
+          <span className="absolute -top-4 right-4 rotate-3 rounded-full bg-(--page-accent) px-4 py-1.5 font-page-heading text-xl font-bold text-(--page-accent-fg) shadow-card">
+            {badge}
+          </span>
+        )}
         {headline && page.offer.trim() && (
           <p className="font-page-heading text-5xl font-bold tracking-tight text-[var(--page-accent)]">
             {page.offer}
           </p>
         )}
         {page.description.trim() && <Prose text={page.description} />}
-        {page.code.trim() && (
-          <div className="w-full">
-            <p className="mb-2 text-sm text-fg-muted">Use this code</p>
-            <CopyCode code={page.code.trim()} />
+        {code && (
+          <div className="flex w-full flex-col items-center gap-3">
+            <p className="text-sm text-fg-muted">Use this code</p>
+            {page.scan && page.scan !== "text" && <ScanCode kind={page.scan} value={code} />}
+            <div className="w-full">
+              <CopyCode code={code} />
+            </div>
           </div>
         )}
-        {page.validUntil && (
-          <p className={expired ? "font-semibold text-danger" : "text-sm text-fg-muted"}>
-            {expired ? "This offer has ended" : `Valid until ${formatDate(page.validUntil)}`}
-          </p>
-        )}
+        <CouponDeadline validUntil={page.validUntil} />
         {page.buttonUrl.trim() && (
           <PageLink href={safeHref(page.buttonUrl)} preview={preview}>
             {page.buttonLabel.trim() || "Redeem now"}

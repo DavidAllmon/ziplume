@@ -577,3 +577,33 @@ describe("Menu extras", () => {
     expect(screen.getByRole("img", { name: "Pie" })).toBeInTheDocument();
   });
 });
+
+describe("Coupon extras", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("shows the badge, the code to scan, and the countdown", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2030, 0, 1, 12));
+    view(
+      "coupon",
+      {
+        ...PAGE_DEFAULTS.coupon(),
+        offer: "20% OFF",
+        badge: "NEW",
+        code: "SAVE20",
+        scan: "qr",
+        validUntil: "2030-01-04",
+      },
+      false,
+    );
+    expect(screen.getByText("NEW")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "QR code for SAVE20" })).toBeInTheDocument();
+    expect(screen.getByText("Ends in 3 days")).toBeInTheDocument();
+  });
+
+  it("keeps an old coupon's code as text only", () => {
+    view("coupon", { ...PAGE_DEFAULTS.coupon(), offer: "20% OFF", code: "SAVE20" }, false);
+    expect(screen.queryByRole("img", { name: /SAVE20/ })).toBeNull();
+    expect(screen.getByText("SAVE20")).toBeInTheDocument();
+  });
+});
