@@ -51,7 +51,8 @@ export function Viewer({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, at, images.length, onIndex]);
   return (
-    <Dialog open={open} onClose={onClose} className="relative z-50">
+    // The dialog itself covers the screen (not just its fixed children), so it has a size.
+    <Dialog open={open} onClose={onClose} className="fixed inset-0 z-50">
       <div className="fixed inset-0 bg-black/95" aria-hidden />
       <DialogPanel className="fixed inset-0 flex flex-col text-white">
         <div className="flex items-center justify-between gap-3 px-3 pt-[max(env(safe-area-inset-top),0.75rem)]">

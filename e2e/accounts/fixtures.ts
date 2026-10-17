@@ -172,6 +172,62 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
     },
   },
   {
+    // Every Contact page extra: pronouns, department, quick buttons, several websites.
+    type: "vcard",
+    slug: "PHONE-CONTACT-PLUS",
+    content: {
+      firstName: "Ana",
+      lastName: "Rivera",
+      pronouns: "she/her",
+      jobTitle: "Designer",
+      department: "Brand",
+      company: "Acme",
+      phones: [{ label: "Mobile", number: "+1 555 010 2030", whatsapp: true }],
+      emails: [{ label: "Work", address: "ana@example.com" }],
+      websites: [
+        { label: "Portfolio", url: "example.com/ana" },
+        { label: "Studio", url: "example.com/studio" },
+      ],
+      address: "1 Main St, Springfield",
+      socials: [],
+    },
+  },
+  {
+    // Every Business extra: split hours, a closure, a gallery, a ready-made button, services.
+    type: "business",
+    slug: "PHONE-BIZ-PLUS",
+    content: {
+      name: "Mario's Pizzeria & Bakery",
+      tagline: "Since 1999",
+      about: "Wood-fired pizza and fresh bread.",
+      timeZone: "America/New_York",
+      showHours: true,
+      hours: [
+        { open: true, from: "09:00", to: "12:00", from2: "13:00", to2: "17:00" },
+        ...Array.from({ length: 4 }, () => ({ open: true, from: "09:00", to: "17:00" })),
+        { open: false, from: "09:00", to: "17:00" },
+        { open: false, from: "09:00", to: "17:00" },
+      ],
+      closures: [{ date: "2099-12-25", note: "Christmas" }],
+      // Placeholder files: the row and the viewer are what's tested, not the photos.
+      gallery: Array.from({ length: 6 }, (_, i) => ({
+        path: `00000000-0000-4000-8000-000000000000/photo-${i + 1}.jpg`,
+        name: `photo-${i + 1}.jpg`,
+        type: "image/jpeg",
+        size: 1000,
+      })),
+      buttons: [
+        { label: "Leave a Google review", url: "https://g.page/r/abc", on: true, icon: "review" },
+      ],
+      services: Array.from({ length: 12 }, (_, i) => ({
+        name: `Catering package ${i + 1}`,
+        price: "$120",
+        description: "Feeds ten",
+      })),
+      socials: [],
+    },
+  },
+  {
     type: "menu",
     slug: "PHONE-MENU",
     content: {
