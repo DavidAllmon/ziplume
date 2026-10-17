@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { newDish } from "./menu";
 import { limitAt, overLimit, sanitizePage, shortenBy } from "./sanitize";
 import { LIMITS, PAGE_DEFAULTS } from "./types";
 import { validatePage } from "./validate";
@@ -48,7 +49,8 @@ describe("text limits", () => {
     menu.sections = [
       {
         name: "Mains",
-        items: [{ name: "Pie", description: long(301), price: "9", tags: "" }],
+        description: "",
+        items: [{ ...newDish(), name: "Pie", description: long(301), price: "9" }],
       },
     ];
     expect(overLimit("menu", menu)).toEqual({

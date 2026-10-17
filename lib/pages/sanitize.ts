@@ -3,6 +3,7 @@ import type { PageTypeId } from "@/lib/qr/types";
 
 import { legacyLook, sanitizeLook, themeLook, TYPE_THEME, type PageLook } from "./look";
 import { sanitizeMedia } from "./media";
+import { DIET_LABEL_IDS, tagsToLabels } from "./menu";
 import {
   LIMITS,
   PAGE_DEFAULTS,
@@ -24,7 +25,8 @@ type Spec =
   | { kind: "mediaList"; max: number }
   | { kind: "hours" }
   | { kind: "enum"; values: readonly string[] }
-  | { kind: "list"; max: number; item: Record<string, Spec> };
+  | { kind: "list"; max: number; item: Record<string, Spec> }
+  | { kind: "enumList"; values: readonly string[]; max: number };
 
 const str = (max: number = LIMITS.short): Spec => ({ kind: "string", max });
 const bool: Spec = { kind: "bool" };
@@ -114,10 +116,27 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
       max: LIMITS.sections,
       item: {
         name: str(80),
+        description: str(LIMITS.medium),
         items: {
           kind: "list",
           max: LIMITS.items,
-          item: { name: str(), description: str(LIMITS.medium), price: str(20), tags: str(80) },
+          item: {
+            name: str(),
+            description: str(LIMITS.medium),
+            price: str(20),
+            tags: str(80),
+            photo: media,
+            labels: { kind: "enumList", values: DIET_LABEL_IDS, max: DIET_LABEL_IDS.length },
+            // Dishes saved before they could be hidden all show.
+            on: { kind: "bool", fallback: true },
+            soldOut: bool,
+            popular: bool,
+            options: {
+              kind: "list",
+              max: LIMITS.options,
+              item: { label: str(30), price: str(20) },
+            },
+          },
         },
       },
     },
@@ -229,6 +248,14 @@ function clean(spec: Spec, raw: unknown, fallback: unknown, options: CleanOption
       if (!Array.isArray(raw)) return fallback;
       return raw.slice(0, spec.max).map((item) => cleanObject(spec.item, item, {}, options));
     }
+    case "enumList":
+      return Array.isArray(raw)
+        ? [
+            ...new Set(
+              raw.filter((v): v is string => typeof v === "string" && spec.values.includes(v)),
+            ),
+          ].slice(0, spec.max)
+        : fallback;
   }
 }
 
@@ -240,6 +267,7 @@ function emptyFor(spec: Spec): unknown {
       return spec.fallback ?? false;
     case "list":
     case "mediaList":
+    case "enumList":
       return [];
     case "media":
       return null;
@@ -264,11 +292,29 @@ function cleanObject(
   return out;
 }
 
+const upgradeDish = (dish: unknown) => {
+  if (!isObject(dish) || "labels" in dish || typeof dish.tags !== "string") return dish;
+  const { labels, rest } = tagsToLabels(dish.tags);
+  return { ...dish, labels, tags: rest };
+};
+
 /** Older content shapes, brought up to date before the schema reads them. */
 const UPGRADES: Partial<
   Record<PageTypeId, (raw: Record<string, unknown>) => Record<string, unknown>>
 > = {
   // Contact pages had one website before they had several (spec item 13).
+  // Dishes had free-text tags before they had dietary labels (spec item 22, ruling 8).
+  menu: (raw) =>
+    Array.isArray(raw.sections)
+      ? {
+          ...raw,
+          sections: raw.sections.map((section) =>
+            isObject(section) && Array.isArray(section.items)
+              ? { ...section, items: section.items.map(upgradeDish) }
+              : section,
+          ),
+        }
+      : raw,
   vcard: (raw) =>
     !("websites" in raw) && typeof raw.website === "string" && raw.website.trim()
       ? { ...raw, websites: [{ label: "", url: raw.website }] }

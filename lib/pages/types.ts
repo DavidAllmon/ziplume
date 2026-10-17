@@ -1,6 +1,7 @@
 import type { PageTypeId } from "@/lib/qr/types";
 
 import { themeLook, TYPE_THEME, type PageLook } from "./look";
+import { newDish, type DietLabel } from "./menu";
 import { SOCIAL_ICONS } from "./social-icons.data";
 
 // Content for hosted pages: what the owner edits and what scanners see at /p/<slug>.
@@ -84,15 +85,31 @@ export interface Closure {
   note: string;
 }
 
+export interface PriceOption {
+  label: string;
+  price: string;
+}
+
 export interface MenuItem {
   name: string;
   description: string;
   price: string;
+  /** Other notes the labels don't cover ("contains egg"); old tags that weren't a label. */
   tags: string;
+  /** Shown as a square on the row; opens the viewer (spec item 21). */
+  photo: Media | null;
+  labels: DietLabel[];
+  /** Off keeps the dish in the editor but not on the page (spec item 23). */
+  on: boolean;
+  soldOut: boolean;
+  popular: boolean;
+  /** Up to 4; shown instead of the price (spec item 24). */
+  options: PriceOption[];
 }
 
 export interface MenuSection {
   name: string;
+  description: string;
   items: MenuItem[];
 }
 
@@ -269,6 +286,7 @@ export const LIMITS = {
   emails: 4,
   websites: 4,
   closures: 10,
+  options: 4,
   gallery: 6,
   services: 30,
   buttons: 6,
@@ -372,7 +390,7 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       description: "",
       logo: null,
       currency: "$",
-      sections: [{ name: "Starters", items: [{ name: "", description: "", price: "", tags: "" }] }],
+      sections: [{ name: "Starters", description: "", items: [newDish()] }],
       note: "",
     }),
   coupon: () =>

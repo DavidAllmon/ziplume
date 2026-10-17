@@ -104,8 +104,24 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
   menu: (p) => {
     const errors: PageErrors = {};
     if (!p.name.trim()) errors.name = "Add the restaurant name";
-    const items = p.sections.flatMap((s) => s.items).filter((item) => item.name.trim());
-    if (!items.length) errors["sections.0.items.0.name"] = "Add at least one dish or drink";
+    const named = p.sections
+      .flatMap((s, si) => s.items.map((item, ii) => ({ item, at: `sections.${si}.items.${ii}` })))
+      .filter(({ item }) => item.name.trim());
+    if (!named.length) errors["sections.0.items.0.name"] = "Add at least one dish or drink";
+    else if (!named.some(({ item }) => item.on)) {
+      // A hidden dish is parked, like a link that's off: the page needs one that shows.
+      errors[`${named[0]!.at}.name`] = "Show at least one dish or drink";
+    }
+    p.sections.forEach((s, si) =>
+      s.items.forEach((item, ii) =>
+        item.options.forEach((o, oi) => {
+          const at = `sections.${si}.items.${ii}.options.${oi}`;
+          if (o.price.trim() && !o.label.trim())
+            errors[`${at}.label`] = "Name this option, like Small";
+          if (o.label.trim() && !o.price.trim()) errors[`${at}.price`] = "Add its price";
+        }),
+      ),
+    );
     return errors;
   },
   coupon: (p) => {

@@ -12,6 +12,7 @@ import {
   type PageContentMap,
 } from "@/lib/pages/types";
 import { newLink } from "@/lib/pages/links";
+import { newDish } from "@/lib/pages/menu";
 import { limitAt } from "@/lib/pages/sanitize";
 import { validatePage } from "@/lib/pages/validate";
 import { PAGE_TYPE_IDS, type PageTypeId } from "@/lib/qr/types";
@@ -210,13 +211,13 @@ describe("PageEditor lists", () => {
   it("moves a menu section with its dishes", async () => {
     const user = userEvent.setup();
     const onUpdate = vi.fn();
-    const dish = (name: string) => ({ name, description: "", price: "", tags: "" });
+    const dish = (name: string) => ({ ...newDish(), name });
     const menu: MenuPage = {
       ...PAGE_DEFAULTS.menu(),
       name: "Diner",
       sections: [
-        { name: "Starters", items: [dish("Soup")] },
-        { name: "Mains", items: [dish("Pie"), dish("Fish")] },
+        { name: "Starters", description: "", items: [dish("Soup")] },
+        { name: "Mains", description: "", items: [dish("Pie"), dish("Fish")] },
       ],
     };
     render(<PageEditor type="menu" page={menu} errors={{}} onUpdate={onUpdate} />);
@@ -299,13 +300,13 @@ function Stateful<K extends PageTypeId>({
 }
 
 describe("PageEditor focus", () => {
-  const dish = (name: string) => ({ name, description: "", price: "", tags: "" });
+  const dish = (name: string) => ({ ...newDish(), name });
   const menu: MenuPage = {
     ...PAGE_DEFAULTS.menu(),
     name: "Diner",
     sections: [
-      { name: "Starters", items: [dish("Soup")] },
-      { name: "Mains", items: [dish("Pie")] },
+      { name: "Starters", description: "", items: [dish("Soup")] },
+      { name: "Mains", description: "", items: [dish("Pie")] },
     ],
   };
 

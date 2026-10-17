@@ -1,5 +1,6 @@
 "use client";
 
+import { newDish } from "@/lib/pages/menu";
 import { LIMITS, type MenuPage } from "@/lib/pages/types";
 
 import { AreaField, MediaField, rowName, TextField } from "../fields";
@@ -45,10 +46,7 @@ export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
           path="sections"
           errors={errors}
           itemLabel={(section, s) => rowName("section", section.name, s)}
-          newItem={() => ({
-            name: "",
-            items: [{ name: "", description: "", price: "", tags: "" }],
-          })}
+          newItem={() => ({ name: "", description: "", items: [newDish()] })}
           render={(section, update, s) => (
             <>
               <TextField
@@ -69,7 +67,7 @@ export function MenuEditor({ page, set, errors }: EditorProps<MenuPage>) {
                 path={`sections.${s}.items`}
                 errors={errors}
                 itemLabel={(item, i) => rowName("item", item.name, i)}
-                newItem={() => ({ name: "", description: "", price: "", tags: "" })}
+                newItem={newDish}
                 render={(item, updateItem, i) => (
                   <>
                     <div className="grid gap-3 sm:grid-cols-[1fr_6rem]">
