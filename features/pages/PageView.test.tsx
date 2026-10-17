@@ -90,7 +90,11 @@ describe("PageView", () => {
   });
 
   it("doesn't play video or audio in the preview", () => {
-    const video = { ...PAGE_DEFAULTS.video(), title: "Clip", url: "https://youtu.be/dQw4w9WgXcQ" };
+    const video = {
+      ...PAGE_DEFAULTS.video(),
+      title: "Clip",
+      videos: [{ title: "", url: "https://youtu.be/dQw4w9WgXcQ", start: "" }],
+    };
     const { container, getAllByText, unmount } = view("video", video);
     expect(container.querySelector("iframe, video")).toBeNull();
     expect(getAllByText("Plays on the live page").length).toBeGreaterThan(0);
@@ -688,5 +692,205 @@ describe("An event in a time zone this browser doesn't know", () => {
       "href",
       "https://meet.example.com/launch",
     );
+  });
+});
+
+describe("Images extras", () => {
+  const item = (n: number, patch: object = {}) => ({
+    image: media(`${n}.jpg`, "image/jpeg"),
+    caption: "",
+    link: "",
+    ...patch,
+  });
+  const images = (list: object[], layout = "grid2") => ({
+    ...PAGE_DEFAULTS.images(),
+    title: "Trip",
+    images: list,
+    layout,
+  });
+
+  it("names each image by its caption or its place, and opens it in the viewer with its link", async () => {
+    const user = userEvent.setup();
+    view(
+      "images",
+      images([item(1, { caption: "Sunset", link: "example.com/sunset" }), item(2)]),
+      false,
+    );
+    expect(screen.getByRole("button", { name: "Image 2 of 2" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Sunset" }));
+    const dialog = screen.getByRole("dialog", { name: "Photo 1 of 2" });
+    expect(within(dialog).getByText("Sunset")).toBeInTheDocument();
+    expect(within(dialog).getByRole("link", { name: "Open link" })).toHaveAttribute(
+      "href",
+      "https://example.com/sunset",
+    );
+  });
+
+  it("lays images out in 2 or 3 columns, or one column with captions", () => {
+    const list = [item(1, { caption: "Sunset" }), item(2), item(3)];
+    const { container, unmount } = view("images", images(list, "grid3"), false);
+    expect(container.querySelector("[data-layout=grid3]")).not.toBeNull();
+    expect(screen.queryByText("Sunset")).toBeNull();
+    unmount();
+    const one = view("images", images(list, "single"), false);
+    expect(one.container.querySelector("[data-layout=single]")).not.toBeNull();
+    expect(screen.getByText("Sunset")).toBeInTheDocument();
+  });
+
+  it("shows a carousel with dots for a few images, and a counter for more", async () => {
+    const user = userEvent.setup();
+    const { unmount } = view("images", images([item(1), item(2), item(3)], "carousel"), false);
+    expect(screen.getByRole("button", { name: "Go to image 2 of 3" })).toBeInTheDocument();
+    unmount();
+    view(
+      "images",
+      images(
+        [1, 2, 3, 4, 5, 6, 7].map((n) => item(n)),
+        "carousel",
+      ),
+      false,
+    );
+    expect(screen.queryByRole("button", { name: /^Go to image/ })).toBeNull();
+    expect(screen.getByText("1 of 7")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous image" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await user.click(screen.getByRole("button", { name: "Next image" }));
+    expect(screen.getByText("2 of 7")).toBeInTheDocument();
+  });
+
+  it("keeps images still in the editor's preview", () => {
+    view("images", images([item(1, { caption: "Sunset" })], "carousel"), true);
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByRole("img", { name: "Sunset" })).toBeInTheDocument();
+  });
+});
+
+describe("Video extras", () => {
+  const video = (videos: object[], description = "About these") => ({
+    ...PAGE_DEFAULTS.video(),
+    title: "Clips",
+    description,
+    videos,
+  });
+  const v = (url: string, patch: object = {}) => ({ title: "", url, start: "", ...patch });
+
+  it("holds a TikTok back until it's tapped", async () => {
+    const user = userEvent.setup();
+    const { container } = view(
+      "video",
+      video([v("https://www.tiktok.com/@cafe/video/7234567890123456789")]),
+      false,
+    );
+    expect(container.querySelector("iframe")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Tap to play from TikTok" }));
+    expect(container.querySelector("iframe")).toHaveAttribute(
+      "src",
+      "https://www.tiktok.com/embed/v2/7234567890123456789",
+    );
+  });
+
+  it("plays YouTube in place from its start time", () => {
+    const { container } = view(
+      "video",
+      video([v("https://youtu.be/dQw4w9WgXcQ", { start: "1:23" })]),
+      false,
+    );
+    expect(container.querySelector("iframe")).toHaveAttribute(
+      "src",
+      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=83",
+    );
+  });
+
+  it("gives each of several videos its own card and title, with the description at the top", () => {
+    view(
+      "video",
+      video([
+        v("https://youtu.be/dQw4w9WgXcQ", { title: "Trailer" }),
+        v("https://www.loom.com/share/0123456789abcdef0123456789abcdef", {
+          title: "Behind the scenes",
+        }),
+      ]),
+      false,
+    );
+    expect(screen.getByRole("heading", { level: 2, name: "Trailer" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Behind the scenes" }),
+    ).toBeInTheDocument();
+    // Under the page title, before the first video.
+    const description = screen.getByText("About these");
+    const first = screen.getByRole("heading", { level: 2, name: "Trailer" });
+    expect(
+      description.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("keeps players still in the editor's preview", () => {
+    const { container } = view(
+      "video",
+      video([v("https://www.tiktok.com/@cafe/video/7234567890123456789")]),
+      true,
+    );
+    expect(container.querySelector("iframe")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Tap to play/ })).toBeNull();
+  });
+});
+
+describe("App extras", () => {
+  it("shows tall screenshots that open in the viewer, and the features", () => {
+    view(
+      "app",
+      {
+        ...PAGE_DEFAULTS.app(),
+        name: "Tasks",
+        iosUrl: "https://apps.apple.com/app/id1",
+        screenshots: [media("s1.png", "image/png"), media("s2.png", "image/png")],
+        features: [{ text: "Works offline" }, { text: "" }, { text: "Syncs everywhere" }],
+      },
+      false,
+    );
+    expect(screen.getByRole("button", { name: "Open photo 1 of 2" })).toBeInTheDocument();
+    const features = within(screen.getByRole("region", { name: "Features" }));
+    expect(features.getAllByRole("listitem")).toHaveLength(2);
+    expect(features.getByText("Works offline")).toBeInTheDocument();
+  });
+});
+
+describe("Images and Video fixes", () => {
+  const item = (n: number, patch: object = {}) => ({
+    image: media(`${n}.jpg`, "image/jpeg"),
+    caption: "",
+    link: "",
+    ...patch,
+  });
+
+  it("draws a carousel slide's focus ring inside it, where the row can't clip it", () => {
+    view(
+      "images",
+      { ...PAGE_DEFAULTS.images(), images: [item(1), item(2)], layout: "carousel" },
+      false,
+    );
+    expect(screen.getByRole("button", { name: "Image 1 of 2" }).className).toMatch(
+      /focus-visible:-outline-offset-\d/,
+    );
+  });
+
+  it("keeps an old one-video page's description above its Watch video button", () => {
+    view(
+      "video",
+      {
+        ...PAGE_DEFAULTS.video(),
+        title: "Clip",
+        description: "About it",
+        videos: [{ title: "", url: "https://example.com/video", start: "" }],
+      },
+      false,
+    );
+    const description = screen.getByText("About it");
+    const watch = screen.getByRole("link", { name: /Watch video/ });
+    expect(
+      description.compareDocumentPosition(watch) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

@@ -255,17 +255,38 @@ export interface PdfPage extends Themed {
   direct: boolean;
 }
 
+export interface ImageItem {
+  image: Media;
+  /** Shown in the viewer and one-column layouts; also the image's description (spec item 41). */
+  caption: string;
+  /** An "Open link" button in the viewer (spec item 44). */
+  link: string;
+}
+
+/** spec item 42; an old page is "grid2" (2 columns, the first wide when the count is odd). */
+export type ImagesLayout = "grid2" | "grid3" | "single" | "carousel";
+
 export interface ImagesPage extends Themed {
   title: string;
   description: string;
-  images: Media[];
+  images: ImageItem[];
+  layout: ImagesLayout;
+}
+
+export interface VideoItem {
+  /** Heads its card when the page has several videos (spec item 46). */
+  title: string;
+  /** YouTube, Vimeo, TikTok, Instagram, Facebook or Loom. Ziplume is free, so no uploads. */
+  url: string;
+  /** "1:23", or "" to start at the beginning (spec item 47). */
+  start: string;
 }
 
 export interface VideoPage extends Themed {
   title: string;
   description: string;
-  /** A YouTube (Shorts included) or Vimeo link. Ziplume is free, so videos aren't uploaded. */
-  url: string;
+  /** Up to 10, one below the other; an old page's single link becomes the first. */
+  videos: VideoItem[];
 }
 
 export interface AudioPage extends Themed {
@@ -284,6 +305,12 @@ export interface AppPage extends Themed {
   iosUrl: string;
   androidUrl: string;
   webUrl: string;
+  /** iPhones/iPads to the App Store and Android to Google Play, from the scan (spec item 51). */
+  storeRedirect: boolean;
+  /** Up to 5, resized to 1200 px (spec item 52). */
+  screenshots: Media[];
+  /** Up to 6, each up to 80 characters (spec item 53). */
+  features: { text: string }[];
 }
 
 export interface PageContentMap {
@@ -311,6 +338,9 @@ export const LIMITS = {
   websites: 4,
   closures: 10,
   options: 4,
+  videos: 10,
+  screenshots: 5,
+  features: 6,
   agenda: 30,
   hosts: 12,
   gallery: 6,
@@ -473,13 +503,19 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       direct: false,
     }),
   images: () =>
-    withLook("images", { color: DEFAULT_PAGE_COLOR, title: "", description: "", images: [] }),
+    withLook("images", {
+      color: DEFAULT_PAGE_COLOR,
+      title: "",
+      description: "",
+      images: [],
+      layout: "grid2",
+    }),
   video: () =>
     withLook("video", {
       color: "#DC2626",
       title: "",
       description: "",
-      url: "",
+      videos: [{ title: "", url: "", start: "" }],
     }),
   audio: () =>
     withLook("audio", {
@@ -500,6 +536,9 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       iosUrl: "",
       androidUrl: "",
       webUrl: "",
+      storeRedirect: true,
+      screenshots: [],
+      features: [],
     }),
 };
 

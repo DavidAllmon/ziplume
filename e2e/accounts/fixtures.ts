@@ -99,6 +99,9 @@ const photo = (name: string) => ({
   name: `${name}.jpg`,
   type: "image/jpeg",
   size: 1000,
+  // Every upload records its size, so pages hold the space before the picture loads.
+  width: 1200,
+  height: 900,
 });
 
 /** One page per hosted type, long enough to scroll on a phone where the type allows it. */
@@ -375,6 +378,87 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
     type: "images",
     slug: "PHONE-IMAGES",
     content: { title: "Phone gallery", description: "No images yet.", images: [] },
+  },
+  {
+    type: "images",
+    slug: "PHONE-IMAGES-GRID3",
+    content: {
+      title: "Phone grid",
+      layout: "grid3",
+      images: Array.from({ length: 7 }, (_, i) => ({
+        image: photo(`grid-${i}`),
+        caption: i === 0 ? "A long caption that describes the first picture in detail" : "",
+        link: i === 0 ? "https://example.com/first" : "",
+      })),
+    },
+  },
+  {
+    type: "images",
+    slug: "PHONE-IMAGES-SINGLE",
+    content: {
+      title: "Phone column",
+      layout: "single",
+      images: Array.from({ length: 3 }, (_, i) => ({
+        image: photo(`col-${i}`),
+        caption: i === 0 ? "Acaptionwithonelongunbrokenwordthatmustwrapratherthanwidenthepage" : "",
+        link: "",
+      })),
+    },
+  },
+  {
+    type: "images",
+    slug: "PHONE-IMAGES-CAROUSEL",
+    content: {
+      title: "Phone carousel",
+      layout: "carousel",
+      images: Array.from({ length: 4 }, (_, i) => ({
+        image: photo(`slide-${i}`),
+        caption:
+          i === 0 ? "Slide1withaverylongunbrokencaptionthatkeepsgoingandgoing" : `Slide ${i + 1}`,
+        link: "",
+      })),
+    },
+  },
+  {
+    type: "video",
+    slug: "PHONE-VIDEO-PLUS",
+    content: {
+      title: "Phone clips",
+      description: "Three ways to watch.",
+      videos: [
+        {
+          title: "On TikTok",
+          url: "https://www.tiktok.com/@cafe/video/7234567890123456789",
+          start: "",
+        },
+        {
+          title: "On Loom",
+          url: "https://www.loom.com/share/0123456789abcdef0123456789abcdef",
+          start: "0:10",
+        },
+        // One long unbroken word, like a handle: it must wrap, not widen the page.
+        {
+          title: "@thelittlebakeryonmainstreetinspringfieldusa",
+          url: "https://example.com/video",
+          start: "",
+        },
+      ],
+    },
+  },
+  {
+    type: "app",
+    slug: "PHONE-APP-PLUS",
+    content: {
+      name: "Phone app plus",
+      iosUrl: "https://apps.apple.com/app/id1",
+      androidUrl: "https://play.google.com/store/apps/details?id=com.example",
+      storeRedirect: false,
+      screenshots: Array.from({ length: 5 }, (_, i) => photo(`shot-${i}`)),
+      features: [
+        { text: "Works offline" },
+        { text: "Syncs across every device you own, even very old ones" },
+      ],
+    },
   },
   // No video link, so the page shows its placeholder instead of loading a player.
   {

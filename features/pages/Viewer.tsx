@@ -1,7 +1,7 @@
 "use client";
 
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
@@ -13,6 +13,8 @@ export interface ViewerImage {
   media: Media;
   alt: string;
   caption?: string;
+  /** An "Open link" button in the viewer (spec item 44). */
+  link?: string | null;
 }
 
 // A sideways move shorter than this is a tap, not a swipe.
@@ -99,7 +101,19 @@ export function Viewer({
               <ChevronLeft aria-hidden className="size-6" />
             </button>
           )}
-          <p className="min-w-0 flex-1 text-center text-sm text-white/90">{image?.caption}</p>
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
+            {image?.caption && <p className="text-sm text-white/90">{image.caption}</p>}
+            {image?.link && (
+              <a
+                href={image.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                <ExternalLink aria-hidden className="size-4" /> Open link
+              </a>
+            )}
+          </div>
           {many && (
             <button
               type="button"
@@ -122,10 +136,13 @@ export function Gallery({
   images,
   label,
   preview = false,
+  portrait = false,
 }: {
   images: ViewerImage[];
   label: string;
   preview?: boolean;
+  /** Tall, phone-shaped images (an app's screenshots). */
+  portrait?: boolean;
 }) {
   const [index, setIndex] = useState<number | null>(null);
   if (!images.length) return null;
@@ -136,12 +153,21 @@ export function Gallery({
         className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1"
       >
         {images.map((image, i) => (
-          <li key={image.media.path} className="w-[70%] max-w-64 shrink-0 snap-start">
+          <li
+            key={image.media.path}
+            className={cn(
+              "shrink-0 snap-start",
+              portrait ? "w-[45%] max-w-48" : "w-[70%] max-w-64",
+            )}
+          >
             {preview ? (
               <MediaImage
                 media={image.media}
                 alt={image.alt}
-                className="aspect-[4/3] w-full rounded-(--pg-radius) object-cover"
+                className={cn(
+                  "w-full rounded-(--pg-radius) object-cover",
+                  portrait ? "aspect-[9/16]" : "aspect-[4/3]",
+                )}
               />
             ) : (
               <button
@@ -153,7 +179,7 @@ export function Gallery({
                 <MediaImage
                   media={image.media}
                   alt=""
-                  className="aspect-[4/3] w-full object-cover"
+                  className={cn("w-full object-cover", portrait ? "aspect-[9/16]" : "aspect-[4/3]")}
                 />
               </button>
             )}
@@ -200,8 +226,9 @@ export function ViewerThumb({
       aria-label={label}
       onClick={() => open(index)}
       className={cn(
-        className,
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring)",
+        // Last, so a caller can move the ring (inside a row that would clip it).
+        className,
       )}
     >
       {children}

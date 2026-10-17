@@ -251,15 +251,14 @@ export default function DevelopersPage() {
         <code>pdf</code>, <code>images</code>, <code>video</code>, <code>audio</code> and{" "}
         <code>app</code>) take the same content as their editor in the app. The easiest way to see
         the shape is to make one in the app and fetch it with <code>GET /codes/{"{id}"}</code>.
-        Video pages take a YouTube or Vimeo link in <code>url</code>. Links may also set{" "}
-        <code>kind</code> (<code>link</code> or <code>header</code>), <code>type</code> (
-        <code>web</code>, <code>email</code>, <code>phone</code> or <code>sms</code>),{" "}
-        <code>featured</code> (only the first featured link is drawn), <code>icon</code> (
-        <code>auto</code>, <code>none</code> or <code>image</code>) with an uploaded{" "}
-        <code>image</code>, and <code>showFrom</code>/<code>showUntil</code> (ISO times). Upload
-        images and files in the app first; the API can refer to them but not upload them. A link or
-        button with <code>&quot;on&quot;: false</code> stays saved but isn’t shown on the page;
-        without it, it’s shown.
+        Links may also set <code>kind</code> (<code>link</code> or <code>header</code>),{" "}
+        <code>type</code> (<code>web</code>, <code>email</code>, <code>phone</code> or{" "}
+        <code>sms</code>), <code>featured</code> (only the first featured link is drawn),{" "}
+        <code>icon</code> (<code>auto</code>, <code>none</code> or <code>image</code>) with an
+        uploaded <code>image</code>, and <code>showFrom</code>/<code>showUntil</code> (ISO times).
+        Upload images and files in the app first; the API can refer to them but not upload them. A
+        link or button with <code>&quot;on&quot;: false</code> stays saved but isn’t shown on the
+        page; without it, it’s shown.
       </p>
       <p>
         Contact pages (<code>vcard</code>) take <code>websites</code> (up to 4, each a{" "}
@@ -290,6 +289,20 @@ export default function DevelopersPage() {
         <code>time</code> as <code>HH:mm</code>, a <code>title</code> and a <code>note</code>), and{" "}
         <code>hosts</code> (up to 12, each a <code>photo</code>, <code>name</code> and{" "}
         <code>role</code>).
+      </p>
+      <p>
+        Images pages take <code>images</code> (up to 24, each an uploaded <code>image</code>, a{" "}
+        <code>caption</code> of up to 200 characters, and a <code>link</code>; a plain list of files
+        still works) and a <code>layout</code>: <code>grid2</code>, <code>grid3</code>,{" "}
+        <code>single</code> or <code>carousel</code>. Video pages take <code>videos</code> (up to
+        10, each a <code>title</code>, a <code>url</code> from YouTube, Vimeo, TikTok, Instagram,
+        Facebook or Loom, and a <code>start</code> like <code>1:23</code>); a single{" "}
+        <code>url</code> still works, as the first video. App pages take <code>storeRedirect</code>{" "}
+        (true sends phones to their store), <code>screenshots</code> (up to 5 images) and{" "}
+        <code>features</code> (up to 6, each a <code>text</code>). Responses use the new shapes:
+        Images pages return image items, and Video pages return <code>videos</code>, not{" "}
+        <code>url</code>. A <code>url</code> sent back with fetched content replaces the first
+        video’s link.
       </p>
       <Code>{`{
   "type": "links",

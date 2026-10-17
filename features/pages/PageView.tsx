@@ -1,5 +1,6 @@
 import {
   CalendarPlus,
+  Check,
   Clock,
   Download,
   ExternalLink,
@@ -29,13 +30,16 @@ import type {
   CouponPage,
   EventPage,
   FeedbackPage,
+  ImageItem,
   ImagesPage,
   LinksPage,
+  Media,
   MenuItem,
   MenuPage,
   PageContentMap,
   PdfPage,
   VcardPage,
+  VideoItem,
   VideoPage,
 } from "@/lib/pages/types";
 import { DAY_NAMES, formatTime, rangesOf } from "@/lib/pages/hours";
@@ -58,6 +62,8 @@ import { LinkIconMark } from "./LinkIcon";
 import { DietMark } from "./DietMark";
 import { FeedbackForm } from "./FeedbackForm";
 import { ScanCode } from "./ScanCode";
+import { TapToPlay } from "./TapToPlay";
+import { Carousel } from "./Carousel";
 import { Gallery, ViewerGroup, ViewerThumb, type ViewerImage } from "./Viewer";
 import { OpenStatus } from "./OpenStatus";
 import {
@@ -897,6 +903,72 @@ function PdfView({ page, preview }: ViewProps<PdfPage>) {
 
 function ImagesView({ page, preview }: ViewProps<ImagesPage>) {
   const look = page.look;
+  // Drawn as given: an older page's images may still be plain files.
+  const items: ImageItem[] = (page.images ?? []).map((it) =>
+    "image" in it ? it : { image: it as unknown as Media, caption: "", link: "" },
+  );
+  const n = items.length;
+  // A caption is also the image's description; without one, its place (spec item 41).
+  const alt = (item: ImageItem, i: number) => item.caption?.trim() || `Image ${i + 1} of ${n}`;
+  const viewer: ViewerImage[] = items.map((item, i) => ({
+    media: item.image,
+    alt: alt(item, i),
+    caption: item.caption?.trim() || undefined,
+    link: safeHref(item.link ?? ""),
+  }));
+  const layout = page.layout ?? "grid2";
+  const tile = (item: ImageItem, i: number, className: string) => (
+    <ViewerThumb
+      index={i}
+      label={alt(item, i)}
+      className="block w-full overflow-hidden rounded-(--pg-radius) bg-surface-2"
+    >
+      <MediaImage
+        media={item.image}
+        alt={preview ? alt(item, i) : ""}
+        eager={i < 2}
+        className={className}
+      />
+    </ViewerThumb>
+  );
+  const body = !n ? (
+    <EmptyNote>Images you add appear here.</EmptyNote>
+  ) : layout === "carousel" ? (
+    <Carousel
+      items={items.map((item, i) => ({
+        media: item.image,
+        alt: alt(item, i),
+        caption: item.caption?.trim() || undefined,
+      }))}
+      preview={preview}
+    />
+  ) : layout === "single" ? (
+    <ul data-layout="single" className="flex flex-col gap-5">
+      {items.map((item, i) => (
+        <li key={item.image.path} className="flex flex-col gap-2">
+          {tile(item, i, "h-auto w-full")}
+          {item.caption?.trim() && (
+            <p className="text-sm [overflow-wrap:anywhere] text-fg-muted">{item.caption}</p>
+          )}
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <ul
+      data-layout={layout}
+      className={layout === "grid3" ? "grid grid-cols-3 gap-1.5" : "grid grid-cols-2 gap-2"}
+    >
+      {items.map((item, i) => (
+        <li
+          key={item.image.path}
+          // An old page's look: 2 columns, the first image wide when the count is odd.
+          className={layout === "grid2" && n % 2 === 1 && i === 0 ? "col-span-2" : undefined}
+        >
+          {tile(item, i, "aspect-square w-full object-cover")}
+        </li>
+      ))}
+    </ul>
+  );
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -907,32 +979,7 @@ function ImagesView({ page, preview }: ViewProps<ImagesPage>) {
         title={page.title || "Gallery"}
         sub={page.description || undefined}
       />
-      {page.images.length ? (
-        <ul className="grid grid-cols-2 gap-2">
-          {page.images.map((image, i) => (
-            <li
-              key={image.path}
-              className={page.images.length % 2 === 1 && i === 0 ? "col-span-2" : undefined}
-            >
-              <a
-                href={preview ? undefined : mediaUrl(image.path)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block overflow-hidden rounded-(--pg-radius) bg-surface-2"
-              >
-                <MediaImage
-                  media={image}
-                  alt={`Image ${i + 1} of ${page.images.length}`}
-                  eager={i < 2}
-                  className="aspect-square w-full object-cover"
-                />
-              </a>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <EmptyNote>Images you add appear here.</EmptyNote>
-      )}
+      {!preview && n ? <ViewerGroup images={viewer}>{body}</ViewerGroup> : body}
     </PageFrame>
   );
 }
@@ -949,10 +996,63 @@ function StillMedia({ icon }: { icon: ReactNode }) {
   );
 }
 
+function VideoPlayer({
+  video,
+  title,
+  preview,
+  children,
+}: {
+  video: VideoItem;
+  title: string;
+  preview?: boolean;
+  /** Between the player and its Watch video button (a one-video page's description). */
+  children?: ReactNode;
+}) {
+  const embed = videoEmbed(video.url, video.start);
+  const link = !embed ? safeHref(video.url) : null;
+  return (
+    <>
+      {/* The player sits inside the card's padding: no overhang on phones. */}
+      <div className="overflow-hidden rounded-(--pg-radius) bg-black">
+        {preview && embed ? (
+          <StillMedia icon={<Play aria-hidden className="size-12" />} />
+        ) : embed?.tap ? (
+          <TapToPlay embed={embed} title={title} />
+        ) : embed ? (
+          <iframe
+            src={embed.src}
+            title={title}
+            className="aspect-video w-full"
+            allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+            loading="lazy"
+          />
+        ) : (
+          <div className="grid aspect-video place-items-center text-white/80">
+            <Play aria-hidden className="size-14" />
+          </div>
+        )}
+      </div>
+      {children}
+      {link && (
+        <PageLink href={link} preview={preview}>
+          <Play aria-hidden /> Watch video
+        </PageLink>
+      )}
+    </>
+  );
+}
+
 function VideoView({ page, preview }: ViewProps<VideoPage>) {
-  const embed = videoEmbed(page.url);
-  const link = !embed ? safeHref(page.url) : null;
   const look = page.look;
+  // Drawn as given: an old page with only a link shows it as its one video.
+  const all = page.videos ?? [
+    { title: "", url: (page as unknown as { url?: string }).url ?? "", start: "" },
+  ];
+  const videos = all.filter((v) => v.url.trim());
+  const many = videos.length > 1;
+  const description = page.description.trim() && <Prose text={page.description} />;
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -962,34 +1062,24 @@ function VideoView({ page, preview }: ViewProps<VideoPage>) {
         imageAlt=""
         title={page.title || "Video"}
       />
-      <PageCard className="flex flex-col gap-4">
-        {/* The player sits inside the card's padding: no overhang on phones. */}
-        <div className="overflow-hidden rounded-(--pg-radius) bg-black">
-          {preview && embed ? (
-            <StillMedia icon={<Play aria-hidden className="size-12" />} />
-          ) : embed ? (
-            <iframe
-              src={embed.src}
-              title={page.title || "Video"}
-              className="aspect-video w-full"
-              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-              loading="lazy"
-            />
-          ) : (
-            <div className="grid aspect-video place-items-center text-white/80">
-              <Play aria-hidden className="size-14" />
-            </div>
+      {many && description && <div className="px-1">{description}</div>}
+      {(videos.length ? videos : [{ title: "", url: "", start: "" }]).map((video, i) => (
+        <PageCard key={i} className="flex flex-col gap-4">
+          {video.title.trim() && (
+            <h2 className="font-page-heading text-lg font-bold [overflow-wrap:anywhere] text-fg">
+              {video.title}
+            </h2>
           )}
-        </div>
-        {page.description.trim() && <Prose text={page.description} />}
-        {link && (
-          <PageLink href={link} preview={preview}>
-            <Play aria-hidden /> Watch video
-          </PageLink>
-        )}
-      </PageCard>
+          <VideoPlayer
+            video={video}
+            title={video.title.trim() || page.title || "Video"}
+            preview={preview}
+          >
+            {/* One video reads as it always has: player, description, then Watch video. */}
+            {!many && description}
+          </VideoPlayer>
+        </PageCard>
+      ))}
     </PageFrame>
   );
 }
@@ -1039,6 +1129,7 @@ function AppView({ page, preview }: ViewProps<AppPage>) {
   const android = safeHref(page.androidUrl);
   const web = safeHref(page.webUrl);
   const look = page.look;
+  const features = (page.features ?? []).filter((f) => f.text.trim());
   return (
     <PageFrame look={look} preview={preview}>
       {!page.icon && (
@@ -1068,6 +1159,30 @@ function AppView({ page, preview }: ViewProps<AppPage>) {
           </PageLink>
         </div>
       </PageCard>
+      <Gallery
+        images={(page.screenshots ?? []).map((media, i, all) => ({
+          media,
+          alt: `Screenshot ${i + 1} of ${all.length}`,
+        }))}
+        label="Screenshots"
+        preview={preview}
+        portrait
+      />
+      {features.length > 0 && (
+        <PageCard>
+          <section aria-label="Features">
+            <h2 className="mb-3 font-page-heading text-lg font-bold text-fg">Features</h2>
+            <ul className="flex flex-col gap-2.5">
+              {features.map((f, i) => (
+                <li key={i} className="flex gap-3 text-[15px] text-fg">
+                  <Check aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--page-accent)]" />
+                  <span className="min-w-0 [overflow-wrap:anywhere]">{f.text}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </PageCard>
+      )}
     </PageFrame>
   );
 }

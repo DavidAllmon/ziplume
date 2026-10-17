@@ -85,14 +85,37 @@ export function socialHref(network: SocialNetwork, value: string): string | null
   return safeHref(v);
 }
 
-export type VideoEmbed = { provider: "youtube" | "vimeo"; id: string; src: string };
+export type VideoEmbed = {
+  provider: "youtube" | "vimeo" | "tiktok" | "instagram" | "facebook" | "loom";
+  id: string;
+  src: string;
+  /** For "Tap to play from TikTok". */
+  name: string;
+  /** Phone-shaped (TikTok, Instagram, Facebook reels). */
+  vertical: boolean;
+  /** Loads only after a tap, keeping the site's trackers off until then (spec item 45). */
+  tap: boolean;
+};
 
-/** Turns a YouTube or Vimeo link into a privacy-friendly embed, or null. */
-export function videoEmbed(input: string): VideoEmbed | null {
+/** Seconds from "1:23", "1:02:03" or "83"; null when it isn't a time. */
+export function startSeconds(text: string): number | null {
+  const t = text.trim();
+  if (!/^\d{1,3}(:\d{2}){0,2}$/.test(t)) return null;
+  const parts = t.split(":").map(Number);
+  if (parts.slice(1).some((p) => p > 59)) return null;
+  return parts.reduce((total, p) => total * 60 + p, 0);
+}
+
+/**
+ * A video link as a privacy-friendly embed: YouTube and Vimeo play in place; TikTok, Instagram,
+ * Facebook and Loom load after a tap. `start` ("1:23") applies where the player takes one.
+ */
+export function videoEmbed(input: string, start = ""): VideoEmbed | null {
   const href = safeHref(input);
   if (!href) return null;
   const url = new URL(href);
-  const host = url.hostname.replace(/^(www\.|m\.)/, "");
+  const host = url.hostname.replace(/^(www\.|m\.|web\.)/, "");
+  const at = startSeconds(start) || 0;
   let id: string | null = null;
   if (host === "youtu.be") id = url.pathname.slice(1);
   else if (host === "youtube.com" || host === "youtube-nocookie.com") {
@@ -102,12 +125,73 @@ export function videoEmbed(input: string): VideoEmbed | null {
       null;
   }
   if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) {
-    return { provider: "youtube", id, src: `https://www.youtube-nocookie.com/embed/${id}` };
+    const src = `https://www.youtube-nocookie.com/embed/${id}${at ? `?start=${at}` : ""}`;
+    return { provider: "youtube", id, src, name: "YouTube", vertical: false, tap: false };
   }
   if (host === "vimeo.com" || host === "player.vimeo.com") {
     const vimeo = /\/(?:video\/)?(\d{6,12})(?:$|[/?#])/.exec(url.pathname)?.[1];
-    if (vimeo)
-      return { provider: "vimeo", id: vimeo, src: `https://player.vimeo.com/video/${vimeo}?dnt=1` };
+    if (vimeo) {
+      const src = `https://player.vimeo.com/video/${vimeo}?dnt=1${at ? `#t=${at}s` : ""}`;
+      return { provider: "vimeo", id: vimeo, src, name: "Vimeo", vertical: false, tap: false };
+    }
+  }
+  if (host === "tiktok.com") {
+    const tiktok = /^\/@[^/]+\/video\/(\d{15,21})/.exec(url.pathname)?.[1];
+    if (tiktok) {
+      return {
+        provider: "tiktok",
+        id: tiktok,
+        src: `https://www.tiktok.com/embed/v2/${tiktok}`,
+        name: "TikTok",
+        vertical: true,
+        tap: true,
+      };
+    }
+  }
+  if (host === "instagram.com") {
+    const match = /^\/(p|reels?|tv)\/([A-Za-z0-9_-]{5,40})/.exec(url.pathname);
+    if (match) {
+      const kind = match[1] === "reels" ? "reel" : match[1]!;
+      return {
+        provider: "instagram",
+        id: match[2]!,
+        src: `https://www.instagram.com/${kind}/${match[2]}/embed`,
+        name: "Instagram",
+        vertical: true,
+        tap: true,
+      };
+    }
+  }
+  if (host === "facebook.com") {
+    const video =
+      /\/(?:videos|reel)\/(\d{5,25})/.exec(url.pathname)?.[1] ??
+      (url.pathname.startsWith("/watch") ? url.searchParams.get("v") : null);
+    if (video && /^\d{5,25}$/.test(video)) {
+      const canonical = url.pathname.startsWith("/watch")
+        ? `https://www.facebook.com/watch/?v=${video}`
+        : `https://www.facebook.com${url.pathname}`;
+      return {
+        provider: "facebook",
+        id: video,
+        src: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(canonical)}&show_text=false`,
+        name: "Facebook",
+        vertical: url.pathname.includes("/reel/"),
+        tap: true,
+      };
+    }
+  }
+  if (host === "loom.com") {
+    const loom = /^\/(?:share|embed)\/([a-f0-9]{32})/.exec(url.pathname)?.[1];
+    if (loom) {
+      return {
+        provider: "loom",
+        id: loom,
+        src: `https://www.loom.com/embed/${loom}${at ? `?t=${at}` : ""}`,
+        name: "Loom",
+        vertical: false,
+        tap: true,
+      };
+    }
   }
   return null;
 }

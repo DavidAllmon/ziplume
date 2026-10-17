@@ -258,9 +258,9 @@ const CARDS: Record<PageTypeId, string[]> = {
   feedback: ["Header", "Question", "After sending"],
   pdf: ["File", "Details", "Opening"],
   images: ["Details", "Images"],
-  video: ["Video", "Details"],
+  video: ["Videos", "Details"],
   audio: ["Audio", "Header", "Details"],
-  app: ["Header", "Store links", "Website"],
+  app: ["Header", "Store links", "Screenshots", "Features", "Website"],
 };
 
 describe("PageEditor cards", () => {
@@ -453,6 +453,16 @@ describe("text limits in the editor", () => {
     }
     if (type === "business") page.buttons = [{ label: "", url: "", on: true }];
     if (type === "vcard") page.socials = [{ network: "instagram", url: "" }];
+    if (type === "app") page.features = [{ text: "" }];
+    if (type === "images") {
+      page.images = [
+        {
+          image: { path: `${UID}/a.png`, name: "a.png", type: "image/png", size: 1 },
+          caption: "",
+          link: "",
+        },
+      ];
+    }
     if (type === "event") {
       page.online = true;
       page.agenda = [{ time: "", title: "", note: "" }];
@@ -858,5 +868,138 @@ describe("Menu dish checks", () => {
       />,
     );
     expect(screen.getByRole("textbox", { name: /^Other notes/ })).toBeInTheDocument();
+  });
+});
+
+describe("Images editor extras", () => {
+  const img = (n: number) => ({
+    image: { path: `${UID}/${n}.png`, name: `${n}.png`, type: "image/png", size: 1 },
+    caption: "",
+    link: "",
+  });
+  function Gallery() {
+    const [page, setPage] = useState({ ...PAGE_DEFAULTS.images(), images: [img(1), img(2)] });
+    return (
+      <>
+        <PageEditor
+          type="images"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("chooses a layout, and gives each image a caption and a link", async () => {
+    const user = userEvent.setup();
+    render(<Gallery />);
+    await user.selectOptions(screen.getByRole("combobox", { name: /^Layout/ }), "carousel");
+    await user.type(screen.getByRole("textbox", { name: /^Image 2 caption/ }), "Sunset");
+    await user.type(screen.getByRole("textbox", { name: /^Image 2 link/ }), "example.com");
+    expect(saved().layout).toBe("carousel");
+    expect(saved().images[1]).toMatchObject({ caption: "Sunset", link: "example.com" });
+  });
+
+  it("keeps each caption with its own image when the images move", async () => {
+    const user = userEvent.setup();
+    render(<Gallery />);
+    await user.type(screen.getByRole("textbox", { name: /^Image 1 caption/ }), "First");
+    await user.click(screen.getByRole("button", { name: "Actions for image 1" }));
+    await user.click(screen.getByRole("menuitem", { name: "Move later" }));
+    expect(saved().images.map((i: { caption: string }) => i.caption)).toEqual(["", "First"]);
+    expect(screen.getByRole("textbox", { name: /^Image 2 caption/ })).toHaveValue("First");
+  });
+});
+
+describe("Video editor extras", () => {
+  function Video() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.video());
+    return (
+      <>
+        <PageEditor
+          type="video"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("adds a second video with a title and a start time", async () => {
+    const user = userEvent.setup();
+    render(<Video />);
+    await user.type(screen.getByRole("textbox", { name: /^Video link/ }), "youtu.be/dQw4w9WgXcQ");
+    await user.click(screen.getByRole("button", { name: "Add video" }));
+    const links = screen.getAllByRole("textbox", { name: /^Video link/ });
+    await user.type(links[1]!, "loom.com/share/0123456789abcdef0123456789abcdef");
+    await user.type(screen.getAllByRole("textbox", { name: /^Start at/ })[1]!, "0:10");
+    expect(saved().videos).toHaveLength(2);
+    expect(saved().videos[1]).toMatchObject({ start: "0:10" });
+  });
+});
+
+describe("App editor extras", () => {
+  function App() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.app());
+    return (
+      <>
+        <PageEditor
+          type="app"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("turns the store switch off, and adds a feature", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("switch", { name: /^Send phones straight to their store/ }));
+    await user.click(screen.getByRole("button", { name: "Add feature" }));
+    await user.type(screen.getByRole("textbox", { name: /^Feature/ }), "Works offline");
+    expect(saved()).toMatchObject({ storeRedirect: false, features: [{ text: "Works offline" }] });
+    expect(screen.getByText("Screenshots")).toBeInTheDocument();
+  });
+});
+
+describe("Images editor link checks", () => {
+  function Checked() {
+    const [page, setPage] = useState({
+      ...PAGE_DEFAULTS.images(),
+      images: [
+        {
+          image: { path: `${UID}/1.png`, name: "1.png", type: "image/png", size: 1 },
+          caption: "",
+          link: "",
+        },
+      ],
+    });
+    return (
+      <PageEditor
+        type="images"
+        page={page}
+        errors={validatePage("images", page)}
+        onUpdate={(update) => setPage((p) => update(p))}
+      />
+    );
+  }
+
+  it("waits until you leave an image's link box to say it isn't a web address", async () => {
+    const user = userEvent.setup();
+    render(<Checked />);
+    await user.type(screen.getByRole("textbox", { name: /^Image 1 link/ }), "e");
+    expect(screen.queryByText("Enter a web address, like example.com")).toBeNull();
+    await user.tab();
+    expect(screen.getByText("Enter a web address, like example.com")).toBeInTheDocument();
   });
 });

@@ -25,7 +25,8 @@ type Spec =
   | { kind: "mediaList"; max: number }
   | { kind: "hours" }
   | { kind: "enum"; values: readonly string[] }
-  | { kind: "list"; max: number; item: Record<string, Spec> }
+  // `required`: an item whose field of that name cleans to null (an image that's gone) is dropped.
+  | { kind: "list"; max: number; item: Record<string, Spec>; required?: string }
   | { kind: "enumList"; values: readonly string[]; max: number };
 
 const str = (max: number = LIMITS.short): Spec => ({ kind: "string", max });
@@ -193,9 +194,23 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
   images: {
     title: str(),
     description: str(LIMITS.text),
-    images: { kind: "mediaList", max: LIMITS.images },
+    images: {
+      kind: "list",
+      max: LIMITS.images,
+      required: "image",
+      item: { image: media, caption: str(200), link: str(2048) },
+    },
+    layout: { kind: "enum", values: ["grid2", "grid3", "single", "carousel"] },
   },
-  video: { title: str(), description: str(LIMITS.text), url: str(2048) },
+  video: {
+    title: str(),
+    description: str(LIMITS.text),
+    videos: {
+      kind: "list",
+      max: LIMITS.videos,
+      item: { title: str(), url: str(2048), start: str(8) },
+    },
+  },
   audio: {
     title: str(),
     artist: str(),
@@ -211,6 +226,10 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     iosUrl: str(2048),
     androidUrl: str(2048),
     webUrl: str(2048),
+    // Every App code sent phones to their store before this could be switched off.
+    storeRedirect: { kind: "bool", fallback: true },
+    screenshots: { kind: "mediaList", max: LIMITS.screenshots },
+    features: { kind: "list", max: LIMITS.features, item: { text: str(80) } },
   },
 };
 
@@ -260,7 +279,10 @@ function clean(spec: Spec, raw: unknown, fallback: unknown, options: CleanOption
       return sanitizeHours(raw, fallback as DayHours[]);
     case "list": {
       if (!Array.isArray(raw)) return fallback;
-      return raw.slice(0, spec.max).map((item) => cleanObject(spec.item, item, {}, options));
+      return raw
+        .slice(0, spec.max)
+        .map((item) => cleanObject(spec.item, item, {}, options))
+        .filter((item) => !spec.required || item[spec.required] !== null);
     }
     case "enumList":
       return Array.isArray(raw)
@@ -317,6 +339,27 @@ const UPGRADES: Partial<
   Record<PageTypeId, (raw: Record<string, unknown>) => Record<string, unknown>>
 > = {
   // Contact pages had one website before they had several (spec item 13).
+  // An Images page's images were plain files before they had captions and links (spec item 41).
+  images: (raw) =>
+    Array.isArray(raw.images)
+      ? {
+          ...raw,
+          images: raw.images.map((m) =>
+            isObject(m) && "path" in m && !("image" in m) ? { image: m } : m,
+          ),
+        }
+      : raw,
+  // Video pages had one link before they had several (spec item 46).
+  video: (raw) => {
+    if (typeof raw.url !== "string") return raw;
+    if (!("videos" in raw)) return { ...raw, videos: [{ title: "", url: raw.url, start: "" }] };
+    // The app never sends `url` now, so it's an older API client sending back what it fetched
+    // with a new link: that changes the first video.
+    const [first, ...rest] = Array.isArray(raw.videos) ? raw.videos : [];
+    return raw.url.trim() && isObject(first)
+      ? { ...raw, videos: [{ ...first, url: raw.url }, ...rest] }
+      : raw;
+  },
   // Dishes had free-text tags before they had dietary labels (spec item 22, ruling 8).
   menu: (raw) =>
     Array.isArray(raw.sections)
