@@ -93,6 +93,14 @@ const dishes = (course: string) =>
     tags: "vegetarian",
   }));
 
+/** A placeholder photo: the parts that show it are tested, not the picture. */
+const photo = (name: string) => ({
+  path: `00000000-0000-4000-8000-000000000000/${name}.jpg`,
+  name: `${name}.jpg`,
+  type: "image/jpeg",
+  size: 1000,
+});
+
 /** One page per hosted type, long enough to scroll on a phone where the type allows it. */
 export const PHONE_PAGES: { type: string; slug: string; content: Record<string, unknown> }[] = [
   {
@@ -270,6 +278,81 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
       organizer: "Ziplume",
       ticketUrl: "https://example.com/tickets",
       ticketLabel: "Get tickets",
+    },
+  },
+  {
+    // Every Menu extra: 3 sections with descriptions, photos, labels, markers, options, an old tag.
+    type: "menu",
+    slug: "PHONE-MENU-PLUS",
+    content: {
+      name: "Phone Bistro",
+      currency: "$",
+      sections: ["Starters", "Mains", "Desserts"].map((name, s) => ({
+        name,
+        description: `${name} are made to order.`,
+        items: Array.from({ length: 7 }, (_, i) => ({
+          name:
+            i === 0
+              ? "A very long dish name that has to wrap on a small phone screen"
+              : `${name} ${i + 1}`,
+          description: "Fresh, local and seasonal.",
+          price: `${8 + i}`,
+          photo: i < 2 ? photo(`dish-${s}-${i}`) : null,
+          labels: i === 1 ? ["vegan", "gluten-free", "spicy", "nuts"] : [],
+          popular: i === 2,
+          soldOut: i === 3,
+          on: i !== 4,
+          options:
+            i === 5
+              ? [
+                  { label: "Small", price: "8" },
+                  { label: "Large family size to share", price: "14" },
+                ]
+              : [],
+          // An old dish: its tags become labels.
+          ...(i === 6 && { labels: undefined, tags: "Vegan, GF, house special" }),
+        })),
+      })),
+    },
+  },
+  {
+    type: "coupon",
+    slug: "PHONE-COUPON-QR",
+    content: {
+      business: "Phone Cafe",
+      offer: "20% OFF",
+      badge: "NEW",
+      code: "SAVE20",
+      scan: "qr",
+      validUntil: "2099-12-31",
+    },
+  },
+  {
+    type: "coupon",
+    slug: "PHONE-COUPON-BAR",
+    content: { business: "Phone Cafe", offer: "2 FOR 1", code: "BAR128", scan: "barcode" },
+  },
+  {
+    type: "event",
+    slug: "PHONE-EVENT-PLUS",
+    content: {
+      title: "Phone launch",
+      start: "2099-12-05T18:00",
+      end: "2099-12-05T21:00",
+      timeZone: "America/New_York",
+      location: "100 Main Street, Springfield",
+      online: true,
+      joinUrl: "https://meet.example.com/launch",
+      agenda: Array.from({ length: 8 }, (_, i) => ({
+        time: `${18 + Math.floor(i / 3)}:${["00", "20", "40"][i % 3]}`,
+        title: `Agenda item ${i + 1}`,
+        note: "With time for questions.",
+      })),
+      hosts: Array.from({ length: 4 }, (_, i) => ({
+        photo: i < 2 ? photo(`host-${i}`) : null,
+        name: `Host number ${i + 1}`,
+        role: "Speaker",
+      })),
     },
   },
   {
