@@ -350,10 +350,16 @@ const UPGRADES: Partial<
         }
       : raw,
   // Video pages had one link before they had several (spec item 46).
-  video: (raw) =>
-    !("videos" in raw) && typeof raw.url === "string"
-      ? { ...raw, videos: [{ title: "", url: raw.url, start: "" }] }
-      : raw,
+  video: (raw) => {
+    if (typeof raw.url !== "string") return raw;
+    if (!("videos" in raw)) return { ...raw, videos: [{ title: "", url: raw.url, start: "" }] };
+    // The app never sends `url` now, so it's an older API client sending back what it fetched
+    // with a new link: that changes the first video.
+    const [first, ...rest] = Array.isArray(raw.videos) ? raw.videos : [];
+    return raw.url.trim() && isObject(first)
+      ? { ...raw, videos: [{ ...first, url: raw.url }, ...rest] }
+      : raw;
+  },
   // Dishes had free-text tags before they had dietary labels (spec item 22, ruling 8).
   menu: (raw) =>
     Array.isArray(raw.sections)

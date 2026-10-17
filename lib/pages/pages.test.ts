@@ -667,3 +667,20 @@ describe("App store switch, screenshots and features", () => {
     ).toEqual([{ text: "Offline" }, { text: "" }]);
   });
 });
+
+describe("an older API client's video link", () => {
+  it("replaces the first video's link when it sends a url with what it fetched", () => {
+    const page = sanitizePage("video", {
+      title: "T",
+      videos: [
+        { title: "One", url: "https://youtu.be/dQw4w9WgXcQ", start: "0:10" },
+        { title: "Two", url: "https://vimeo.com/76979871", start: "" },
+      ],
+      url: "https://vimeo.com/123456789",
+    });
+    expect(page.videos).toEqual([
+      { title: "One", url: "https://vimeo.com/123456789", start: "0:10" },
+      { title: "Two", url: "https://vimeo.com/76979871", start: "" },
+    ]);
+  });
+});

@@ -971,3 +971,35 @@ describe("App editor extras", () => {
     expect(screen.getByText("Screenshots")).toBeInTheDocument();
   });
 });
+
+describe("Images editor link checks", () => {
+  function Checked() {
+    const [page, setPage] = useState({
+      ...PAGE_DEFAULTS.images(),
+      images: [
+        {
+          image: { path: `${UID}/1.png`, name: "1.png", type: "image/png", size: 1 },
+          caption: "",
+          link: "",
+        },
+      ],
+    });
+    return (
+      <PageEditor
+        type="images"
+        page={page}
+        errors={validatePage("images", page)}
+        onUpdate={(update) => setPage((p) => update(p))}
+      />
+    );
+  }
+
+  it("waits until you leave an image's link box to say it isn't a web address", async () => {
+    const user = userEvent.setup();
+    render(<Checked />);
+    await user.type(screen.getByRole("textbox", { name: /^Image 1 link/ }), "e");
+    expect(screen.queryByText("Enter a web address, like example.com")).toBeNull();
+    await user.tab();
+    expect(screen.getByText("Enter a web address, like example.com")).toBeInTheDocument();
+  });
+});

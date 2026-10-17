@@ -118,7 +118,11 @@ export function PageEditor<K extends PageTypeId>({
           <ImagesEditor
             page={page as ImagesPage}
             set={set}
-            errors={fileErrors}
+            // "Add an image" shows once editing starts; a caption or link waits until it's left.
+            errors={{
+              ...errorsApi,
+              error: (path) => (path === "images" ? errors[path] : errorsApi.error(path)),
+            }}
             touched={anyTouched}
           />
         );

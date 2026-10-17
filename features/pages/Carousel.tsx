@@ -43,7 +43,12 @@ export function Carousel({
       >
         {items.map((item, i) => (
           <li key={item.media.path} className="w-full shrink-0 snap-start">
-            <ViewerThumb index={i} label={item.alt} className="block w-full bg-surface-2">
+            <ViewerThumb
+              index={i}
+              label={item.alt}
+              // Inside the slide: the row clips anything drawn outside it.
+              className="block w-full bg-surface-2 focus-visible:-outline-offset-4"
+            >
               <MediaImage
                 media={item.media}
                 alt={preview ? item.alt : ""}
@@ -56,7 +61,9 @@ export function Carousel({
       </ul>
       {/* The showing image's caption, under the row rather than on every slide, so it's never
           drawn off screen. */}
-      {items[at]?.caption && <p className="text-sm text-fg-muted">{items[at]!.caption}</p>}
+      {items[at]?.caption && (
+        <p className="text-sm [overflow-wrap:anywhere] text-fg-muted">{items[at]!.caption}</p>
+      )}
       {items.length > 1 &&
         !preview &&
         (items.length <= MAX_DOTS ? (

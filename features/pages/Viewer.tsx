@@ -226,8 +226,9 @@ export function ViewerThumb({
       aria-label={label}
       onClick={() => open(index)}
       className={cn(
-        className,
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring)",
+        // Last, so a caller can move the ring (inside a row that would clip it).
+        className,
       )}
     >
       {children}

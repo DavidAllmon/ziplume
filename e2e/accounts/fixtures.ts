@@ -99,6 +99,9 @@ const photo = (name: string) => ({
   name: `${name}.jpg`,
   type: "image/jpeg",
   size: 1000,
+  // Every upload records its size, so pages hold the space before the picture loads.
+  width: 1200,
+  height: 900,
 });
 
 /** One page per hosted type, long enough to scroll on a phone where the type allows it. */
@@ -391,13 +394,27 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
   },
   {
     type: "images",
+    slug: "PHONE-IMAGES-SINGLE",
+    content: {
+      title: "Phone column",
+      layout: "single",
+      images: Array.from({ length: 3 }, (_, i) => ({
+        image: photo(`col-${i}`),
+        caption: i === 0 ? "Acaptionwithonelongunbrokenwordthatmustwrapratherthanwidenthepage" : "",
+        link: "",
+      })),
+    },
+  },
+  {
+    type: "images",
     slug: "PHONE-IMAGES-CAROUSEL",
     content: {
       title: "Phone carousel",
       layout: "carousel",
       images: Array.from({ length: 4 }, (_, i) => ({
         image: photo(`slide-${i}`),
-        caption: `Slide ${i + 1}`,
+        caption:
+          i === 0 ? "Slide1withaverylongunbrokencaptionthatkeepsgoingandgoing" : `Slide ${i + 1}`,
         link: "",
       })),
     },
@@ -419,7 +436,12 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
           url: "https://www.loom.com/share/0123456789abcdef0123456789abcdef",
           start: "0:10",
         },
-        { title: "Elsewhere", url: "https://example.com/video", start: "" },
+        // One long unbroken word, like a handle: it must wrap, not widen the page.
+        {
+          title: "@thelittlebakeryonmainstreetinspringfieldusa",
+          url: "https://example.com/video",
+          start: "",
+        },
       ],
     },
   },

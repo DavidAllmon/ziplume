@@ -856,3 +856,41 @@ describe("App extras", () => {
     expect(features.getByText("Works offline")).toBeInTheDocument();
   });
 });
+
+describe("Images and Video fixes", () => {
+  const item = (n: number, patch: object = {}) => ({
+    image: media(`${n}.jpg`, "image/jpeg"),
+    caption: "",
+    link: "",
+    ...patch,
+  });
+
+  it("draws a carousel slide's focus ring inside it, where the row can't clip it", () => {
+    view(
+      "images",
+      { ...PAGE_DEFAULTS.images(), images: [item(1), item(2)], layout: "carousel" },
+      false,
+    );
+    expect(screen.getByRole("button", { name: "Image 1 of 2" }).className).toMatch(
+      /focus-visible:-outline-offset-\d/,
+    );
+  });
+
+  it("keeps an old one-video page's description above its Watch video button", () => {
+    view(
+      "video",
+      {
+        ...PAGE_DEFAULTS.video(),
+        title: "Clip",
+        description: "About it",
+        videos: [{ title: "", url: "https://example.com/video", start: "" }],
+      },
+      false,
+    );
+    const description = screen.getByText("About it");
+    const watch = screen.getByRole("link", { name: /Watch video/ });
+    expect(
+      description.compareDocumentPosition(watch) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+});

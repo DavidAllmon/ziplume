@@ -1,7 +1,7 @@
 "use client";
 
 import { Play } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
 import type { VideoEmbed } from "@/lib/pages/urls";
@@ -9,12 +9,18 @@ import type { VideoEmbed } from "@/lib/pages/urls";
 /** A video from a site with trackers, loaded only once it's tapped (spec item 45). */
 export function TapToPlay({ embed, title }: { embed: VideoEmbed; title: string }) {
   const [on, setOn] = useState(false);
+  const player = useRef<HTMLIFrameElement>(null);
+  // The button that was tapped is gone, so focus moves to the player that replaced it.
+  useEffect(() => {
+    if (on) player.current?.focus();
+  }, [on]);
   const shape = embed.vertical
     ? "mx-auto aspect-[9/16] w-full max-w-[22rem]"
     : "aspect-video w-full";
   if (on) {
     return (
       <iframe
+        ref={player}
         src={embed.src}
         title={title}
         className={shape}

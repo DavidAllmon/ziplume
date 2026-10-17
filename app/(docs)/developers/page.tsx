@@ -299,7 +299,10 @@ export default function DevelopersPage() {
         Facebook or Loom, and a <code>start</code> like <code>1:23</code>); a single{" "}
         <code>url</code> still works, as the first video. App pages take <code>storeRedirect</code>{" "}
         (true sends phones to their store), <code>screenshots</code> (up to 5 images) and{" "}
-        <code>features</code> (up to 6, each a <code>text</code>).
+        <code>features</code> (up to 6, each a <code>text</code>). Responses use the new shapes:
+        Images pages return image items, and Video pages return <code>videos</code>, not{" "}
+        <code>url</code>. A <code>url</code> sent back with fetched content replaces the first
+        video’s link.
       </p>
       <Code>{`{
   "type": "links",

@@ -947,7 +947,9 @@ function ImagesView({ page, preview }: ViewProps<ImagesPage>) {
       {items.map((item, i) => (
         <li key={item.image.path} className="flex flex-col gap-2">
           {tile(item, i, "h-auto w-full")}
-          {item.caption?.trim() && <p className="text-sm text-fg-muted">{item.caption}</p>}
+          {item.caption?.trim() && (
+            <p className="text-sm [overflow-wrap:anywhere] text-fg-muted">{item.caption}</p>
+          )}
         </li>
       ))}
     </ul>
@@ -998,10 +1000,13 @@ function VideoPlayer({
   video,
   title,
   preview,
+  children,
 }: {
   video: VideoItem;
   title: string;
   preview?: boolean;
+  /** Between the player and its Watch video button (a one-video page's description). */
+  children?: ReactNode;
 }) {
   const embed = videoEmbed(video.url, video.start);
   const link = !embed ? safeHref(video.url) : null;
@@ -1029,6 +1034,7 @@ function VideoPlayer({
           </div>
         )}
       </div>
+      {children}
       {link && (
         <PageLink href={link} preview={preview}>
           <Play aria-hidden /> Watch video
@@ -1060,14 +1066,18 @@ function VideoView({ page, preview }: ViewProps<VideoPage>) {
       {(videos.length ? videos : [{ title: "", url: "", start: "" }]).map((video, i) => (
         <PageCard key={i} className="flex flex-col gap-4">
           {video.title.trim() && (
-            <h2 className="font-page-heading text-lg font-bold text-fg">{video.title}</h2>
+            <h2 className="font-page-heading text-lg font-bold [overflow-wrap:anywhere] text-fg">
+              {video.title}
+            </h2>
           )}
           <VideoPlayer
             video={video}
             title={video.title.trim() || page.title || "Video"}
             preview={preview}
-          />
-          {!many && description}
+          >
+            {/* One video reads as it always has: player, description, then Watch video. */}
+            {!many && description}
+          </VideoPlayer>
         </PageCard>
       ))}
     </PageFrame>
