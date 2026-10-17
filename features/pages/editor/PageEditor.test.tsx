@@ -257,7 +257,7 @@ const CARDS: Record<PageTypeId, string[]> = {
   menu: ["Header", "Sections and dishes", "Currency and note"],
   coupon: ["Header", "Offer", "Button", "Terms"],
   event: ["Header", "When", "Where", "Details", "Agenda", "Hosts and speakers", "Tickets"],
-  feedback: ["Header", "Question", "After sending"],
+  feedback: ["Header", "Questions", "After sending"],
   pdf: ["PDFs", "Details", "Opening"],
   images: ["Details", "Images"],
   video: ["Videos", "Details"],
@@ -1103,5 +1103,46 @@ describe("Audio editor extras", () => {
       listen: [{ url: "music.apple.com/us/album/x/1" }],
       tracks: [{ title: "Intro", file: null, link: "example.com/intro" }],
     });
+  });
+});
+
+describe("Feedback editor extras", () => {
+  function Feedback() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.feedback());
+    return (
+      <>
+        <PageEditor
+          type="feedback"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("adds up to three questions, each in its own rating style, and a review link", async () => {
+    const user = userEvent.setup();
+    render(<Feedback />);
+    await user.click(screen.getByRole("button", { name: "Add question" }));
+    const texts = screen.getAllByRole("textbox", { name: /^Question/ });
+    await user.type(texts[1]!, "How likely are you to recommend us?");
+    await user.selectOptions(
+      screen.getAllByRole("combobox", { name: /^Rating style/ })[1]!,
+      "scale",
+    );
+    await user.type(screen.getByRole("textbox", { name: /^Review link/ }), "g.page/r/abc/review");
+    expect(saved()).toMatchObject({
+      questions: [
+        { text: "How was your visit?", style: "stars" },
+        { text: "How likely are you to recommend us?", style: "scale" },
+      ],
+      reviewUrl: "g.page/r/abc/review",
+    });
+    expect(screen.getByText(/Shows as Share it on Google/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add question" }));
+    expect(screen.queryByRole("button", { name: "Add question" })).toBeNull();
   });
 });
