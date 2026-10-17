@@ -28,9 +28,16 @@ export function FeedbackEditor({ page, set, errors }: EditorProps<FeedbackPage>)
       <FormCard title="Question">
         <TextField
           label="Question"
-          value={page.question}
-          onChange={(question) => set({ question })}
-          path="question"
+          value={page.questions[0]?.text ?? ""}
+          onChange={(text) =>
+            set((latest) => ({
+              questions: [
+                { style: "stars" as const, ...latest.questions[0], text },
+                ...latest.questions.slice(1),
+              ],
+            }))
+          }
+          path="questions.0.text"
           errors={errors}
         />
         <ToggleField

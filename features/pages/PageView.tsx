@@ -861,7 +861,7 @@ function FeedbackView({ page, slug, preview }: ViewProps<FeedbackPage>) {
       <PageCard>
         <FeedbackForm
           slug={slug}
-          question={page.question}
+          question={page.questions?.[0]?.text ?? ""}
           allowComment={page.allowComment}
           askContact={page.askContact}
           thanks={page.thanks}

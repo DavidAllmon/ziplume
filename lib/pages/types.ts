@@ -1,6 +1,7 @@
 import type { PageTypeId } from "@/lib/qr/types";
 
 import { themeLook, TYPE_THEME, type PageLook } from "./look";
+import type { FeedbackQuestion } from "./feedback";
 import { newDish, type DietLabel } from "./menu";
 import { SOCIAL_ICONS } from "./social-icons.data";
 
@@ -241,10 +242,13 @@ export interface EventPage extends Themed {
 export interface FeedbackPage extends Themed {
   business: string;
   logo: Media | null;
-  question: string;
+  /** Up to 3, each rated in its own style (spec item 37); an old page's question is the first. */
+  questions: FeedbackQuestion[];
   allowComment: boolean;
   askContact: boolean;
   thanks: string;
+  /** A Google (or other) review link, offered to everyone after sending (spec item 35). */
+  reviewUrl: string;
 }
 
 export interface PdfFile {
@@ -353,6 +357,7 @@ export const LIMITS = {
   options: 4,
   videos: 10,
   pdfs: 10,
+  questions: 3,
   listen: 8,
   tracks: 10,
   screenshots: 5,
@@ -505,10 +510,11 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       color: "#0F766E",
       business: "",
       logo: null,
-      question: "How was your visit?",
+      questions: [{ text: "How was your visit?", style: "stars" }],
       allowComment: true,
       askContact: false,
       thanks: "Thank you! Your feedback helps us improve.",
+      reviewUrl: "",
     }),
   pdf: () =>
     withLook("pdf", {

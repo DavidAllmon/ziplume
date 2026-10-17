@@ -189,7 +189,10 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
   feedback: (p) => {
     const errors: PageErrors = {};
     if (!p.business.trim()) errors.business = "Add the business name";
-    if (!p.question.trim()) errors.question = "Add a question";
+    if (!p.questions.some((q) => q.text.trim())) {
+      errors[p.questions.length ? "questions.0.text" : "questions"] = "Add a question";
+    }
+    checkUrl(errors, "reviewUrl", p.reviewUrl);
     return errors;
   },
   pdf: (p) => {
