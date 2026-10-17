@@ -66,4 +66,24 @@ describe("POST /p/[slug]/feedback", () => {
     rpc.mockResolvedValue({ data: false, error: null });
     expect((await post({ answers: [4, 1] })).status).toBe(429);
   });
+
+  it("stores an old form's single rating on a one-question page, and refuses it on three", async () => {
+    const { getPublicPage } = await import("@/lib/supabase/public");
+    vi.mocked(getPublicPage).mockResolvedValueOnce({
+      type: "feedback",
+      locked: false,
+      content: { business: "Cafe", question: "How was it?" },
+    } as never);
+    expect((await post({ rating: 4 })).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith(
+      "submit_feedback_answers",
+      expect.objectContaining({
+        p_answers: [{ question: "How was it?", style: "stars", value: 4 }],
+      }),
+    );
+    rpc.mockClear();
+    // The two-question page (the default here) can't take one rating.
+    expect((await post({ rating: 4 })).status).toBe(400);
+    expect(rpc).not.toHaveBeenCalled();
+  });
 });
