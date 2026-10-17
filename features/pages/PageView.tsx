@@ -47,6 +47,8 @@ import { DAY_NAMES, formatTime, rangesOf } from "@/lib/pages/hours";
 import { isShown, linkHref, linkIcon } from "@/lib/pages/links";
 import { priceText } from "@/lib/pages/menu";
 import {
+  audioEmbed,
+  listenService,
   mailHref,
   mediaUrl,
   safeHref,
@@ -62,6 +64,8 @@ import { CouponDeadline, EventCountdown, JoinButton } from "./Countdowns";
 import { LinkIconMark } from "./LinkIcon";
 import { DietMark } from "./DietMark";
 import { FeedbackForm } from "./FeedbackForm";
+import { MusicIcon } from "./MusicIcon";
+import { OneAtATime } from "./OneAtATime";
 import { ScanCode } from "./ScanCode";
 import { TapToPlay } from "./TapToPlay";
 import { Carousel } from "./Carousel";
@@ -1086,7 +1090,14 @@ function VideoPlayer({
         {preview && embed ? (
           <StillMedia icon={<Play aria-hidden className="size-12" />} />
         ) : embed?.tap ? (
-          <TapToPlay embed={embed} title={title} />
+          <TapToPlay
+            src={embed.src}
+            name={embed.name}
+            title={title}
+            frame={
+              embed.vertical ? "mx-auto aspect-[9/16] w-full max-w-[22rem]" : "aspect-video w-full"
+            }
+          />
         ) : embed ? (
           <iframe
             src={embed.src}
@@ -1155,7 +1166,16 @@ function VideoView({ page, preview }: ViewProps<VideoPage>) {
 
 function AudioView({ page, preview }: ViewProps<AudioPage>) {
   const link = safeHref(page.link);
+  // A Spotify, SoundCloud or Apple link shows that site's player, after a tap (spec item 48).
+  const embed = audioEmbed(page.link);
   const look = page.look;
+  // Drawn as given: an older page has no Listen on links or tracks.
+  const listen = (page.listen ?? []).flatMap((l) => {
+    const service = listenService(l.url);
+    const href = safeHref(l.url);
+    return service && href ? [{ href, service }] : [];
+  });
+  const tracks = (page.tracks ?? []).filter((t) => t.file || safeHref(t.link));
   return (
     <PageFrame look={look} preview={preview}>
       {!page.cover && (
@@ -1182,13 +1202,82 @@ function AudioView({ page, preview }: ViewProps<AudioPage>) {
           ) : (
             <audio src={mediaUrl(page.file.path)} controls preload="metadata" className="w-full" />
           ))}
-        {link && (
-          <PageLink href={link} variant={page.file ? "secondary" : "primary"} preview={preview}>
-            <Music aria-hidden /> Listen
-          </PageLink>
+        {embed ? (
+          preview ? (
+            <p className="flex items-center gap-2 text-sm font-medium text-fg-muted">
+              <Music aria-hidden className="size-4" /> Plays on the live page
+            </p>
+          ) : (
+            <div className="w-full overflow-hidden rounded-(--pg-radius) bg-black">
+              <TapToPlay
+                src={embed.src}
+                name={embed.name}
+                title={page.title || "Audio"}
+                height={embed.height}
+              />
+            </div>
+          )
+        ) : (
+          link && (
+            <PageLink href={link} variant={page.file ? "secondary" : "primary"} preview={preview}>
+              <Music aria-hidden /> Listen
+            </PageLink>
+          )
         )}
         {page.description.trim() && <Prose text={page.description} />}
       </PageCard>
+      {listen.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {listen.map(({ href, service }) => (
+            <PageLink
+              key={href}
+              href={href}
+              variant="secondary"
+              preview={preview}
+              icon={<MusicIcon service={service.id} />}
+            >
+              Listen on {service.label}
+            </PageLink>
+          ))}
+        </div>
+      )}
+      {tracks.length > 0 && (
+        <PageCard>
+          <section aria-label="Tracks">
+            <h2 className="mb-3 font-page-heading text-lg font-bold text-fg">Tracks</h2>
+            <ol className="flex flex-col gap-4">
+              {tracks.map((t, i) => (
+                <li key={i} className="flex flex-col gap-2">
+                  <span className="flex items-baseline gap-2">
+                    <span className="text-sm text-fg-muted tabular-nums">{i + 1}.</span>
+                    <span className="min-w-0 font-medium [overflow-wrap:anywhere] text-fg">
+                      {t.title.trim() || t.file?.name || "Track"}
+                    </span>
+                  </span>
+                  {t.file ? (
+                    preview ? (
+                      <p className="text-sm text-fg-muted">Plays on the live page</p>
+                    ) : (
+                      <audio
+                        src={mediaUrl(t.file.path)}
+                        controls
+                        preload="none"
+                        className="w-full"
+                      />
+                    )
+                  ) : (
+                    <PageLink href={safeHref(t.link)} variant="secondary" preview={preview}>
+                      <Music aria-hidden /> Listen to {t.title.trim() || "this track"}
+                    </PageLink>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </section>
+        </PageCard>
+      )}
+      {/* Starting one player pauses the others (spec item 50). */}
+      {!preview && <OneAtATime />}
     </PageFrame>
   );
 }
