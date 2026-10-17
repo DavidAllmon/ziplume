@@ -2,8 +2,9 @@
 
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
+import { cn } from "@/lib/cn";
 import type { Media } from "@/lib/pages/types";
 
 import { MediaImage } from "./parts";
@@ -163,5 +164,47 @@ export function Gallery({
         <Viewer images={images} index={index} onIndex={setIndex} onClose={() => setIndex(null)} />
       )}
     </>
+  );
+}
+
+const OpenPhoto = createContext<((index: number) => void) | null>(null);
+
+/** One viewer for photos spread across a page (a menu's dishes); each ViewerThumb opens it. */
+export function ViewerGroup({ images, children }: { images: ViewerImage[]; children: ReactNode }) {
+  const [index, setIndex] = useState<number | null>(null);
+  return (
+    <OpenPhoto.Provider value={setIndex}>
+      {children}
+      <Viewer images={images} index={index} onIndex={setIndex} onClose={() => setIndex(null)} />
+    </OpenPhoto.Provider>
+  );
+}
+
+/** A photo that opens its group's viewer; outside a group (the editor's preview) it's still. */
+export function ViewerThumb({
+  index,
+  label,
+  className,
+  children,
+}: {
+  index: number;
+  label: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const open = useContext(OpenPhoto);
+  if (!open) return <span className={className}>{children}</span>;
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={() => open(index)}
+      className={cn(
+        className,
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring)",
+      )}
+    >
+      {children}
+    </button>
   );
 }

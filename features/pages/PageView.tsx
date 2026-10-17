@@ -12,12 +12,14 @@ import {
   Phone,
   Play,
   Smartphone,
+  Star,
   Ticket,
   UserPlus,
 } from "lucide-react";
 
 import type { ReactNode } from "react";
 
+import { cn } from "@/lib/cn";
 import { googleCalendarUrl } from "@/lib/pages/files";
 import type {
   AppPage,
@@ -28,6 +30,7 @@ import type {
   FeedbackPage,
   ImagesPage,
   LinksPage,
+  MenuItem,
   MenuPage,
   PageContentMap,
   PdfPage,
@@ -36,6 +39,7 @@ import type {
 } from "@/lib/pages/types";
 import { DAY_NAMES, formatTime, rangesOf } from "@/lib/pages/hours";
 import { isShown, linkHref, linkIcon } from "@/lib/pages/links";
+import { priceText } from "@/lib/pages/menu";
 import {
   mailHref,
   mediaUrl,
@@ -49,8 +53,9 @@ import type { PageTypeId } from "@/lib/qr/types";
 
 import { CopyCode } from "./CopyCode";
 import { LinkIconMark } from "./LinkIcon";
+import { DietMark } from "./DietMark";
 import { FeedbackForm } from "./FeedbackForm";
-import { Gallery } from "./Viewer";
+import { Gallery, ViewerGroup, ViewerThumb, type ViewerImage } from "./Viewer";
 import { OpenStatus } from "./OpenStatus";
 import {
   EmptyNote,
@@ -450,9 +455,86 @@ function BusinessView({ page, preview }: ViewProps<BusinessPage>) {
 
 function MenuView({ page, preview }: ViewProps<MenuPage>) {
   const sections = page.sections
-    .map((s) => ({ ...s, items: s.items.filter((item) => item.name.trim()) }))
+    // Drawn as given, so a dish without the newer fields still shows (`on` unset is on).
+    .map((s) => ({
+      ...s,
+      items: s.items.filter((item) => item.on !== false && item.name.trim()),
+    }))
     .filter((s) => s.items.length);
+  // Every shown dish photo, in page order, for the viewer (spec item 21).
+  const photos: ViewerImage[] = sections.flatMap((s) =>
+    s.items.flatMap((item) =>
+      item.photo ? [{ media: item.photo, alt: item.name, caption: item.name }] : [],
+    ),
+  );
+  let photoAt = 0;
   const look = page.look;
+  const body = sections.length ? (
+    sections.map((section, i) => (
+      <PageCard key={i}>
+        <h2
+          id={`section-${i}`}
+          className="mb-3 scroll-mt-4 font-page-heading text-xl font-bold text-fg"
+        >
+          {section.name || "Menu"}
+        </h2>
+        {section.description?.trim() && (
+          <p className="-mt-2 mb-3 text-sm text-fg-muted">{section.description}</p>
+        )}
+        <ul className="divide-y divide-border">
+          {section.items.map((item, j) => (
+            <li key={j} className="flex gap-3 py-3">
+              {item.photo && (
+                <ViewerThumb
+                  index={photoAt++}
+                  label={`Photo of ${item.name}`}
+                  className="size-16 shrink-0 overflow-hidden rounded-(--pg-radius)"
+                >
+                  <MediaImage
+                    media={item.photo}
+                    alt={preview ? item.name : ""}
+                    className={cn("size-full object-cover", item.soldOut && "opacity-50")}
+                  />
+                </ViewerThumb>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold [overflow-wrap:anywhere]">
+                  {/* Sold out greys the name rather than fading it, so it stays readable. */}
+                  <span className={item.soldOut ? "text-fg-muted" : "text-fg"}>{item.name}</span>
+                  {item.popular && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-(--page-accent) px-2 py-0.5 text-xs font-semibold text-(--page-accent-fg)">
+                      <Star aria-hidden className="size-3" /> Popular
+                    </span>
+                  )}
+                  {item.soldOut && (
+                    <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-fg-muted">
+                      Sold out
+                    </span>
+                  )}
+                </p>
+                {item.description.trim() && (
+                  <p className="mt-0.5 text-sm text-fg-muted">{item.description}</p>
+                )}
+                {item.labels?.length > 0 && (
+                  <ul aria-label="Dietary" className="mt-1.5 flex flex-wrap gap-1">
+                    {item.labels.map((id) => (
+                      <li key={id}>
+                        <DietMark id={id} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {item.tags?.trim() && <p className="mt-1 text-xs text-fg-muted">{item.tags}</p>}
+              </div>
+              <DishPrice item={item} currency={page.currency} />
+            </li>
+          ))}
+        </ul>
+      </PageCard>
+    ))
+  ) : (
+    <EmptyNote>Dishes you add appear here.</EmptyNote>
+  );
   return (
     <PageFrame look={look} preview={preview}>
       <PageHeader
@@ -487,58 +569,29 @@ function MenuView({ page, preview }: ViewProps<MenuPage>) {
           )}
         </nav>
       )}
-      {sections.length ? (
-        sections.map((section, i) => (
-          <PageCard key={i}>
-            <h2
-              id={`section-${i}`}
-              className="mb-3 scroll-mt-4 font-page-heading text-xl font-bold text-fg"
-            >
-              {section.name || "Menu"}
-            </h2>
-            <ul className="divide-y divide-border">
-              {section.items.map((item, j) => (
-                <li key={j} className="flex gap-3 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-fg">{item.name}</p>
-                    {item.description.trim() && (
-                      <p className="mt-0.5 text-sm text-fg-muted">{item.description}</p>
-                    )}
-                    {item.tags.trim() && (
-                      <p className="mt-1.5 flex flex-wrap gap-1">
-                        {item.tags
-                          .split(",")
-                          .map((tag) => tag.trim())
-                          .filter(Boolean)
-                          .map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-fg-muted"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                      </p>
-                    )}
-                  </div>
-                  {item.price.trim() && (
-                    <p className="shrink-0 font-semibold text-fg tabular-nums">
-                      {/^\d/.test(item.price.trim())
-                        ? `${page.currency}${item.price.trim()}`
-                        : item.price.trim()}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </PageCard>
-        ))
-      ) : (
-        <EmptyNote>Dishes you add appear here.</EmptyNote>
-      )}
+      {!preview && photos.length ? <ViewerGroup images={photos}>{body}</ViewerGroup> : body}
       {page.note.trim() && <Prose text={page.note} className="px-1 text-center text-sm" />}
     </PageFrame>
   );
+}
+
+/** A dish's price, or its options in its place (spec item 24); struck through when sold out. */
+function DishPrice({ item, currency }: { item: MenuItem; currency: string }) {
+  const options = (item.options ?? []).filter((o) => o.label.trim() && o.price.trim());
+  const style = cn(
+    "shrink-0 text-right font-semibold tabular-nums",
+    item.soldOut ? "text-fg-muted line-through" : "text-fg",
+  );
+  if (options.length) {
+    return (
+      <ul className={cn(style, "max-w-[45%] text-sm [overflow-wrap:anywhere]")}>
+        {options.map((o, k) => (
+          <li key={k}>{`${o.label.trim()} ${priceText(o.price, currency)}`}</li>
+        ))}
+      </ul>
+    );
+  }
+  return item.price.trim() ? <p className={style}>{priceText(item.price, currency)}</p> : null;
 }
 
 function formatDate(value: string) {

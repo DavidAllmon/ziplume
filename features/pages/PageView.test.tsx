@@ -1,7 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { newHeader, newLink } from "@/lib/pages/links";
+import { newDish } from "@/lib/pages/menu";
 import { themeLook } from "@/lib/pages/look";
 import { PAGE_DEFAULTS } from "@/lib/pages/types";
 import { PAGE_TYPE_IDS, type PageTypeId } from "@/lib/qr/types";
@@ -505,5 +507,73 @@ describe("WhatsApp quick button", () => {
     const actions = within(screen.getByRole("navigation", { name: "Quick actions" }));
     expect(actions.getByRole("link", { name: "Call" })).toBeInTheDocument();
     expect(actions.queryByRole("link", { name: "WhatsApp" })).toBeNull();
+  });
+});
+
+describe("Menu extras", () => {
+  const dish = (patch: object) => ({ ...newDish(), ...patch });
+  const menu = (items: object[]) => ({
+    ...PAGE_DEFAULTS.menu(),
+    name: "Diner",
+    sections: [{ name: "Mains", description: "Served all day", items }],
+  });
+
+  it("shows labels, Popular, Sold out and price options, and leaves hidden dishes out", () => {
+    view(
+      "menu",
+      menu([
+        dish({ name: "Chili", price: "9", labels: ["spicy", "vegan"], popular: true }),
+        dish({ name: "Pie", price: "5", soldOut: true }),
+        dish({ name: "Secret", price: "1", on: false }),
+        dish({
+          name: "Pizza",
+          price: "10",
+          options: [
+            { label: "Small", price: "8" },
+            { label: "Large", price: "12" },
+          ],
+        }),
+      ]),
+      false,
+    );
+    expect(screen.getByText("Served all day")).toBeInTheDocument();
+    const chili = screen.getByText("Chili").closest("li")!;
+    expect(within(chili).getByText("Spicy")).toBeInTheDocument();
+    expect(within(chili).getByText("Vegan")).toBeInTheDocument();
+    expect(within(chili).getByText("Popular")).toBeInTheDocument();
+    const pie = screen.getByText("Pie").closest("li")!;
+    expect(within(pie).getByText("Sold out")).toBeInTheDocument();
+    expect(screen.queryByText("Secret")).toBeNull();
+    const pizza = screen.getByText("Pizza").closest("li")!;
+    expect(within(pizza).getByText("Small $8")).toBeInTheDocument();
+    expect(within(pizza).getByText("Large $12")).toBeInTheDocument();
+    expect(within(pizza).queryByText("$10")).toBeNull();
+  });
+
+  it("opens a dish's photo full screen, captioned with its name, counting only dishes with one", async () => {
+    const user = userEvent.setup();
+    view(
+      "menu",
+      menu([
+        dish({ name: "Soup", price: "4" }),
+        dish({ name: "Hidden", price: "4", on: false, photo: media("h.jpg", "image/jpeg") }),
+        dish({ name: "Chili", price: "9", photo: media("chili.jpg", "image/jpeg") }),
+        dish({ name: "Pie", price: "5", photo: media("pie.jpg", "image/jpeg") }),
+      ]),
+      false,
+    );
+    await user.click(screen.getByRole("button", { name: "Photo of Pie" }));
+    const dialog = screen.getByRole("dialog", { name: "Photo 2 of 2" });
+    expect(within(dialog).getByText("Pie")).toBeInTheDocument();
+  });
+
+  it("shows dish photos but opens nothing in the editor's preview", () => {
+    view(
+      "menu",
+      menu([dish({ name: "Pie", price: "5", photo: media("pie.jpg", "image/jpeg") })]),
+      true,
+    );
+    expect(screen.queryByRole("button", { name: "Photo of Pie" })).toBeNull();
+    expect(screen.getByRole("img", { name: "Pie" })).toBeInTheDocument();
   });
 });
