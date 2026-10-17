@@ -254,7 +254,7 @@ const CARDS: Record<PageTypeId, string[]> = {
   ],
   menu: ["Header", "Sections and dishes", "Currency and note"],
   coupon: ["Header", "Offer", "Button", "Terms"],
-  event: ["Header", "When", "Where", "Details", "Tickets"],
+  event: ["Header", "When", "Where", "Details", "Agenda", "Hosts and speakers", "Tickets"],
   feedback: ["Header", "Question", "After sending"],
   pdf: ["File", "Details", "Opening"],
   images: ["Details", "Images"],
@@ -453,6 +453,11 @@ describe("text limits in the editor", () => {
     }
     if (type === "business") page.buttons = [{ label: "", url: "", on: true }];
     if (type === "vcard") page.socials = [{ network: "instagram", url: "" }];
+    if (type === "event") {
+      page.online = true;
+      page.agenda = [{ time: "", title: "", note: "" }];
+      page.hosts = [{ photo: null, name: "", role: "" }];
+    }
     const { container } = render(
       <PageEditor type={type} page={page as never} errors={{}} onUpdate={vi.fn()} reveal />,
     );
@@ -728,5 +733,41 @@ describe("Coupon editor extras", () => {
     await user.type(screen.getByRole("textbox", { name: /^Badge/ }), "NEW");
     await user.click(screen.getByRole("radio", { name: "Barcode" }));
     expect(saved()).toMatchObject({ badge: "NEW", scan: "barcode" });
+  });
+});
+
+describe("Event editor extras", () => {
+  function Event() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.event());
+    return (
+      <>
+        <PageEditor
+          type="event"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("turns on Online event for a join link, and adds agenda rows and hosts", async () => {
+    const user = userEvent.setup();
+    render(<Event />);
+    expect(screen.queryByRole("textbox", { name: /^Join link/ })).toBeNull();
+    await user.click(screen.getByRole("switch", { name: /^Online event/ }));
+    await user.type(screen.getByRole("textbox", { name: /^Join link/ }), "meet.example.com/x");
+    await user.click(screen.getByRole("button", { name: "Add agenda item" }));
+    await user.type(screen.getByRole("textbox", { name: /^What’s happening/ }), "Doors open");
+    await user.click(screen.getByRole("button", { name: "Add host" }));
+    await user.type(screen.getByRole("textbox", { name: /^Name/ }), "Ana");
+    expect(saved()).toMatchObject({
+      online: true,
+      joinUrl: "meet.example.com/x",
+      agenda: [{ title: "Doors open" }],
+      hosts: [{ name: "Ana" }],
+    });
   });
 });
