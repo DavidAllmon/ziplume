@@ -29,4 +29,18 @@ describe("copy-vendor", () => {
       ).toBe(true);
     }
   });
+
+  it("copies the decoders, character maps, fonts and colour profiles pdf.js fetches when a PDF needs them", () => {
+    const out = mkdtempSync(join(tmpdir(), "vendor-"));
+    copyVendor(out);
+    for (const file of [
+      "wasm/jbig2.wasm",
+      "wasm/openjpeg.wasm",
+      "cmaps/Adobe-Japan1-UCS2.bcmap",
+      "standard_fonts/FoxitFixed.pfb",
+      "iccs/CGATS001Compat-v2-micro.icc",
+    ]) {
+      expect(existsSync(join(out, "pdfjs", file)), file).toBe(true);
+    }
+  });
 });

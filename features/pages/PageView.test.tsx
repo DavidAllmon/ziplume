@@ -1014,3 +1014,21 @@ describe("Audio extras", () => {
     expect(screen.queryByRole("button", { name: /Tap to play/ })).toBeNull();
   });
 });
+
+describe("Audio track players", () => {
+  it("names each track's player for screen readers", () => {
+    const { container } = view(
+      "audio",
+      {
+        ...PAGE_DEFAULTS.audio(),
+        title: "Album",
+        tracks: [{ title: "Intro", file: media("1.mp3", "audio/mpeg"), link: "" }],
+      },
+      false,
+    );
+    expect(container.querySelector("section[aria-label=Tracks] audio")).toHaveAttribute(
+      "aria-label",
+      "Intro",
+    );
+  });
+});

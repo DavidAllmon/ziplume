@@ -307,8 +307,10 @@ export default function DevelopersPage() {
       <p>
         PDF pages take <code>files</code> (up to 10, each an uploaded <code>file</code>, a{" "}
         <code>title</code> and a <code>preview</code> image); a single <code>file</code> still
-        works, as the first. <code>direct</code> opens the file only when there’s one. Audio pages
-        take <code>listen</code> (up to 8, each a <code>url</code> from Spotify, Apple Music, Apple
+        works, as the first, and responses return <code>files</code>, not <code>file</code> (a{" "}
+        <code>file</code> sent back with fetched content replaces the first PDF).{" "}
+        <code>direct</code> opens the file only when there’s one. Audio pages take{" "}
+        <code>listen</code> (up to 8, each a <code>url</code> from Spotify, Apple Music, Apple
         Podcasts, YouTube Music, Amazon Music, Deezer, Tidal, SoundCloud or Bandcamp) and{" "}
         <code>tracks</code> (up to 10, each a <code>title</code> with an uploaded <code>file</code>{" "}
         or a <code>link</code>). A Spotify, SoundCloud or Apple <code>link</code> shows that site’s

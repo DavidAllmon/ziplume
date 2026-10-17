@@ -20,7 +20,8 @@ async function previewOf(file: File, ownerId: string | null): Promise<Media | nu
   const image = new File([blob], file.name.replace(/\.pdf$/i, "") + ".webp", {
     type: "image/webp",
   });
-  const result = await uploadMedia(image, "image", { maxSide: 800, ownerId });
+  // 1200: the preview is 800 px wide and at most 1½ times as tall, so it isn't shrunk again.
+  const result = await uploadMedia(image, "image", { maxSide: 1200, ownerId });
   return result.ok ? result.media : null;
 }
 

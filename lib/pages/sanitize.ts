@@ -365,10 +365,16 @@ const UPGRADES: Partial<
         }
       : raw,
   // PDF pages had one file before they had several (spec item 39).
-  pdf: (raw) =>
-    !("files" in raw) && "file" in raw
-      ? { ...raw, files: [{ file: raw.file, title: "", preview: null }] }
-      : raw,
+  pdf: (raw) => {
+    if (!("file" in raw)) return raw;
+    if (!("files" in raw)) return { ...raw, files: [{ file: raw.file, title: "", preview: null }] };
+    // The app never sends `file` now, so it's an older API client sending back what it fetched
+    // with a new file: that replaces the first PDF (and its preview, which was of the old one).
+    const [first, ...rest] = Array.isArray(raw.files) ? raw.files : [];
+    return isObject(raw.file) && isObject(first)
+      ? { ...raw, files: [{ ...first, file: raw.file, preview: null }, ...rest] }
+      : raw;
+  },
   // Video pages had one link before they had several (spec item 46).
   video: (raw) => {
     if (typeof raw.url !== "string") return raw;

@@ -2,9 +2,13 @@ import { expect, test } from "@playwright/test";
 
 import { MAKER } from "./fixtures";
 
-// A one-page PDF, small enough to write here. pdf.js rebuilds its missing cross-reference table.
+// A one-page PDF with a black box on it, small enough to write here. pdf.js rebuilds its missing
+// cross-reference table. (A blank page would get no preview: it's judged blank.)
+const BOX = "0 0 0 rg 20 20 260 360 re f";
 const PDF = Buffer.from(
-  "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 300 400]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n",
+  "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n" +
+    "3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 300 400]/Contents 4 0 R>>endobj\n" +
+    `4 0 obj<</Length ${BOX.length}>>stream\n${BOX}\nendstream endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n`,
 );
 
 test.describe("Audio and PDF extras", () => {

@@ -950,7 +950,8 @@ function PdfView({ page, preview }: ViewProps<PdfPage>) {
                 <MediaImage
                   media={first.preview}
                   alt={`First page of ${page.title.trim() || name(first)}`}
-                  className="w-full max-w-xs rounded border border-border bg-white shadow-card"
+                  // Never taller than a page's worth, whatever shape the PDF is.
+                  className="max-h-[28rem] w-full max-w-xs rounded border border-border bg-white object-cover object-top shadow-card"
                 />
               )}
               <PageLink href={mediaUrl(first.file.path)} preview={preview}>
@@ -1260,6 +1261,7 @@ function AudioView({ page, preview }: ViewProps<AudioPage>) {
                     ) : (
                       <audio
                         src={mediaUrl(t.file.path)}
+                        aria-label={t.title.trim() || t.file.name}
                         controls
                         preload="none"
                         className="w-full"

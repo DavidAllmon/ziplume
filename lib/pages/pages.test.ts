@@ -816,3 +816,37 @@ describe("audio links", () => {
     });
   });
 });
+
+describe("an older API client's PDF file", () => {
+  it("replaces the first PDF when it sends a file with what it fetched", () => {
+    const pdf = (name: string) => ({
+      path: `${UID}/${name}`,
+      name,
+      type: "application/pdf",
+      size: 10,
+    });
+    const page = sanitizePage("pdf", {
+      title: "Menu",
+      files: [
+        { file: pdf("old.pdf"), title: "Food", preview: media("old.png") },
+        { file: pdf("wine.pdf"), title: "", preview: null },
+      ],
+      file: pdf("new.pdf"),
+    });
+    expect(page.files).toEqual([
+      { file: pdf("new.pdf"), title: "Food", preview: null },
+      { file: pdf("wine.pdf"), title: "", preview: null },
+    ]);
+  });
+});
+
+describe("music links copied on a phone", () => {
+  it("knows mobile and short links for their service", () => {
+    expect(listenService("https://m.soundcloud.com/artist/a-song")?.label).toBe("SoundCloud");
+    expect(listenService("https://spoti.fi/3abc")?.label).toBe("Spotify");
+    expect(listenService("https://geo.music.apple.com/us/album/x/1")?.label).toBe("Apple Music");
+    expect(audioEmbed("https://m.soundcloud.com/artist/a-song")?.src).toBe(
+      "https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fartist%2Fa-song&visual=false",
+    );
+  });
+});

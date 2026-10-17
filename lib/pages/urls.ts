@@ -210,7 +210,8 @@ export function audioEmbed(input: string): AudioEmbed | null {
   const href = safeHref(input);
   if (!href) return null;
   const url = new URL(href);
-  const host = url.hostname.replace(/^www\./, "");
+  // m.soundcloud.com is what a phone's browser shows: the same track.
+  const host = url.hostname.replace(/^(www|m)\./, "");
   if (host === "open.spotify.com") {
     const match =
       /^(?:\/intl-[a-z-]+)?\/(track|album|playlist|episode|show|artist)\/([A-Za-z0-9]{22})/.exec(
@@ -271,15 +272,20 @@ export function listenService(input: string): ListenService | null {
   if (!href) return null;
   const host = new URL(href).hostname.replace(/^www\./, "");
   const is = (...hosts: string[]) => hosts.includes(host);
-  if (is("open.spotify.com", "spotify.link")) return { id: "spotify", label: "Spotify" };
-  if (is("music.apple.com")) return { id: "applemusic", label: "Apple Music" };
+  // Short and mobile addresses too: what a phone's share button copies.
+  if (is("open.spotify.com", "spotify.link", "spoti.fi"))
+    return { id: "spotify", label: "Spotify" };
+  if (is("music.apple.com", "geo.music.apple.com"))
+    return { id: "applemusic", label: "Apple Music" };
   if (is("podcasts.apple.com")) return { id: "applepodcasts", label: "Apple Podcasts" };
   if (is("music.youtube.com")) return { id: "youtubemusic", label: "YouTube Music" };
   if (/^music\.amazon\.[a-z.]{2,6}$/.test(host)) return { id: "amazon", label: "Amazon Music" };
   if (is("deezer.com", "link.deezer.com", "deezer.page.link"))
     return { id: "deezer", label: "Deezer" };
   if (is("tidal.com", "listen.tidal.com")) return { id: "tidal", label: "Tidal" };
-  if (is("soundcloud.com", "on.soundcloud.com")) return { id: "soundcloud", label: "SoundCloud" };
+  if (is("soundcloud.com", "m.soundcloud.com", "on.soundcloud.com")) {
+    return { id: "soundcloud", label: "SoundCloud" };
+  }
   if (host === "bandcamp.com" || /^[a-z0-9-]+\.bandcamp\.com$/.test(host))
     return { id: "bandcamp", label: "Bandcamp" };
   return null;
