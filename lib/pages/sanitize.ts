@@ -190,7 +190,16 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     askContact: bool,
     thanks: str(LIMITS.text),
   },
-  pdf: { title: str(), description: str(LIMITS.text), file: media, direct: bool },
+  pdf: {
+    title: str(),
+    description: str(LIMITS.text),
+    files: {
+      kind: "list",
+      max: LIMITS.pdfs,
+      item: { file: media, title: str(), preview: media },
+    },
+    direct: bool,
+  },
   images: {
     title: str(),
     description: str(LIMITS.text),
@@ -218,6 +227,12 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     cover: media,
     file: media,
     link: str(2048),
+    listen: { kind: "list", max: LIMITS.listen, item: { url: str(2048) } },
+    tracks: {
+      kind: "list",
+      max: LIMITS.tracks,
+      item: { title: str(), file: media, link: str(2048) },
+    },
   },
   app: {
     name: str(),
@@ -349,6 +364,17 @@ const UPGRADES: Partial<
           ),
         }
       : raw,
+  // PDF pages had one file before they had several (spec item 39).
+  pdf: (raw) => {
+    if (!("file" in raw)) return raw;
+    if (!("files" in raw)) return { ...raw, files: [{ file: raw.file, title: "", preview: null }] };
+    // The app never sends `file` now, so it's an older API client sending back what it fetched
+    // with a new file: that replaces the first PDF (and its preview, which was of the old one).
+    const [first, ...rest] = Array.isArray(raw.files) ? raw.files : [];
+    return isObject(raw.file) && isObject(first)
+      ? { ...raw, files: [{ ...first, file: raw.file, preview: null }, ...rest] }
+      : raw;
+  },
   // Video pages had one link before they had several (spec item 46).
   video: (raw) => {
     if (typeof raw.url !== "string") return raw;

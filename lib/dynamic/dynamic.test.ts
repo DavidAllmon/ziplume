@@ -168,6 +168,24 @@ describe("scan targets", () => {
     ).toBe(`${site}/p/APP`);
   });
 
+  it("opens a PDF straight away only when the page has one", () => {
+    const file = (name: string) => ({
+      path: `${UID}/${name}`,
+      name,
+      type: "application/pdf",
+      size: 1,
+    });
+    const code = (files: object[]) => ({
+      destination: null,
+      qr_type: "pdf",
+      content: { direct: true, files },
+    });
+    expect(scanTarget(code([{ file: file("a.pdf") }]), "PDF1", null, site)).toMatch(/\/a\.pdf$/);
+    expect(
+      scanTarget(code([{ file: file("a.pdf") }, { file: file("b.pdf") }]), "PDF1", null, site),
+    ).toBe(`${site}/p/PDF1`);
+  });
+
   it("sends phones to their store only while the App page's switch is on", () => {
     const content = {
       name: "A",

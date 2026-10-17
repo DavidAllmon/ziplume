@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -18,9 +18,11 @@ import { validatePage } from "@/lib/pages/validate";
 import { PAGE_TYPE_IDS, type PageTypeId } from "@/lib/qr/types";
 
 import { PageEditor } from "./PageEditor";
+import { pdfFirstPage } from "./pdfFirstPage";
 import { uploadMedia } from "./upload";
 
 vi.mock("./upload", async (original) => ({ ...(await original<object>()), uploadMedia: vi.fn() }));
+vi.mock("./pdfFirstPage", () => ({ pdfFirstPage: vi.fn() }));
 const UID = "11111111-1111-4111-8111-111111111111";
 
 /** Every field each hosted-page form shows for a new page. Splitting the editor must keep them. */
@@ -256,10 +258,10 @@ const CARDS: Record<PageTypeId, string[]> = {
   coupon: ["Header", "Offer", "Button", "Terms"],
   event: ["Header", "When", "Where", "Details", "Agenda", "Hosts and speakers", "Tickets"],
   feedback: ["Header", "Question", "After sending"],
-  pdf: ["File", "Details", "Opening"],
+  pdf: ["PDFs", "Details", "Opening"],
   images: ["Details", "Images"],
   video: ["Videos", "Details"],
-  audio: ["Audio", "Header", "Details"],
+  audio: ["Audio", "Listen on", "Tracks", "Header", "Details"],
   app: ["Header", "Store links", "Screenshots", "Features", "Website"],
 };
 
@@ -395,7 +397,7 @@ describe("an upload that finishes later", () => {
     await act(async () => finish({ ok: true, media: file }));
     const page = JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
     expect(page.title).toBe("Spring menu");
-    expect(page.file).toEqual(file);
+    expect(type === "pdf" ? page.files[0].file : page.file).toEqual(file);
   });
 });
 
@@ -454,6 +456,10 @@ describe("text limits in the editor", () => {
     if (type === "business") page.buttons = [{ label: "", url: "", on: true }];
     if (type === "vcard") page.socials = [{ network: "instagram", url: "" }];
     if (type === "app") page.features = [{ text: "" }];
+    if (type === "audio") {
+      page.listen = [{ url: "" }];
+      page.tracks = [{ title: "", file: null, link: "" }];
+    }
     if (type === "images") {
       page.images = [
         {
@@ -1001,5 +1007,101 @@ describe("Images editor link checks", () => {
     expect(screen.queryByText("Enter a web address, like example.com")).toBeNull();
     await user.tab();
     expect(screen.getByText("Enter a web address, like example.com")).toBeInTheDocument();
+  });
+});
+
+describe("PDF editor extras", () => {
+  function Pdf() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.pdf());
+    return (
+      <>
+        <PageEditor
+          type="pdf"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+  const doc = { path: `${UID}/a.pdf`, name: "menu.pdf", type: "application/pdf", size: 1 };
+  const shot = { path: `${UID}/p.webp`, name: "menu.webp", type: "image/webp", size: 1 };
+
+  it("draws a PDF's first page and saves it as the file's preview", async () => {
+    const user = userEvent.setup();
+    vi.mocked(uploadMedia)
+      .mockResolvedValueOnce({ ok: true, media: doc })
+      .mockResolvedValueOnce({ ok: true, media: shot });
+    vi.mocked(pdfFirstPage).mockResolvedValueOnce(new Blob(["x"], { type: "image/webp" }));
+    const { container } = render(<Pdf />);
+    await user.upload(
+      container.querySelector<HTMLInputElement>("input[type=file]")!,
+      new File(["%PDF"], "menu.pdf", { type: "application/pdf" }),
+    );
+    await waitFor(() => expect(saved().files[0]).toEqual({ file: doc, title: "", preview: shot }));
+    expect(saved().title).toBe("menu");
+    expect(vi.mocked(uploadMedia).mock.calls[1]![1]).toBe("image");
+  });
+
+  it("keeps the PDF, without a preview, when its first page can't be drawn", async () => {
+    const user = userEvent.setup();
+    vi.mocked(uploadMedia).mockResolvedValueOnce({ ok: true, media: doc });
+    vi.mocked(pdfFirstPage).mockResolvedValueOnce(null);
+    const { container } = render(<Pdf />);
+    await user.upload(
+      container.querySelector<HTMLInputElement>("input[type=file]")!,
+      new File(["%PDF"], "menu.pdf", { type: "application/pdf" }),
+    );
+    await waitFor(() => expect(saved().files[0]).toEqual({ file: doc, title: "", preview: null }));
+  });
+
+  it("adds a second PDF with its own title, and says direct opening needs one file", async () => {
+    const user = userEvent.setup();
+    render(<Pdf />);
+    await user.click(screen.getByRole("button", { name: "Add PDF" }));
+    await user.type(screen.getAllByRole("textbox", { name: /^PDF title/ })[1]!, "Wine list");
+    expect(saved().files[1]).toMatchObject({ title: "Wine list" });
+    expect(screen.getByText(/with several, scanning shows the list/)).toBeInTheDocument();
+  });
+});
+
+describe("Audio editor extras", () => {
+  function Audio() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.audio());
+    return (
+      <>
+        <PageEditor
+          type="audio"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("adds a Listen on link, naming its service, and a track with a link", async () => {
+    const user = userEvent.setup();
+    render(<Audio />);
+    await user.click(screen.getByRole("button", { name: "Add Listen on link" }));
+    await user.type(
+      screen.getByRole("textbox", { name: /^Listen on link/ }),
+      "music.apple.com/us/album/x/1",
+    );
+    expect(screen.getByText("Shows as Listen on Apple Music")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add track" }));
+    await user.type(screen.getByRole("textbox", { name: /^Track title/ }), "Intro");
+    await user.type(
+      screen.getByRole("textbox", { name: /^Or the track’s link/ }),
+      "example.com/intro",
+    );
+    expect(saved()).toMatchObject({
+      listen: [{ url: "music.apple.com/us/album/x/1" }],
+      tracks: [{ title: "Intro", file: null, link: "example.com/intro" }],
+    });
   });
 });

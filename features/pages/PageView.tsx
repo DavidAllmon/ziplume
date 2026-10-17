@@ -37,6 +37,7 @@ import type {
   MenuItem,
   MenuPage,
   PageContentMap,
+  PdfFile,
   PdfPage,
   VcardPage,
   VideoItem,
@@ -46,6 +47,8 @@ import { DAY_NAMES, formatTime, rangesOf } from "@/lib/pages/hours";
 import { isShown, linkHref, linkIcon } from "@/lib/pages/links";
 import { priceText } from "@/lib/pages/menu";
 import {
+  audioEmbed,
+  listenService,
   mailHref,
   mediaUrl,
   safeHref,
@@ -61,6 +64,8 @@ import { CouponDeadline, EventCountdown, JoinButton } from "./Countdowns";
 import { LinkIconMark } from "./LinkIcon";
 import { DietMark } from "./DietMark";
 import { FeedbackForm } from "./FeedbackForm";
+import { MusicIcon } from "./MusicIcon";
+import { OneAtATime } from "./OneAtATime";
 import { ScanCode } from "./ScanCode";
 import { TapToPlay } from "./TapToPlay";
 import { Carousel } from "./Carousel";
@@ -867,36 +872,105 @@ function FeedbackView({ page, slug, preview }: ViewProps<FeedbackPage>) {
   );
 }
 
+// A round 44px link with just an icon (a PDF's View and Download in a list).
+const iconLink =
+  "grid size-11 shrink-0 place-items-center rounded-full border border-border text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring)";
+
 function PdfView({ page, preview }: ViewProps<PdfPage>) {
-  const href = page.file ? mediaUrl(page.file.path) : null;
   const look = page.look;
+  // Drawn as given: an old page may still have one `file`.
+  const old = (page as unknown as { file?: Media | null }).file ?? null;
+  const files = (page.files ?? [{ file: old, title: "", preview: null }]).filter(
+    (f): f is PdfFile & { file: Media } => Boolean(f.file),
+  );
+  const name = (f: PdfFile & { file: Media }) => f.title.trim() || f.file.name;
+  const first = files[0];
   return (
     <PageFrame look={look} preview={preview}>
-      <span className="grid size-20 place-items-center self-center rounded-(--pg-radius) bg-[var(--page-accent)] text-[var(--page-accent-fg)]">
-        <FileText aria-hidden className="size-10" />
-      </span>
+      {!first?.preview && (
+        <span className="grid size-20 place-items-center self-center rounded-(--pg-radius) bg-[var(--page-accent)] text-[var(--page-accent-fg)]">
+          <FileText aria-hidden className="size-10" />
+        </span>
+      )}
       <PageHeader
         look={look}
         layout="classic"
         image={null}
         imageAlt=""
-        title={page.title || page.file?.name || "Document"}
+        title={page.title || first?.file.name || "Document"}
         sub={page.description || undefined}
       />
-      <PageCard className="flex flex-col items-center gap-4 text-center">
-        {page.file ? (
-          <>
-            <PageLink href={href} preview={preview}>
-              <ExternalLink aria-hidden /> Open PDF
-            </PageLink>
-            <PageLink href={href} variant="secondary" download={page.file.name} preview={preview}>
-              <Download aria-hidden /> Download · {fileSize(page.file.size)}
-            </PageLink>
-          </>
-        ) : (
-          <EmptyNote>Your PDF appears here.</EmptyNote>
-        )}
-      </PageCard>
+      {files.length > 1 ? (
+        <PageCard>
+          <ul aria-label="PDFs" className="divide-y divide-border">
+            {files.map((f) => {
+              const href = mediaUrl(f.file.path);
+              return (
+                <li key={f.file.path} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  {f.preview ? (
+                    <MediaImage
+                      media={f.preview}
+                      alt=""
+                      className="h-16 w-12 shrink-0 rounded border border-border bg-white object-cover object-top"
+                    />
+                  ) : (
+                    <FileText aria-hidden className="size-8 shrink-0 text-[var(--page-accent)]" />
+                  )}
+                  <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                    <span className="block font-medium text-fg">{name(f)}</span>
+                    <span className="block text-sm text-fg-muted">{fileSize(f.file.size)}</span>
+                  </span>
+                  <a
+                    href={preview ? undefined : href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`View ${name(f)}`}
+                    className={iconLink}
+                  >
+                    <ExternalLink aria-hidden className="size-5" />
+                  </a>
+                  <a
+                    href={preview ? undefined : href}
+                    download={f.file.name}
+                    aria-label={`Download ${name(f)}, ${fileSize(f.file.size)}`}
+                    className={iconLink}
+                  >
+                    <Download aria-hidden className="size-5" />
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </PageCard>
+      ) : (
+        <PageCard className="flex flex-col items-center gap-4 text-center">
+          {first ? (
+            <>
+              {first.preview && (
+                <MediaImage
+                  media={first.preview}
+                  alt={`First page of ${page.title.trim() || name(first)}`}
+                  // Never taller than a page's worth, whatever shape the PDF is.
+                  className="max-h-[28rem] w-full max-w-xs rounded border border-border bg-white object-cover object-top shadow-card"
+                />
+              )}
+              <PageLink href={mediaUrl(first.file.path)} preview={preview}>
+                <ExternalLink aria-hidden /> Open PDF
+              </PageLink>
+              <PageLink
+                href={mediaUrl(first.file.path)}
+                variant="secondary"
+                download={first.file.name}
+                preview={preview}
+              >
+                <Download aria-hidden /> Download · {fileSize(first.file.size)}
+              </PageLink>
+            </>
+          ) : (
+            <EmptyNote>Your PDF appears here.</EmptyNote>
+          )}
+        </PageCard>
+      )}
     </PageFrame>
   );
 }
@@ -1017,7 +1091,14 @@ function VideoPlayer({
         {preview && embed ? (
           <StillMedia icon={<Play aria-hidden className="size-12" />} />
         ) : embed?.tap ? (
-          <TapToPlay embed={embed} title={title} />
+          <TapToPlay
+            src={embed.src}
+            name={embed.name}
+            title={title}
+            frame={
+              embed.vertical ? "mx-auto aspect-[9/16] w-full max-w-[22rem]" : "aspect-video w-full"
+            }
+          />
         ) : embed ? (
           <iframe
             src={embed.src}
@@ -1086,7 +1167,16 @@ function VideoView({ page, preview }: ViewProps<VideoPage>) {
 
 function AudioView({ page, preview }: ViewProps<AudioPage>) {
   const link = safeHref(page.link);
+  // A Spotify, SoundCloud or Apple link shows that site's player, after a tap (spec item 48).
+  const embed = audioEmbed(page.link);
   const look = page.look;
+  // Drawn as given: an older page has no Listen on links or tracks.
+  const listen = (page.listen ?? []).flatMap((l) => {
+    const service = listenService(l.url);
+    const href = safeHref(l.url);
+    return service && href ? [{ href, service }] : [];
+  });
+  const tracks = (page.tracks ?? []).filter((t) => t.file || safeHref(t.link));
   return (
     <PageFrame look={look} preview={preview}>
       {!page.cover && (
@@ -1113,13 +1203,83 @@ function AudioView({ page, preview }: ViewProps<AudioPage>) {
           ) : (
             <audio src={mediaUrl(page.file.path)} controls preload="metadata" className="w-full" />
           ))}
-        {link && (
-          <PageLink href={link} variant={page.file ? "secondary" : "primary"} preview={preview}>
-            <Music aria-hidden /> Listen
-          </PageLink>
+        {embed ? (
+          preview ? (
+            <p className="flex items-center gap-2 text-sm font-medium text-fg-muted">
+              <Music aria-hidden className="size-4" /> Plays on the live page
+            </p>
+          ) : (
+            <div className="w-full overflow-hidden rounded-(--pg-radius) bg-black">
+              <TapToPlay
+                src={embed.src}
+                name={embed.name}
+                title={page.title || "Audio"}
+                height={embed.height}
+              />
+            </div>
+          )
+        ) : (
+          link && (
+            <PageLink href={link} variant={page.file ? "secondary" : "primary"} preview={preview}>
+              <Music aria-hidden /> Listen
+            </PageLink>
+          )
         )}
         {page.description.trim() && <Prose text={page.description} />}
       </PageCard>
+      {listen.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {listen.map(({ href, service }) => (
+            <PageLink
+              key={href}
+              href={href}
+              variant="secondary"
+              preview={preview}
+              icon={<MusicIcon service={service.id} />}
+            >
+              Listen on {service.label}
+            </PageLink>
+          ))}
+        </div>
+      )}
+      {tracks.length > 0 && (
+        <PageCard>
+          <section aria-label="Tracks">
+            <h2 className="mb-3 font-page-heading text-lg font-bold text-fg">Tracks</h2>
+            <ol className="flex flex-col gap-4">
+              {tracks.map((t, i) => (
+                <li key={i} className="flex flex-col gap-2">
+                  <span className="flex items-baseline gap-2">
+                    <span className="text-sm text-fg-muted tabular-nums">{i + 1}.</span>
+                    <span className="min-w-0 font-medium [overflow-wrap:anywhere] text-fg">
+                      {t.title.trim() || t.file?.name || "Track"}
+                    </span>
+                  </span>
+                  {t.file ? (
+                    preview ? (
+                      <p className="text-sm text-fg-muted">Plays on the live page</p>
+                    ) : (
+                      <audio
+                        src={mediaUrl(t.file.path)}
+                        aria-label={t.title.trim() || t.file.name}
+                        controls
+                        preload="none"
+                        className="w-full"
+                      />
+                    )
+                  ) : (
+                    <PageLink href={safeHref(t.link)} variant="secondary" preview={preview}>
+                      <Music aria-hidden /> Listen to {t.title.trim() || "this track"}
+                    </PageLink>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </section>
+        </PageCard>
+      )}
+      {/* Starting one player pauses the others (spec item 50). */}
+      {!preview && <OneAtATime />}
     </PageFrame>
   );
 }

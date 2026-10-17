@@ -894,3 +894,141 @@ describe("Images and Video fixes", () => {
     ).toBeTruthy();
   });
 });
+
+describe("PDF extras", () => {
+  const pdf = (name: string, size = 2048) => ({
+    path: `00000000-0000-0000-0000-000000000000/${name}`,
+    name,
+    type: "application/pdf",
+    size,
+  });
+  const row = (name: string, patch: object = {}) => ({
+    file: pdf(name),
+    title: "",
+    preview: null,
+    ...patch,
+  });
+
+  it("keeps one PDF's page as it was, with its first page shown when there is one", () => {
+    view(
+      "pdf",
+      {
+        ...PAGE_DEFAULTS.pdf(),
+        title: "Menu",
+        files: [row("menu.pdf", { preview: media("p.webp", "image/webp") })],
+      },
+      false,
+    );
+    expect(screen.getByRole("img", { name: "First page of Menu" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Open PDF/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Download/ })).toBeInTheDocument();
+  });
+
+  it("lists several PDFs, each with View and Download, named by title or file", () => {
+    view(
+      "pdf",
+      {
+        ...PAGE_DEFAULTS.pdf(),
+        title: "Menus",
+        files: [
+          row("food.pdf", { title: "Food" }),
+          row("wine-list.pdf"),
+          { file: null, title: "", preview: null },
+        ],
+      },
+      false,
+    );
+    const list = within(screen.getByRole("list", { name: "PDFs" }));
+    expect(list.getAllByRole("listitem")).toHaveLength(2);
+    expect(list.getByText("Food")).toBeInTheDocument();
+    expect(list.getByText("wine-list.pdf")).toBeInTheDocument();
+    expect(list.getByRole("link", { name: "View Food" })).toBeInTheDocument();
+    expect(list.getByRole("link", { name: "Download Food, 2 KB" })).toBeInTheDocument();
+  });
+});
+
+describe("Audio extras", () => {
+  const audio = (patch: object) => ({ ...PAGE_DEFAULTS.audio(), title: "Album", ...patch });
+
+  it("shows the Spotify player after a tap, in place of the Listen button", async () => {
+    const user = userEvent.setup();
+    const { container } = view(
+      "audio",
+      audio({ link: "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC" }),
+      false,
+    );
+    expect(screen.queryByRole("link", { name: /^Listen$/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Tap to play from Spotify" }));
+    expect(container.querySelector("iframe")).toHaveAttribute(
+      "src",
+      "https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC",
+    );
+  });
+
+  it("keeps the Listen button for another link", () => {
+    view("audio", audio({ link: "https://example.com/song" }), false);
+    expect(screen.getByRole("link", { name: /Listen/ })).toHaveAttribute(
+      "href",
+      "https://example.com/song",
+    );
+  });
+
+  it("shows a Listen on button per service, and the tracks", () => {
+    const { container } = view(
+      "audio",
+      audio({
+        link: "https://example.com/song",
+        listen: [
+          { url: "https://music.apple.com/us/album/x/1" },
+          { url: "https://music.amazon.com/albums/x" },
+          { url: "" },
+        ],
+        tracks: [
+          { title: "Intro", file: media("1.mp3", "audio/mpeg"), link: "" },
+          { title: "Live", file: null, link: "https://example.com/live" },
+        ],
+      }),
+      false,
+    );
+    expect(screen.getByRole("link", { name: /Listen on Apple Music/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Listen on Amazon Music/ })).toBeInTheDocument();
+    const tracks = within(screen.getByRole("region", { name: "Tracks" }));
+    expect(tracks.getByText("Intro")).toBeInTheDocument();
+    expect(container.querySelectorAll("section[aria-label=Tracks] audio")).toHaveLength(1);
+    expect(tracks.getByRole("link", { name: /Live/ })).toHaveAttribute(
+      "href",
+      "https://example.com/live",
+    );
+  });
+
+  it("plays nothing in the editor's preview", () => {
+    const { container } = view(
+      "audio",
+      audio({
+        link: "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC",
+        tracks: [{ title: "Intro", file: media("1.mp3", "audio/mpeg"), link: "" }],
+      }),
+      true,
+    );
+    expect(container.querySelector("audio, iframe")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Tap to play/ })).toBeNull();
+  });
+});
+
+describe("Audio track players", () => {
+  it("names each track's player for screen readers", () => {
+    const { container } = view(
+      "audio",
+      {
+        ...PAGE_DEFAULTS.audio(),
+        title: "Album",
+        tracks: [{ title: "Intro", file: media("1.mp3", "audio/mpeg"), link: "" }],
+      },
+      false,
+    );
+    expect(container.querySelector("section[aria-label=Tracks] audio")).toHaveAttribute(
+      "aria-label",
+      "Intro",
+    );
+  });
+});

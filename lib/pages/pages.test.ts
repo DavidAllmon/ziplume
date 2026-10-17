@@ -5,8 +5,16 @@ import { PAGE_TYPE_IDS } from "@/lib/qr/types";
 import { contactVcard, eventIcs, eventTimes, googleCalendarUrl } from "./files";
 import { newLink } from "./links";
 import { mediaPaths, sanitizeMedia, sanitizePage } from "./sanitize";
-import { PAGE_DEFAULTS, type EventPage, type VcardPage } from "./types";
-import { safeHref, socialHref, startSeconds, videoEmbed, whatsappHref } from "./urls";
+import { PAGE_DEFAULTS, type EventPage, type Media, type VcardPage } from "./types";
+import {
+  audioEmbed,
+  listenService,
+  safeHref,
+  socialHref,
+  startSeconds,
+  videoEmbed,
+  whatsappHref,
+} from "./urls";
 import { pageSummary, validatePage } from "./validate";
 
 const UID = "11111111-1111-4111-8111-111111111111";
@@ -114,8 +122,13 @@ describe("validatePage", () => {
     expect(validatePage("links", PAGE_DEFAULTS.links())).toMatchObject({
       title: expect.any(String),
     });
-    expect(validatePage("pdf", PAGE_DEFAULTS.pdf())).toEqual({ file: "Upload a PDF" });
-    expect(validatePage("pdf", { ...PAGE_DEFAULTS.pdf(), file: media("a.pdf") })).toEqual({});
+    expect(validatePage("pdf", PAGE_DEFAULTS.pdf())).toEqual({ "files.0.file": "Upload a PDF" });
+    expect(
+      validatePage("pdf", {
+        ...PAGE_DEFAULTS.pdf(),
+        files: [{ file: media("a.pdf"), title: "", preview: null }],
+      }),
+    ).toEqual({});
     expect(
       validatePage("app", {
         ...PAGE_DEFAULTS.app(),
@@ -682,5 +695,158 @@ describe("an older API client's video link", () => {
       { title: "One", url: "https://vimeo.com/123456789", start: "0:10" },
       { title: "Two", url: "https://vimeo.com/76979871", start: "" },
     ]);
+  });
+});
+
+describe("PDF pages with several files", () => {
+  const pdf = (name: string) => ({
+    path: `${UID}/${name}`,
+    name,
+    type: "application/pdf",
+    size: 10,
+  });
+
+  it("reads an old page's file as its first, and an empty one as one empty row", () => {
+    expect(
+      sanitizePage("pdf", { title: "Menu", file: pdf("menu.pdf"), direct: true }),
+    ).toMatchObject({
+      files: [{ file: pdf("menu.pdf"), title: "", preview: null }],
+      direct: true,
+    });
+    expect(sanitizePage("pdf", { title: "Menu", file: null }).files).toEqual([
+      { file: null, title: "", preview: null },
+    ]);
+    expect(sanitizePage("pdf", { file: pdf("a.pdf") })).not.toHaveProperty("file");
+  });
+
+  it("needs one PDF, and a file on any row that has a title", () => {
+    const page = (files: { file: Media | null; title: string; preview: Media | null }[]) => ({
+      ...PAGE_DEFAULTS.pdf(),
+      files,
+    });
+    expect(validatePage("pdf", page([{ file: null, title: "", preview: null }]))).toEqual({
+      "files.0.file": "Upload a PDF",
+    });
+    expect(
+      validatePage(
+        "pdf",
+        page([
+          { file: pdf("a.pdf"), title: "", preview: null },
+          { file: null, title: "Wine list", preview: null },
+        ]),
+      ),
+    ).toEqual({ "files.1.file": "Upload a PDF, or remove this row" });
+  });
+});
+
+describe("audio links", () => {
+  it("embeds Spotify, SoundCloud and Apple players at their own heights", () => {
+    expect(
+      audioEmbed("https://open.spotify.com/intl-de/track/4uLU6hMCjMI75M1A2tKUQC?si=x"),
+    ).toEqual({
+      provider: "spotify",
+      src: "https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC",
+      name: "Spotify",
+      height: 152,
+    });
+    expect(audioEmbed("https://open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3")?.height).toBe(352);
+    expect(audioEmbed("https://soundcloud.com/artist/a-song")).toEqual({
+      provider: "soundcloud",
+      src: "https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fartist%2Fa-song&visual=false",
+      name: "SoundCloud",
+      height: 166,
+    });
+    expect(audioEmbed("https://soundcloud.com/artist/sets/an-album")?.height).toBe(450);
+    expect(audioEmbed("https://music.apple.com/us/album/x/1440857781?i=1440857798")).toMatchObject({
+      provider: "apple",
+      src: "https://embed.music.apple.com/us/album/x/1440857781?i=1440857798",
+      height: 175,
+    });
+    expect(audioEmbed("https://podcasts.apple.com/us/podcast/a-show/id1200361736")).toMatchObject({
+      src: "https://embed.podcasts.apple.com/us/podcast/a-show/id1200361736",
+      height: 450,
+    });
+    // Short links and look-alikes aren't embedded.
+    expect(audioEmbed("https://spotify.link/abc123")).toBeNull();
+    expect(audioEmbed("https://on.soundcloud.com/abc")).toBeNull();
+    expect(
+      audioEmbed("https://open.spotify.com.evil.example/track/4uLU6hMCjMI75M1A2tKUQC"),
+    ).toBeNull();
+  });
+
+  it("names a Listen on link's service from its address", () => {
+    expect(listenService("https://open.spotify.com/artist/x")?.label).toBe("Spotify");
+    expect(listenService("https://spotify.link/abc")?.id).toBe("spotify");
+    expect(listenService("https://music.apple.com/us/artist/x/1")?.label).toBe("Apple Music");
+    expect(listenService("https://podcasts.apple.com/us/podcast/x/id1")?.label).toBe(
+      "Apple Podcasts",
+    );
+    expect(listenService("https://music.youtube.com/channel/x")?.label).toBe("YouTube Music");
+    expect(listenService("https://music.amazon.co.uk/artists/x")?.label).toBe("Amazon Music");
+    expect(listenService("https://www.deezer.com/artist/1")?.id).toBe("deezer");
+    expect(listenService("https://link.deezer.com/s/abc")?.id).toBe("deezer");
+    expect(listenService("https://listen.tidal.com/artist/1")?.id).toBe("tidal");
+    expect(listenService("https://on.soundcloud.com/abc")?.id).toBe("soundcloud");
+    expect(listenService("https://artist.bandcamp.com/album/x")?.label).toBe("Bandcamp");
+    expect(listenService("https://example.com/music")).toBeNull();
+    expect(listenService("https://bandcamp.com.evil.example/x")).toBeNull();
+  });
+
+  it("reads an old audio page with no Listen on links or tracks", () => {
+    expect(
+      sanitizePage("audio", { title: "T", link: "https://open.spotify.com/track/x" }),
+    ).toMatchObject({
+      listen: [],
+      tracks: [],
+    });
+  });
+
+  it("checks Listen on links and tracks", () => {
+    const page = { ...PAGE_DEFAULTS.audio(), title: "T", link: "https://example.com/a" };
+    expect(
+      validatePage("audio", {
+        ...page,
+        listen: [{ url: "https://example.com/music" }],
+        tracks: [{ title: "Intro", file: null, link: "" }],
+      }),
+    ).toEqual({
+      "listen.0.url":
+        "Use a link from Spotify, Apple Music, YouTube Music, Amazon Music, Deezer, Tidal, SoundCloud or Bandcamp",
+      "tracks.0.file": "Upload the track or add its link",
+    });
+  });
+});
+
+describe("an older API client's PDF file", () => {
+  it("replaces the first PDF when it sends a file with what it fetched", () => {
+    const pdf = (name: string) => ({
+      path: `${UID}/${name}`,
+      name,
+      type: "application/pdf",
+      size: 10,
+    });
+    const page = sanitizePage("pdf", {
+      title: "Menu",
+      files: [
+        { file: pdf("old.pdf"), title: "Food", preview: media("old.png") },
+        { file: pdf("wine.pdf"), title: "", preview: null },
+      ],
+      file: pdf("new.pdf"),
+    });
+    expect(page.files).toEqual([
+      { file: pdf("new.pdf"), title: "Food", preview: null },
+      { file: pdf("wine.pdf"), title: "", preview: null },
+    ]);
+  });
+});
+
+describe("music links copied on a phone", () => {
+  it("knows mobile and short links for their service", () => {
+    expect(listenService("https://m.soundcloud.com/artist/a-song")?.label).toBe("SoundCloud");
+    expect(listenService("https://spoti.fi/3abc")?.label).toBe("Spotify");
+    expect(listenService("https://geo.music.apple.com/us/album/x/1")?.label).toBe("Apple Music");
+    expect(audioEmbed("https://m.soundcloud.com/artist/a-song")?.src).toBe(
+      "https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fartist%2Fa-song&visual=false",
+    );
   });
 });

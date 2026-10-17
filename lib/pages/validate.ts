@@ -6,6 +6,7 @@ import { barcodeProblem } from "./scan";
 import type { LinkItem, PageContentMap, SocialItem } from "./types";
 import { linkHref } from "./links";
 import {
+  listenService,
   mailHref,
   safeHref,
   socialHref,
@@ -191,7 +192,16 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     if (!p.question.trim()) errors.question = "Add a question";
     return errors;
   },
-  pdf: (p): PageErrors => (p.file ? {} : { file: "Upload a PDF" }),
+  pdf: (p) => {
+    const errors: PageErrors = {};
+    if (!p.files.some((f) => f.file)) {
+      errors[p.files.length ? "files.0.file" : "files"] = "Upload a PDF";
+    }
+    p.files.forEach((f, i) => {
+      if (!f.file && f.title.trim()) errors[`files.${i}.file`] = "Upload a PDF, or remove this row";
+    });
+    return errors;
+  },
   images: (p) => {
     const errors: PageErrors = {};
     if (!p.images.length) errors.images = "Add at least one image";
@@ -215,8 +225,23 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
   },
   audio: (p) => {
     const errors: PageErrors = {};
-    if (!p.file && !p.link.trim()) errors.file = "Upload an audio file or add a link";
+    const anyTrack = p.tracks.some((t) => t.file || t.link.trim());
+    if (!p.file && !p.link.trim() && !anyTrack) errors.file = "Upload an audio file or add a link";
     checkUrl(errors, "link", p.link);
+    p.listen.forEach((l, i) => {
+      if (!l.url.trim()) return;
+      if (!safeHref(l.url)) errors[`listen.${i}.url`] = URL_MESSAGE;
+      else if (!listenService(l.url)) {
+        errors[`listen.${i}.url`] =
+          "Use a link from Spotify, Apple Music, YouTube Music, Amazon Music, Deezer, Tidal, SoundCloud or Bandcamp";
+      }
+    });
+    p.tracks.forEach((t, i) => {
+      if (t.title.trim() && !t.file && !t.link.trim()) {
+        errors[`tracks.${i}.file`] = "Upload the track or add its link";
+      }
+      checkUrl(errors, `tracks.${i}.link`, t.link);
+    });
     return errors;
   },
   app: (p) => {

@@ -460,6 +460,71 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
       ],
     },
   },
+  {
+    type: "pdf",
+    slug: "PHONE-PDF-LIST",
+    content: {
+      title: "Phone menus",
+      files: [
+        {
+          file: {
+            path: "00000000-0000-4000-8000-000000000000/food.pdf",
+            name: "food.pdf",
+            type: "application/pdf",
+            size: 120000,
+          },
+          title: "Food menu with a long name that wraps on phones",
+          preview: photo("food-page"),
+        },
+        {
+          file: {
+            path: "00000000-0000-4000-8000-000000000000/wine.pdf",
+            name: "wine.pdf",
+            type: "application/pdf",
+            size: 80000,
+          },
+          title: "",
+          preview: null,
+        },
+      ],
+    },
+  },
+  {
+    type: "audio",
+    slug: "PHONE-AUDIO-PLUS",
+    content: {
+      title: "Phone album",
+      artist: "Ziplume",
+      link: "https://open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3",
+      listen: [
+        "https://music.apple.com/us/album/x/1",
+        "https://music.youtube.com/playlist?list=x",
+        "https://music.amazon.com/albums/x",
+        "https://www.deezer.com/album/1",
+        "https://listen.tidal.com/album/1",
+        "https://soundcloud.com/artist/sets/x",
+        "https://artist.bandcamp.com/album/x",
+        "https://podcasts.apple.com/us/podcast/x/id1",
+      ].map((url) => ({ url })),
+      tracks: [
+        {
+          title: "Intro",
+          file: {
+            path: "00000000-0000-4000-8000-000000000000/intro.mp3",
+            name: "intro.mp3",
+            type: "audio/mpeg",
+            size: 1000,
+          },
+          link: "",
+        },
+        {
+          title: "Live at the hall, a very long track title",
+          file: null,
+          link: "https://example.com/live",
+        },
+      ],
+    },
+  },
   // No video link, so the page shows its placeholder instead of loading a player.
   {
     type: "video",
