@@ -316,6 +316,12 @@ export default function DevelopersPage() {
         or a <code>link</code>). A Spotify, SoundCloud or Apple <code>link</code> shows that site’s
         player.
       </p>
+      <p>
+        Feedback pages take <code>questions</code> (up to 3, each a <code>text</code> and a{" "}
+        <code>style</code>: <code>stars</code>, <code>faces</code>, <code>thumbs</code> or{" "}
+        <code>scale</code> for 0 to 10) and a <code>reviewUrl</code>, offered to everyone after
+        sending. A single <code>question</code> still works, as one star question.
+      </p>
       <Code>{`{
   "type": "links",
   "name": "Bio links",
