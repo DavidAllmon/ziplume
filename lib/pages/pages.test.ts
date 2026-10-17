@@ -260,8 +260,12 @@ describe("validatePage names what's missing", () => {
       start: "Pick when the event starts",
     });
     expect(
-      validatePage("feedback", { ...PAGE_DEFAULTS.feedback(), business: "", question: "" }),
-    ).toMatchObject({ business: "Add the business name", question: "Add a question" });
+      validatePage("feedback", {
+        ...PAGE_DEFAULTS.feedback(),
+        business: "",
+        questions: [{ text: "", style: "stars" }],
+      }),
+    ).toMatchObject({ business: "Add the business name", "questions.0.text": "Add a question" });
     expect(validatePage("app", PAGE_DEFAULTS.app())).toMatchObject({ name: "Add the app name" });
     expect(
       validatePage("coupon", { ...PAGE_DEFAULTS.coupon(), offer: "20% off", buttonLabel: "Shop" }),

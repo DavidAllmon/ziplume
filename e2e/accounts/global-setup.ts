@@ -130,6 +130,31 @@ export default async function globalSetup(config: FullConfig) {
     .select("id")
     .single();
   if (postersError || !posters) throw postersError ?? new Error("Couldn't create the folder");
+  // A feedback page Maker owns, so a test can answer it and then read the summary.
+  const { data: makerFeedback, error: feedbackError } = await admin
+    .from("qr_codes")
+    .insert({
+      user_id: makerId,
+      name: "Maker feedback",
+      qr_type: "feedback",
+      is_dynamic: true,
+      slug: "MAKER-FEEDBACK",
+      content: {
+        business: "Maker Cafe",
+        questions: [
+          { text: "How was the food?", style: "stars" },
+          { text: "Would you come back?", style: "thumbs" },
+          { text: "How likely are you to recommend us?", style: "scale" },
+        ],
+        allowComment: false,
+        askContact: false,
+        thanks: "Thank you!",
+        reviewUrl: "",
+      },
+    })
+    .select("id")
+    .single();
+  if (feedbackError || !makerFeedback) throw feedbackError ?? new Error("Couldn't create feedback");
   const { error: teamsError } = await admin.from("team_members").insert([
     { owner_id: patId, member_id: quinnId, role: "editor" },
     { owner_id: rayId, member_id: skyId, role: "viewer" },
@@ -161,6 +186,7 @@ export default async function globalSetup(config: FullConfig) {
     viewerCodeId: own.find((code) => code.name === "Victor note")!.id,
     rayId,
     skyId,
+    makerFeedbackId: makerFeedback.id,
   };
   mkdirSync(AUTH_DIR, { recursive: true });
   writeFileSync(SEED_FILE, JSON.stringify(seeded));
