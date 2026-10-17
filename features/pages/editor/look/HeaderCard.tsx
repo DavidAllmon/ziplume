@@ -22,23 +22,31 @@ export function HeaderCard<K extends PageTypeId>({
   onLook: (change: LookChange) => void;
 }) {
   const image = heroImage(type, page);
-  const classic = look.header === "classic" || !image;
+  // A Contact page with a cover always shows it across the top, with the photo over it.
+  const covered = type === "vcard" && Boolean((page as PageContentMap["vcard"]).cover);
+  const classic = look.header === "classic" || !image || covered;
   return (
     <Card aria-labelledby="look-header">
       <CardHeader id="look-header" title="Header" />
       <div className="flex flex-col gap-4 px-5 pt-4 pb-6 sm:px-6">
-        <Labeled label="Layout">
-          <SegmentedControl
-            aria-label="Header layout"
-            size="touch"
-            value={look.header}
-            onChange={(header) => onLook({ ...look, header })}
-            options={[
-              { value: "classic", label: "Classic" },
-              { value: "hero", label: "Hero" },
-            ]}
-          />
-        </Labeled>
+        {covered ? (
+          <p className="text-sm text-fg-muted">
+            Your cover photo runs across the top, with your photo over it.
+          </p>
+        ) : (
+          <Labeled label="Layout">
+            <SegmentedControl
+              aria-label="Header layout"
+              size="touch"
+              value={look.header}
+              onChange={(header) => onLook({ ...look, header })}
+              options={[
+                { value: "classic", label: "Classic" },
+                { value: "hero", label: "Hero" },
+              ]}
+            />
+          </Labeled>
+        )}
         {!image && <p className="text-sm text-fg-muted">Add a photo to use Hero</p>}
         {hasShape(type) && classic && (
           <Labeled label="Image shape">

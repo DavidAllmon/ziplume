@@ -2,7 +2,7 @@
 
 import { LIMITS, type VcardPage } from "@/lib/pages/types";
 
-import { AreaField, MediaField, rowName, SocialsField, TextField } from "../fields";
+import { AreaField, MediaField, rowName, SocialsField, TextField, ToggleField } from "../fields";
 import { FormCard } from "../FormCard";
 import { SortableList } from "../sortable/SortableList";
 import type { EditorProps } from "./shared";
@@ -18,6 +18,14 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
           maxSide={512}
           value={page.photo}
           onChange={(photo) => set({ photo })}
+        />
+        <MediaField
+          label="Cover photo"
+          kind="image"
+          maxSide={1600}
+          hint="A wide photo across the top."
+          value={page.cover}
+          onChange={(cover) => set({ cover })}
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
@@ -37,6 +45,15 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
             autoComplete="family-name"
           />
           <TextField
+            path="pronouns"
+            errors={errors}
+            label="Pronouns"
+            optional
+            placeholder="she/her"
+            value={page.pronouns}
+            onChange={(pronouns) => set({ pronouns })}
+          />
+          <TextField
             path="jobTitle"
             errors={errors}
             label="Job title"
@@ -51,6 +68,14 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
             optional
             value={page.company}
             onChange={(company) => set({ company })}
+          />
+          <TextField
+            path="department"
+            errors={errors}
+            label="Department"
+            optional
+            value={page.department}
+            onChange={(department) => set({ department })}
           />
         </div>
       </FormCard>
@@ -79,24 +104,35 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
           itemLabel={(item, i) => rowName("phone", item.number, i)}
           newItem={() => ({ label: "Mobile", number: "", whatsapp: false })}
           render={(item, update, i) => (
-            <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">
-              <TextField
-                path={`phones.${i}.label`}
-                errors={errors}
-                label="Label"
-                value={item.label}
-                onChange={(label) => update({ label })}
-              />
-              <TextField
-                label="Number"
-                type="tel"
-                inputMode="tel"
-                value={item.number}
-                onChange={(number) => update({ number })}
-                path={`phones.${i}.number`}
-                errors={errors}
-                placeholder="+1 555 010 9999"
-              />
+            <div className="flex flex-col gap-3">
+              <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">
+                <TextField
+                  path={`phones.${i}.label`}
+                  errors={errors}
+                  label="Label"
+                  value={item.label}
+                  onChange={(label) => update({ label })}
+                />
+                <TextField
+                  label="Number"
+                  type="tel"
+                  inputMode="tel"
+                  value={item.number}
+                  onChange={(number) => update({ number })}
+                  path={`phones.${i}.number`}
+                  errors={errors}
+                  placeholder="+1 555 010 9999"
+                />
+              </div>
+              <label className="flex min-h-11 items-center gap-2 text-sm text-fg sm:min-h-0">
+                <input
+                  type="checkbox"
+                  className="size-5 accent-primary"
+                  checked={item.whatsapp}
+                  onChange={(event) => update({ whatsapp: event.target.checked })}
+                />
+                On WhatsApp
+              </label>
             </div>
           )}
         />
@@ -138,19 +174,73 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
           )}
         />
       </FormCard>
-      <FormCard title="Website and address">
-        <TextField
-          label="Website"
-          optional
-          type="url"
-          inputMode="url"
-          value={page.websites[0]?.url ?? ""}
-          onChange={(url) =>
-            set((latest) => ({ websites: [{ label: "", url }, ...latest.websites.slice(1)] }))
-          }
-          path="websites.0.url"
+      <FormCard
+        title="Quick buttons"
+        note="Under your name, from your first phone, email and address"
+      >
+        <ToggleField
+          label="Call button"
+          checked={page.showCall}
+          onChange={(showCall) => set({ showCall })}
+        />
+        <ToggleField
+          label="Text button"
+          checked={page.showText}
+          onChange={(showText) => set({ showText })}
+        />
+        <ToggleField
+          label="Email button"
+          checked={page.showEmail}
+          onChange={(showEmail) => set({ showEmail })}
+        />
+        <ToggleField
+          label="WhatsApp button"
+          description="Uses the first number marked On WhatsApp."
+          checked={page.showWhatsapp}
+          onChange={(showWhatsapp) => set({ showWhatsapp })}
+        />
+        <ToggleField
+          label="Directions button"
+          checked={page.showDirections}
+          onChange={(showDirections) => set({ showDirections })}
+        />
+      </FormCard>
+      <FormCard title="Websites and address">
+        <SortableList
+          label="Websites"
+          items={page.websites}
+          onChange={(websites) => set({ websites })}
+          max={LIMITS.websites}
+          addLabel="Add website"
+          addAt="end"
+          newRowFocus="input[type='url']"
+          path="websites"
           errors={errors}
-          placeholder="example.com"
+          itemLabel={(item, i) => rowName("website", item.label || item.url, i)}
+          newItem={() => ({ label: "", url: "" })}
+          render={(item, update, i) => (
+            <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">
+              <TextField
+                path={`websites.${i}.label`}
+                errors={errors}
+                label="Label"
+                optional
+                placeholder="Portfolio"
+                value={item.label}
+                onChange={(label) => update({ label })}
+              />
+              <TextField
+                label="Website address"
+                type="url"
+                inputMode="url"
+                value={item.url}
+                onChange={(url) => update({ url })}
+                path={`websites.${i}.url`}
+                errors={errors}
+                placeholder="example.com"
+              />
+            </div>
+          )}
         />
         <TextField
           path="address"

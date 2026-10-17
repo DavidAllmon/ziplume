@@ -238,7 +238,8 @@ const CARDS: Record<PageTypeId, string[]> = {
     "About",
     "Phone numbers",
     "Email addresses",
-    "Website and address",
+    "Quick buttons",
+    "Websites and address",
     "Social icons",
   ],
   business: ["Header", "Contact", "About", "Opening hours", "Buttons", "Social icons"],
@@ -453,5 +454,51 @@ describe("text limits in the editor", () => {
       expect(path, `${type}: ${box.outerHTML.slice(0, 80)}`).toBeTruthy();
       expect(limitAt(type, path!), `${type}.${path}`).not.toBeNull();
     }
+  });
+});
+
+describe("Contact page editor extras", () => {
+  function Contact() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.vcard());
+    return (
+      <>
+        <PageEditor
+          type="vcard"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("edits pronouns, department and up to four websites", async () => {
+    const user = userEvent.setup();
+    render(<Contact />);
+    await user.type(screen.getByRole("textbox", { name: /^Pronouns/ }), "she/her");
+    await user.type(screen.getByRole("textbox", { name: /^Department/ }), "Design");
+    await user.click(screen.getByRole("button", { name: "Add website" }));
+    await user.type(screen.getByRole("textbox", { name: /^Website address/ }), "ana.dev");
+    expect(saved()).toMatchObject({
+      pronouns: "she/her",
+      department: "Design",
+      websites: [{ label: "", url: "ana.dev" }],
+    });
+  });
+
+  it("ticks a number as WhatsApp, and turns quick buttons off", async () => {
+    const user = userEvent.setup();
+    render(<Contact />);
+    await user.click(screen.getByRole("checkbox", { name: /WhatsApp/ }));
+    await user.click(screen.getByRole("switch", { name: /^Text/ }));
+    expect(saved().phones[0].whatsapp).toBe(true);
+    expect(saved().showText).toBe(false);
+  });
+
+  it("offers a cover photo", () => {
+    render(<Contact />);
+    expect(screen.getByText("Cover photo")).toBeInTheDocument();
   });
 });
