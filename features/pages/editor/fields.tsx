@@ -343,6 +343,7 @@ export function ImagesField({
   max,
   error,
   field,
+  maxSide,
 }: {
   value: Media[];
   onChange: (value: Media[]) => void;
@@ -352,6 +353,8 @@ export function ImagesField({
   error?: string;
   /** Marks the file input for "Show me". */
   field?: string;
+  /** The longest side images are resized to (1600 px unless set). */
+  maxSide?: number;
 }) {
   const inputId = useId();
   const ownerId = useContext(MediaOwnerContext);
@@ -365,7 +368,7 @@ export function ImagesField({
     setProblem(files.length > room ? `You can add up to ${max} images.` : null);
     setBusy(chosen.length);
     for (const file of chosen) {
-      const result = await uploadMedia(file, "image", { ownerId });
+      const result = await uploadMedia(file, "image", { ownerId, maxSide });
       setBusy((n) => n - 1);
       if (result.ok) onAdd(result.media);
       else setProblem(result.error);

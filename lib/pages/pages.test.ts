@@ -654,3 +654,16 @@ describe("video links", () => {
     });
   });
 });
+
+describe("App store switch, screenshots and features", () => {
+  it("reads an old app page with the switch on and no screenshots or features", () => {
+    expect(sanitizePage("app", { name: "A" })).toMatchObject({
+      storeRedirect: true,
+      screenshots: [],
+      features: [],
+    });
+    expect(
+      sanitizePage("app", { name: "A", features: [{ text: "Offline" }, { text: 3 }] }).features,
+    ).toEqual([{ text: "Offline" }, { text: "" }]);
+  });
+});

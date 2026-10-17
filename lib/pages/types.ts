@@ -305,6 +305,12 @@ export interface AppPage extends Themed {
   iosUrl: string;
   androidUrl: string;
   webUrl: string;
+  /** iPhones/iPads to the App Store and Android to Google Play, from the scan (spec item 51). */
+  storeRedirect: boolean;
+  /** Up to 5, resized to 1200 px (spec item 52). */
+  screenshots: Media[];
+  /** Up to 6, each up to 80 characters (spec item 53). */
+  features: { text: string }[];
 }
 
 export interface PageContentMap {
@@ -333,6 +339,8 @@ export const LIMITS = {
   closures: 10,
   options: 4,
   videos: 10,
+  screenshots: 5,
+  features: 6,
   agenda: 30,
   hosts: 12,
   gallery: 6,
@@ -528,6 +536,9 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       iosUrl: "",
       androidUrl: "",
       webUrl: "",
+      storeRedirect: true,
+      screenshots: [],
+      features: [],
     }),
 };
 

@@ -226,6 +226,10 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     iosUrl: str(2048),
     androidUrl: str(2048),
     webUrl: str(2048),
+    // Every App code sent phones to their store before this could be switched off.
+    storeRedirect: { kind: "bool", fallback: true },
+    screenshots: { kind: "mediaList", max: LIMITS.screenshots },
+    features: { kind: "list", max: LIMITS.features, item: { text: str(80) } },
   },
 };
 

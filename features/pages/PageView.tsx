@@ -1,5 +1,6 @@
 import {
   CalendarPlus,
+  Check,
   Clock,
   Download,
   ExternalLink,
@@ -1118,6 +1119,7 @@ function AppView({ page, preview }: ViewProps<AppPage>) {
   const android = safeHref(page.androidUrl);
   const web = safeHref(page.webUrl);
   const look = page.look;
+  const features = (page.features ?? []).filter((f) => f.text.trim());
   return (
     <PageFrame look={look} preview={preview}>
       {!page.icon && (
@@ -1147,6 +1149,30 @@ function AppView({ page, preview }: ViewProps<AppPage>) {
           </PageLink>
         </div>
       </PageCard>
+      <Gallery
+        images={(page.screenshots ?? []).map((media, i, all) => ({
+          media,
+          alt: `Screenshot ${i + 1} of ${all.length}`,
+        }))}
+        label="Screenshots"
+        preview={preview}
+        portrait
+      />
+      {features.length > 0 && (
+        <PageCard>
+          <section aria-label="Features">
+            <h2 className="mb-3 font-page-heading text-lg font-bold text-fg">Features</h2>
+            <ul className="flex flex-col gap-2.5">
+              {features.map((f, i) => (
+                <li key={i} className="flex gap-3 text-[15px] text-fg">
+                  <Check aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--page-accent)]" />
+                  <span className="min-w-0 [overflow-wrap:anywhere]">{f.text}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </PageCard>
+      )}
     </PageFrame>
   );
 }

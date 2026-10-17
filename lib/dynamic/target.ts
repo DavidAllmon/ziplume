@@ -27,10 +27,13 @@ export function scanTarget(
   }
   if (code.qr_type === "app") {
     const page = sanitizePage("app", code.content);
-    const ios = safeHref(page.iosUrl);
-    const android = safeHref(page.androidUrl);
-    if (ios && (os === "iOS" || os === "iPadOS")) return ios;
-    if (android && os === "Android") return android;
+    // Only while the page's "Send phones straight to their store" is on (spec item 51).
+    if (page.storeRedirect) {
+      const ios = safeHref(page.iosUrl);
+      const android = safeHref(page.androidUrl);
+      if (ios && (os === "iOS" || os === "iPadOS")) return ios;
+      if (android && os === "Android") return android;
+    }
   }
   return pageUrl;
 }

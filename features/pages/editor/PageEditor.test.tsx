@@ -260,7 +260,7 @@ const CARDS: Record<PageTypeId, string[]> = {
   images: ["Details", "Images"],
   video: ["Videos", "Details"],
   audio: ["Audio", "Header", "Details"],
-  app: ["Header", "Store links", "Website"],
+  app: ["Header", "Store links", "Screenshots", "Features", "Website"],
 };
 
 describe("PageEditor cards", () => {
@@ -453,6 +453,7 @@ describe("text limits in the editor", () => {
     }
     if (type === "business") page.buttons = [{ label: "", url: "", on: true }];
     if (type === "vcard") page.socials = [{ network: "instagram", url: "" }];
+    if (type === "app") page.features = [{ text: "" }];
     if (type === "images") {
       page.images = [
         {
@@ -940,5 +941,33 @@ describe("Video editor extras", () => {
     await user.type(screen.getAllByRole("textbox", { name: /^Start at/ })[1]!, "0:10");
     expect(saved().videos).toHaveLength(2);
     expect(saved().videos[1]).toMatchObject({ start: "0:10" });
+  });
+});
+
+describe("App editor extras", () => {
+  function App() {
+    const [page, setPage] = useState(PAGE_DEFAULTS.app());
+    return (
+      <>
+        <PageEditor
+          type="app"
+          page={page}
+          errors={{}}
+          onUpdate={(update) => setPage((p) => update(p))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("turns the store switch off, and adds a feature", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("switch", { name: /^Send phones straight to their store/ }));
+    await user.click(screen.getByRole("button", { name: "Add feature" }));
+    await user.type(screen.getByRole("textbox", { name: /^Feature/ }), "Works offline");
+    expect(saved()).toMatchObject({ storeRedirect: false, features: [{ text: "Works offline" }] });
+    expect(screen.getByText("Screenshots")).toBeInTheDocument();
   });
 });

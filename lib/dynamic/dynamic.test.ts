@@ -167,6 +167,25 @@ describe("scan targets", () => {
       scanTarget({ ...code, content: { iosUrl: "javascript:alert(1)" } }, "APP", "iOS", site),
     ).toBe(`${site}/p/APP`);
   });
+
+  it("sends phones to their store only while the App page's switch is on", () => {
+    const content = {
+      name: "A",
+      iosUrl: "https://apps.apple.com/app/id1",
+      androidUrl: "https://play.google.com/store/apps/details?id=a",
+    };
+    const app = (extra: object) => ({
+      destination: null,
+      qr_type: "app",
+      content: { ...content, ...extra },
+    });
+    // Old pages have no switch: they go to the store, as before.
+    expect(scanTarget(app({}), "APP1", "iOS", site)).toBe("https://apps.apple.com/app/id1");
+    expect(scanTarget(app({ storeRedirect: false }), "APP1", "iOS", site)).toBe(`${site}/p/APP1`);
+    expect(scanTarget(app({ storeRedirect: false }), "APP1", "Android", site)).toBe(
+      `${site}/p/APP1`,
+    );
+  });
 });
 
 describe("unlock cookies", () => {

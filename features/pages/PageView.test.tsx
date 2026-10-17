@@ -836,3 +836,23 @@ describe("Video extras", () => {
     expect(screen.queryByRole("button", { name: /Tap to play/ })).toBeNull();
   });
 });
+
+describe("App extras", () => {
+  it("shows tall screenshots that open in the viewer, and the features", () => {
+    view(
+      "app",
+      {
+        ...PAGE_DEFAULTS.app(),
+        name: "Tasks",
+        iosUrl: "https://apps.apple.com/app/id1",
+        screenshots: [media("s1.png", "image/png"), media("s2.png", "image/png")],
+        features: [{ text: "Works offline" }, { text: "" }, { text: "Syncs everywhere" }],
+      },
+      false,
+    );
+    expect(screen.getByRole("button", { name: "Open photo 1 of 2" })).toBeInTheDocument();
+    const features = within(screen.getByRole("region", { name: "Features" }));
+    expect(features.getAllByRole("listitem")).toHaveLength(2);
+    expect(features.getByText("Works offline")).toBeInTheDocument();
+  });
+});

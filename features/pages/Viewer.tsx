@@ -136,10 +136,13 @@ export function Gallery({
   images,
   label,
   preview = false,
+  portrait = false,
 }: {
   images: ViewerImage[];
   label: string;
   preview?: boolean;
+  /** Tall, phone-shaped images (an app's screenshots). */
+  portrait?: boolean;
 }) {
   const [index, setIndex] = useState<number | null>(null);
   if (!images.length) return null;
@@ -150,12 +153,21 @@ export function Gallery({
         className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1"
       >
         {images.map((image, i) => (
-          <li key={image.media.path} className="w-[70%] max-w-64 shrink-0 snap-start">
+          <li
+            key={image.media.path}
+            className={cn(
+              "shrink-0 snap-start",
+              portrait ? "w-[45%] max-w-48" : "w-[70%] max-w-64",
+            )}
+          >
             {preview ? (
               <MediaImage
                 media={image.media}
                 alt={image.alt}
-                className="aspect-[4/3] w-full rounded-(--pg-radius) object-cover"
+                className={cn(
+                  "w-full rounded-(--pg-radius) object-cover",
+                  portrait ? "aspect-[9/16]" : "aspect-[4/3]",
+                )}
               />
             ) : (
               <button
@@ -167,7 +179,7 @@ export function Gallery({
                 <MediaImage
                   media={image.media}
                   alt=""
-                  className="aspect-[4/3] w-full object-cover"
+                  className={cn("w-full object-cover", portrait ? "aspect-[9/16]" : "aspect-[4/3]")}
                 />
               </button>
             )}

@@ -1,9 +1,10 @@
 "use client";
 
-import { type AppPage } from "@/lib/pages/types";
+import { LIMITS, type AppPage } from "@/lib/pages/types";
 
-import { AreaField, MediaField, TextField } from "../fields";
+import { AreaField, ImagesField, MediaField, rowName, TextField, ToggleField } from "../fields";
 import { FormCard } from "../FormCard";
+import { SortableList } from "../sortable/SortableList";
 import type { EditorProps } from "./shared";
 
 export function AppEditor({ page, set, errors }: EditorProps<AppPage>) {
@@ -55,10 +56,51 @@ export function AppEditor({ page, set, errors }: EditorProps<AppPage>) {
           errors={errors}
           placeholder="play.google.com/store/apps/details?id=…"
         />
-        <p className="rounded-control bg-surface-2 px-3.5 py-3 text-sm text-fg-muted">
-          iPhones go straight to the App Store and Android phones to Google Play. Everyone else sees
-          a page with both.
-        </p>
+        <ToggleField
+          label="Send phones straight to their store"
+          description="iPhones and iPads go to the App Store, Android phones to Google Play. Computers, and phones without their store’s link, see this page."
+          checked={page.storeRedirect}
+          onChange={(storeRedirect) => set({ storeRedirect })}
+        />
+      </FormCard>
+      <FormCard title="Screenshots" note="Tall phone screenshots, shown as a row to swipe">
+        <ImagesField
+          value={page.screenshots}
+          onChange={(screenshots) => set({ screenshots })}
+          onAdd={(media) =>
+            set((latest) => ({
+              screenshots: [...latest.screenshots, media].slice(0, LIMITS.screenshots),
+            }))
+          }
+          max={LIMITS.screenshots}
+          maxSide={1200}
+          field="screenshots"
+        />
+      </FormCard>
+      <FormCard title="Features" note="Short points, shown as a checklist">
+        <SortableList
+          label="Features"
+          showLabel={false}
+          items={page.features}
+          onChange={(features) => set({ features })}
+          max={LIMITS.features}
+          addLabel="Add feature"
+          addAt="end"
+          path="features"
+          errors={errors}
+          itemLabel={(item, i) => rowName("feature", item.text, i)}
+          newItem={() => ({ text: "" })}
+          render={(item, update, i) => (
+            <TextField
+              path={`features.${i}.text`}
+              errors={errors}
+              label="Feature"
+              placeholder="Works offline"
+              value={item.text}
+              onChange={(text) => update({ text })}
+            />
+          )}
+        />
       </FormCard>
       <FormCard title="Website">
         <TextField
