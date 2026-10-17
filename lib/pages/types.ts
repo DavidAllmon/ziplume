@@ -305,6 +305,10 @@ export interface AudioPage extends Themed {
   cover: Media | null;
   file: Media | null;
   link: string;
+  /** Up to 8 "Listen on" buttons; each link's service comes from its address (spec item 49). */
+  listen: { url: string }[];
+  /** Up to 10, each an uploaded file or a link; they play one at a time (spec item 50). */
+  tracks: { title: string; file: Media | null; link: string }[];
 }
 
 export interface AppPage extends Themed {
@@ -349,6 +353,8 @@ export const LIMITS = {
   options: 4,
   videos: 10,
   pdfs: 10,
+  listen: 8,
+  tracks: 10,
   screenshots: 5,
   features: 6,
   agenda: 30,
@@ -536,6 +542,8 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       cover: null,
       file: null,
       link: "",
+      listen: [],
+      tracks: [],
     }),
   app: () =>
     withLook("app", {

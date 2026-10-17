@@ -195,3 +195,92 @@ export function videoEmbed(input: string, start = ""): VideoEmbed | null {
   }
   return null;
 }
+
+export type AudioEmbed = {
+  provider: "spotify" | "soundcloud" | "apple";
+  src: string;
+  /** For "Tap to play from Spotify". */
+  name: string;
+  /** The player's own height, in pixels. */
+  height: number;
+};
+
+/** A Spotify, SoundCloud or Apple Music / Podcasts link as that site's player (spec item 48). */
+export function audioEmbed(input: string): AudioEmbed | null {
+  const href = safeHref(input);
+  if (!href) return null;
+  const url = new URL(href);
+  const host = url.hostname.replace(/^www\./, "");
+  if (host === "open.spotify.com") {
+    const match =
+      /^(?:\/intl-[a-z-]+)?\/(track|album|playlist|episode|show|artist)\/([A-Za-z0-9]{22})/.exec(
+        url.pathname,
+      );
+    if (match) {
+      const [, kind, id] = match;
+      return {
+        provider: "spotify",
+        src: `https://open.spotify.com/embed/${kind}/${id}`,
+        name: "Spotify",
+        height: kind === "track" || kind === "episode" ? 152 : 352,
+      };
+    }
+  }
+  if (host === "soundcloud.com") {
+    const parts = url.pathname.split("/").filter(Boolean);
+    if (parts.length >= 2) {
+      return {
+        provider: "soundcloud",
+        src: `https://w.soundcloud.com/player/?url=${encodeURIComponent(`https://soundcloud.com/${parts.join("/")}`)}&visual=false`,
+        name: "SoundCloud",
+        height: parts[1] === "sets" ? 450 : 166,
+      };
+    }
+  }
+  if (host === "music.apple.com" || host === "podcasts.apple.com") {
+    if (/^\/[a-z]{2}\/(album|playlist|song|podcast)\//.test(url.pathname)) {
+      const one = url.searchParams.has("i") || url.pathname.includes("/song/");
+      return {
+        provider: "apple",
+        src: `https://embed.${host}${url.pathname}${url.search}`,
+        name: host === "music.apple.com" ? "Apple Music" : "Apple Podcasts",
+        height: one ? 175 : 450,
+      };
+    }
+  }
+  return null;
+}
+
+export type ListenService = {
+  id:
+    | "spotify"
+    | "applemusic"
+    | "applepodcasts"
+    | "youtubemusic"
+    | "amazon"
+    | "deezer"
+    | "tidal"
+    | "soundcloud"
+    | "bandcamp";
+  label: string;
+};
+
+/** Which service a "Listen on" link is from, by its address (spec item 49, ruling 3). */
+export function listenService(input: string): ListenService | null {
+  const href = safeHref(input);
+  if (!href) return null;
+  const host = new URL(href).hostname.replace(/^www\./, "");
+  const is = (...hosts: string[]) => hosts.includes(host);
+  if (is("open.spotify.com", "spotify.link")) return { id: "spotify", label: "Spotify" };
+  if (is("music.apple.com")) return { id: "applemusic", label: "Apple Music" };
+  if (is("podcasts.apple.com")) return { id: "applepodcasts", label: "Apple Podcasts" };
+  if (is("music.youtube.com")) return { id: "youtubemusic", label: "YouTube Music" };
+  if (/^music\.amazon\.[a-z.]{2,6}$/.test(host)) return { id: "amazon", label: "Amazon Music" };
+  if (is("deezer.com", "link.deezer.com", "deezer.page.link"))
+    return { id: "deezer", label: "Deezer" };
+  if (is("tidal.com", "listen.tidal.com")) return { id: "tidal", label: "Tidal" };
+  if (is("soundcloud.com", "on.soundcloud.com")) return { id: "soundcloud", label: "SoundCloud" };
+  if (host === "bandcamp.com" || /^[a-z0-9-]+\.bandcamp\.com$/.test(host))
+    return { id: "bandcamp", label: "Bandcamp" };
+  return null;
+}

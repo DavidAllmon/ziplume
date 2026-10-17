@@ -6,7 +6,15 @@ import { contactVcard, eventIcs, eventTimes, googleCalendarUrl } from "./files";
 import { newLink } from "./links";
 import { mediaPaths, sanitizeMedia, sanitizePage } from "./sanitize";
 import { PAGE_DEFAULTS, type EventPage, type Media, type VcardPage } from "./types";
-import { safeHref, socialHref, startSeconds, videoEmbed, whatsappHref } from "./urls";
+import {
+  audioEmbed,
+  listenService,
+  safeHref,
+  socialHref,
+  startSeconds,
+  videoEmbed,
+  whatsappHref,
+} from "./urls";
 import { pageSummary, validatePage } from "./validate";
 
 const UID = "11111111-1111-4111-8111-111111111111";
@@ -728,5 +736,83 @@ describe("PDF pages with several files", () => {
         ]),
       ),
     ).toEqual({ "files.1.file": "Upload a PDF, or remove this row" });
+  });
+});
+
+describe("audio links", () => {
+  it("embeds Spotify, SoundCloud and Apple players at their own heights", () => {
+    expect(
+      audioEmbed("https://open.spotify.com/intl-de/track/4uLU6hMCjMI75M1A2tKUQC?si=x"),
+    ).toEqual({
+      provider: "spotify",
+      src: "https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC",
+      name: "Spotify",
+      height: 152,
+    });
+    expect(audioEmbed("https://open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3")?.height).toBe(352);
+    expect(audioEmbed("https://soundcloud.com/artist/a-song")).toEqual({
+      provider: "soundcloud",
+      src: "https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fartist%2Fa-song&visual=false",
+      name: "SoundCloud",
+      height: 166,
+    });
+    expect(audioEmbed("https://soundcloud.com/artist/sets/an-album")?.height).toBe(450);
+    expect(audioEmbed("https://music.apple.com/us/album/x/1440857781?i=1440857798")).toMatchObject({
+      provider: "apple",
+      src: "https://embed.music.apple.com/us/album/x/1440857781?i=1440857798",
+      height: 175,
+    });
+    expect(audioEmbed("https://podcasts.apple.com/us/podcast/a-show/id1200361736")).toMatchObject({
+      src: "https://embed.podcasts.apple.com/us/podcast/a-show/id1200361736",
+      height: 450,
+    });
+    // Short links and look-alikes aren't embedded.
+    expect(audioEmbed("https://spotify.link/abc123")).toBeNull();
+    expect(audioEmbed("https://on.soundcloud.com/abc")).toBeNull();
+    expect(
+      audioEmbed("https://open.spotify.com.evil.example/track/4uLU6hMCjMI75M1A2tKUQC"),
+    ).toBeNull();
+  });
+
+  it("names a Listen on link's service from its address", () => {
+    expect(listenService("https://open.spotify.com/artist/x")?.label).toBe("Spotify");
+    expect(listenService("https://spotify.link/abc")?.id).toBe("spotify");
+    expect(listenService("https://music.apple.com/us/artist/x/1")?.label).toBe("Apple Music");
+    expect(listenService("https://podcasts.apple.com/us/podcast/x/id1")?.label).toBe(
+      "Apple Podcasts",
+    );
+    expect(listenService("https://music.youtube.com/channel/x")?.label).toBe("YouTube Music");
+    expect(listenService("https://music.amazon.co.uk/artists/x")?.label).toBe("Amazon Music");
+    expect(listenService("https://www.deezer.com/artist/1")?.id).toBe("deezer");
+    expect(listenService("https://link.deezer.com/s/abc")?.id).toBe("deezer");
+    expect(listenService("https://listen.tidal.com/artist/1")?.id).toBe("tidal");
+    expect(listenService("https://on.soundcloud.com/abc")?.id).toBe("soundcloud");
+    expect(listenService("https://artist.bandcamp.com/album/x")?.label).toBe("Bandcamp");
+    expect(listenService("https://example.com/music")).toBeNull();
+    expect(listenService("https://bandcamp.com.evil.example/x")).toBeNull();
+  });
+
+  it("reads an old audio page with no Listen on links or tracks", () => {
+    expect(
+      sanitizePage("audio", { title: "T", link: "https://open.spotify.com/track/x" }),
+    ).toMatchObject({
+      listen: [],
+      tracks: [],
+    });
+  });
+
+  it("checks Listen on links and tracks", () => {
+    const page = { ...PAGE_DEFAULTS.audio(), title: "T", link: "https://example.com/a" };
+    expect(
+      validatePage("audio", {
+        ...page,
+        listen: [{ url: "https://example.com/music" }],
+        tracks: [{ title: "Intro", file: null, link: "" }],
+      }),
+    ).toEqual({
+      "listen.0.url":
+        "Use a link from Spotify, Apple Music, YouTube Music, Amazon Music, Deezer, Tidal, SoundCloud or Bandcamp",
+      "tracks.0.file": "Upload the track or add its link",
+    });
   });
 });

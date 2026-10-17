@@ -227,6 +227,12 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     cover: media,
     file: media,
     link: str(2048),
+    listen: { kind: "list", max: LIMITS.listen, item: { url: str(2048) } },
+    tracks: {
+      kind: "list",
+      max: LIMITS.tracks,
+      item: { title: str(), file: media, link: str(2048) },
+    },
   },
   app: {
     name: str(),

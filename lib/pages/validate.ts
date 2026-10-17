@@ -6,6 +6,7 @@ import { barcodeProblem } from "./scan";
 import type { LinkItem, PageContentMap, SocialItem } from "./types";
 import { linkHref } from "./links";
 import {
+  listenService,
   mailHref,
   safeHref,
   socialHref,
@@ -224,8 +225,23 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
   },
   audio: (p) => {
     const errors: PageErrors = {};
-    if (!p.file && !p.link.trim()) errors.file = "Upload an audio file or add a link";
+    const anyTrack = p.tracks.some((t) => t.file || t.link.trim());
+    if (!p.file && !p.link.trim() && !anyTrack) errors.file = "Upload an audio file or add a link";
     checkUrl(errors, "link", p.link);
+    p.listen.forEach((l, i) => {
+      if (!l.url.trim()) return;
+      if (!safeHref(l.url)) errors[`listen.${i}.url`] = URL_MESSAGE;
+      else if (!listenService(l.url)) {
+        errors[`listen.${i}.url`] =
+          "Use a link from Spotify, Apple Music, YouTube Music, Amazon Music, Deezer, Tidal, SoundCloud or Bandcamp";
+      }
+    });
+    p.tracks.forEach((t, i) => {
+      if (t.title.trim() && !t.file && !t.link.trim()) {
+        errors[`tracks.${i}.file`] = "Upload the track or add its link";
+      }
+      checkUrl(errors, `tracks.${i}.link`, t.link);
+    });
     return errors;
   },
   app: (p) => {
