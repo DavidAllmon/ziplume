@@ -23,7 +23,9 @@ export function scanTarget(
 
   if (code.qr_type === "pdf") {
     const page = sanitizePage("pdf", code.content);
-    if (page.direct && page.file) return mediaUrl(page.file.path);
+    // Straight to the file only when there's one to go to (spec item 39).
+    const files = page.files.filter((f) => f.file);
+    if (page.direct && files.length === 1) return mediaUrl(files[0]!.file!.path);
   }
   if (code.qr_type === "app") {
     const page = sanitizePage("app", code.content);

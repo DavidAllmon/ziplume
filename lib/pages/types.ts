@@ -247,11 +247,20 @@ export interface FeedbackPage extends Themed {
   thanks: string;
 }
 
+export interface PdfFile {
+  file: Media | null;
+  /** Shown in the list; the file's name when empty (spec item 39). */
+  title: string;
+  /** Page 1 drawn as an image when the file was uploaded (spec item 40). */
+  preview: Media | null;
+}
+
 export interface PdfPage extends Themed {
   title: string;
   description: string;
-  file: Media | null;
-  /** Skip the page and open the file straight away. */
+  /** Up to 10; an old page's single file becomes the first. */
+  files: PdfFile[];
+  /** Skip the page and open the file straight away (only with one file). */
   direct: boolean;
 }
 
@@ -339,6 +348,7 @@ export const LIMITS = {
   closures: 10,
   options: 4,
   videos: 10,
+  pdfs: 10,
   screenshots: 5,
   features: 6,
   agenda: 30,
@@ -499,7 +509,7 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       color: DEFAULT_PAGE_COLOR,
       title: "",
       description: "",
-      file: null,
+      files: [{ file: null, title: "", preview: null }],
       direct: false,
     }),
   images: () =>

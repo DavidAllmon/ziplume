@@ -190,7 +190,16 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     askContact: bool,
     thanks: str(LIMITS.text),
   },
-  pdf: { title: str(), description: str(LIMITS.text), file: media, direct: bool },
+  pdf: {
+    title: str(),
+    description: str(LIMITS.text),
+    files: {
+      kind: "list",
+      max: LIMITS.pdfs,
+      item: { file: media, title: str(), preview: media },
+    },
+    direct: bool,
+  },
   images: {
     title: str(),
     description: str(LIMITS.text),
@@ -348,6 +357,11 @@ const UPGRADES: Partial<
             isObject(m) && "path" in m && !("image" in m) ? { image: m } : m,
           ),
         }
+      : raw,
+  // PDF pages had one file before they had several (spec item 39).
+  pdf: (raw) =>
+    !("files" in raw) && "file" in raw
+      ? { ...raw, files: [{ file: raw.file, title: "", preview: null }] }
       : raw,
   // Video pages had one link before they had several (spec item 46).
   video: (raw) => {

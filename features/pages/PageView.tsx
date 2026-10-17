@@ -868,7 +868,8 @@ function FeedbackView({ page, slug, preview }: ViewProps<FeedbackPage>) {
 }
 
 function PdfView({ page, preview }: ViewProps<PdfPage>) {
-  const href = page.file ? mediaUrl(page.file.path) : null;
+  const file = page.files?.[0]?.file ?? null;
+  const href = file ? mediaUrl(file.path) : null;
   const look = page.look;
   return (
     <PageFrame look={look} preview={preview}>
@@ -880,17 +881,17 @@ function PdfView({ page, preview }: ViewProps<PdfPage>) {
         layout="classic"
         image={null}
         imageAlt=""
-        title={page.title || page.file?.name || "Document"}
+        title={page.title || file?.name || "Document"}
         sub={page.description || undefined}
       />
       <PageCard className="flex flex-col items-center gap-4 text-center">
-        {page.file ? (
+        {file ? (
           <>
             <PageLink href={href} preview={preview}>
               <ExternalLink aria-hidden /> Open PDF
             </PageLink>
-            <PageLink href={href} variant="secondary" download={page.file.name} preview={preview}>
-              <Download aria-hidden /> Download · {fileSize(page.file.size)}
+            <PageLink href={href} variant="secondary" download={file.name} preview={preview}>
+              <Download aria-hidden /> Download · {fileSize(file.size)}
             </PageLink>
           </>
         ) : (

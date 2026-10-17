@@ -191,7 +191,16 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     if (!p.question.trim()) errors.question = "Add a question";
     return errors;
   },
-  pdf: (p): PageErrors => (p.file ? {} : { file: "Upload a PDF" }),
+  pdf: (p) => {
+    const errors: PageErrors = {};
+    if (!p.files.some((f) => f.file)) {
+      errors[p.files.length ? "files.0.file" : "files"] = "Upload a PDF";
+    }
+    p.files.forEach((f, i) => {
+      if (!f.file && f.title.trim()) errors[`files.${i}.file`] = "Upload a PDF, or remove this row";
+    });
+    return errors;
+  },
   images: (p) => {
     const errors: PageErrors = {};
     if (!p.images.length) errors.images = "Add at least one image";

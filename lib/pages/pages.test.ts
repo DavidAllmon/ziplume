@@ -5,7 +5,7 @@ import { PAGE_TYPE_IDS } from "@/lib/qr/types";
 import { contactVcard, eventIcs, eventTimes, googleCalendarUrl } from "./files";
 import { newLink } from "./links";
 import { mediaPaths, sanitizeMedia, sanitizePage } from "./sanitize";
-import { PAGE_DEFAULTS, type EventPage, type VcardPage } from "./types";
+import { PAGE_DEFAULTS, type EventPage, type Media, type VcardPage } from "./types";
 import { safeHref, socialHref, startSeconds, videoEmbed, whatsappHref } from "./urls";
 import { pageSummary, validatePage } from "./validate";
 
@@ -114,8 +114,13 @@ describe("validatePage", () => {
     expect(validatePage("links", PAGE_DEFAULTS.links())).toMatchObject({
       title: expect.any(String),
     });
-    expect(validatePage("pdf", PAGE_DEFAULTS.pdf())).toEqual({ file: "Upload a PDF" });
-    expect(validatePage("pdf", { ...PAGE_DEFAULTS.pdf(), file: media("a.pdf") })).toEqual({});
+    expect(validatePage("pdf", PAGE_DEFAULTS.pdf())).toEqual({ "files.0.file": "Upload a PDF" });
+    expect(
+      validatePage("pdf", {
+        ...PAGE_DEFAULTS.pdf(),
+        files: [{ file: media("a.pdf"), title: "", preview: null }],
+      }),
+    ).toEqual({});
     expect(
       validatePage("app", {
         ...PAGE_DEFAULTS.app(),
@@ -682,5 +687,46 @@ describe("an older API client's video link", () => {
       { title: "One", url: "https://vimeo.com/123456789", start: "0:10" },
       { title: "Two", url: "https://vimeo.com/76979871", start: "" },
     ]);
+  });
+});
+
+describe("PDF pages with several files", () => {
+  const pdf = (name: string) => ({
+    path: `${UID}/${name}`,
+    name,
+    type: "application/pdf",
+    size: 10,
+  });
+
+  it("reads an old page's file as its first, and an empty one as one empty row", () => {
+    expect(
+      sanitizePage("pdf", { title: "Menu", file: pdf("menu.pdf"), direct: true }),
+    ).toMatchObject({
+      files: [{ file: pdf("menu.pdf"), title: "", preview: null }],
+      direct: true,
+    });
+    expect(sanitizePage("pdf", { title: "Menu", file: null }).files).toEqual([
+      { file: null, title: "", preview: null },
+    ]);
+    expect(sanitizePage("pdf", { file: pdf("a.pdf") })).not.toHaveProperty("file");
+  });
+
+  it("needs one PDF, and a file on any row that has a title", () => {
+    const page = (files: { file: Media | null; title: string; preview: Media | null }[]) => ({
+      ...PAGE_DEFAULTS.pdf(),
+      files,
+    });
+    expect(validatePage("pdf", page([{ file: null, title: "", preview: null }]))).toEqual({
+      "files.0.file": "Upload a PDF",
+    });
+    expect(
+      validatePage(
+        "pdf",
+        page([
+          { file: pdf("a.pdf"), title: "", preview: null },
+          { file: null, title: "Wine list", preview: null },
+        ]),
+      ),
+    ).toEqual({ "files.1.file": "Upload a PDF, or remove this row" });
   });
 });

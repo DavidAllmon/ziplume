@@ -21,5 +21,7 @@ export default defineConfig([
     "playwright-report/**",
     "test-results/**",
     "next-env.d.ts",
+    // pdf.js's browser files, copied from node_modules at build (scripts/copy-vendor.mjs).
+    "public/vendor/**",
   ]),
 ]);

@@ -18,17 +18,20 @@ export function PdfEditor({
         <MediaField
           label="PDF"
           kind="pdf"
-          field="file"
-          value={page.file}
+          field="files.0.file"
+          value={page.files[0]?.file ?? null}
           // From the latest page: a title typed while the file uploaded stays.
           onChange={(file) =>
             set((latest) => ({
-              file,
+              files: [
+                { title: "", ...latest.files[0], file, preview: null },
+                ...latest.files.slice(1),
+              ],
               title: latest.title || file?.name.replace(/\.pdf$/i, "") || "",
             }))
           }
           hint="Up to 10 MB."
-          error={touched ? (errors.error("file") ?? undefined) : undefined}
+          error={touched ? (errors.error("files.0.file") ?? undefined) : undefined}
         />
       </FormCard>
       <FormCard title="Details">

@@ -395,7 +395,7 @@ describe("an upload that finishes later", () => {
     await act(async () => finish({ ok: true, media: file }));
     const page = JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
     expect(page.title).toBe("Spring menu");
-    expect(page.file).toEqual(file);
+    expect(type === "pdf" ? page.files[0].file : page.file).toEqual(file);
   });
 });
 
