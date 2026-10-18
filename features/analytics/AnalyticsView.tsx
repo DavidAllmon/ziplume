@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { buttonClasses } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -18,23 +18,16 @@ import {
   parseAnalytics,
   rangeBounds,
   type AnalyticsData,
-  type Breakdown,
   type RangeKey,
 } from "@/lib/analytics/shape";
 import { shortLink, shortLinkLabel } from "@/lib/env";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import type { QrCodeRow } from "@/types/supabase";
 
-import { BreakdownList, type BreakdownItem } from "./BreakdownList";
+import { BreakdownList } from "./BreakdownList";
 import { DailyChart } from "./DailyChart";
 import { HoursChart } from "./HoursChart";
-
-const DEVICE_LABELS: Record<string, string> = {
-  mobile: "Phone",
-  tablet: "Tablet",
-  desktop: "Computer",
-  other: "Other",
-};
+import { DEVICE_LABELS, StatTile, toItems, useViewerTimeZone } from "./parts";
 
 const RANGE_OPTIONS = RANGES.map((r) => ({
   value: r.value,
@@ -44,46 +37,9 @@ const RANGE_OPTIONS = RANGES.map((r) => ({
 
 type Result = { key: string; data: AnalyticsData } | { key: string; error: string };
 
-const noSubscribe = () => () => {};
-
-function viewerTimeZone() {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  } catch {
-    return "UTC";
-  }
-}
-
-const toItems = (
-  rows: Breakdown[],
-  map: (row: Breakdown) => Omit<BreakdownItem, "scans">,
-): BreakdownItem[] => rows.map((row) => ({ ...map(row), scans: Number(row.scans) }));
-
-function StatTile({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: ReactNode;
-  detail?: ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-card border border-border bg-surface px-4 py-3.5 shadow-card">
-      <span className="text-sm text-fg-muted">{label}</span>
-      <span className="truncate font-display text-2xl font-bold tracking-tight text-fg tabular-nums">
-        {value}
-      </span>
-      {detail && <span className="truncate text-xs text-fg-muted">{detail}</span>}
-    </div>
-  );
-}
-
 export function AnalyticsView({ code }: { code: QrCodeRow }) {
   const [range, setRange] = useState<RangeKey>("30d");
-  // The server can't know the viewer's time zone, so it renders without one (null) and the
-  // browser fills it in after hydration.
-  const timeZone = useSyncExternalStore(noSubscribe, viewerTimeZone, () => null);
+  const timeZone = useViewerTimeZone();
   const [result, setResult] = useState<Result | null>(null);
   const [now] = useState(() => new Date());
 

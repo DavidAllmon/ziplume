@@ -357,6 +357,31 @@ export interface Database {
       };
       rsvp_places_left: { Args: { p_slug: string }; Returns: number | null };
       rsvp_guests: { Args: { p_code: string }; Returns: number };
+      workspace_analytics: {
+        Args: { p_owner: string | null; p_from: string; p_to: string; p_tz?: string };
+        Returns: Json;
+      };
+      workspace_scans: {
+        Args: {
+          p_owner: string | null;
+          p_from: string;
+          p_to: string;
+          p_before?: number | null;
+          p_limit?: number;
+        };
+        Returns: {
+          id: number;
+          scanned_at: string;
+          code_name: string;
+          code_slug: string | null;
+          country: string | null;
+          region: string | null;
+          city: string | null;
+          device_type: string;
+          os: string | null;
+          browser: string | null;
+        }[];
+      };
       set_default_template: { Args: { p_template: string | null }; Returns: undefined };
       set_response_emails: { Args: { p_code: string; p_on: boolean }; Returns: undefined };
       claim_response_emails: {

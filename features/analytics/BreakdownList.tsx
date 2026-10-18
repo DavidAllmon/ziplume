@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 const fmt = new Intl.NumberFormat("en");
@@ -9,6 +10,8 @@ export interface BreakdownItem {
   label: string;
   icon?: string;
   scans: number;
+  /** Opens this item, e.g. a code's own analytics. */
+  href?: string;
 }
 
 /** A ranked list with proportional bars, e.g. countries or browsers. */
@@ -38,7 +41,13 @@ export function BreakdownList({
                     {item.icon}
                   </span>
                 )}
-                {item.label}
+                {item.href ? (
+                  <Link href={item.href} className="underline-offset-4 hover:underline">
+                    {item.label}
+                  </Link>
+                ) : (
+                  item.label
+                )}
               </span>
               <span className="shrink-0 text-fg-muted tabular-nums">
                 <strong className="font-semibold text-fg">{fmt.format(item.scans)}</strong>{" "}

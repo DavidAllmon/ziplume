@@ -99,6 +99,63 @@ export function fillDays(daily: DayPoint[], from: Date, to: Date, timeZone: stri
   return points;
 }
 
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A real calendar day: "2030-02-30" isn't one. */
+const isDay = (day: string) =>
+  DAY.test(day) && new Date(`${day}T12:00:00Z`).toISOString().slice(0, 10) === day;
+
+/**
+ * [from, to) for a custom range of whole days chosen in the viewer's time zone, the end day
+ * included. An end after today is cut to today. Null when it isn't a range: a missing or impossible
+ * day, a start after the end, or a start in the future.
+ */
+export function customBounds(
+  fromDay: string,
+  toDay: string,
+  timeZone: string,
+  now: Date,
+): { from: Date; to: Date } | null {
+  if (!isDay(fromDay) || !isDay(toDay) || fromDay > toDay) return null;
+  const today = dayInZone(now, timeZone);
+  if (fromDay > today) return null;
+  const last = toDay > today ? today : toDay;
+  return {
+    from: startOfDayInZone(fromDay, timeZone),
+    to: startOfDayInZone(addDays(last, 1), timeZone),
+  };
+}
+
+export interface TopCode {
+  id: string;
+  name: string;
+  /** Whose code it is: a teammate's opens inside their workspace. */
+  owner: string;
+  scans: number;
+  unique: number;
+}
+
+export type WorkspaceAnalyticsData = AnalyticsData & { codes: TopCode[] };
+
+/** workspace_analytics() output: a code's totals and breakdowns, plus its top codes. */
+export function parseWorkspaceAnalytics(raw: unknown): WorkspaceAnalyticsData {
+  const base = parseAnalytics(raw);
+  const list = raw && typeof raw === "object" ? (raw as { codes?: unknown }).codes : null;
+  const codes = Array.isArray(list)
+    ? list
+        .filter((c): c is Record<string, unknown> => !!c && typeof c === "object")
+        .filter((c) => typeof c.id === "string" && typeof c.name === "string")
+        .map((c) => ({
+          id: String(c.id),
+          name: String(c.name),
+          owner: String(c.owner ?? ""),
+          scans: Number(c.scans ?? 0),
+          unique: Number(c.unique ?? 0),
+        }))
+    : [];
+  return { ...base, codes };
+}
+
 /** Long ranges read better as weeks; groups days into Monday-start weeks. */
 export function groupByWeek(points: DayPoint[]): DayPoint[] {
   const weeks = new Map<string, DayPoint>();
