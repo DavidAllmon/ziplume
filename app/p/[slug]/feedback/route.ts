@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { scanContext } from "@/lib/dynamic/scan-context";
 import { isValidSlug } from "@/lib/dynamic/slug";
+import { sendResponseEmailsLater } from "@/lib/email/response-emails";
 import { isOwnOrigin } from "@/lib/hosts";
 import { buildAnswers } from "@/lib/pages/feedback";
 import { sanitizePage } from "@/lib/pages/sanitize";
@@ -74,5 +75,7 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/p/[s
     p_visitor_hash: visitor.visitorHash,
   });
   if (error) return json({ error: "unavailable" }, 503);
-  return data ? json({ ok: true }, 200) : json({ error: "limited" }, 429);
+  if (!data) return json({ error: "limited" }, 429);
+  sendResponseEmailsLater(admin, slug);
+  return json({ ok: true }, 200);
 }

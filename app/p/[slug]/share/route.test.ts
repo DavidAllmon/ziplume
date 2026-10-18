@@ -8,6 +8,12 @@ vi.mock("@/lib/supabase/public", () => ({ getPublicPage: vi.fn(async () => card)
 
 import { getPublicPage } from "@/lib/supabase/public";
 
+const later = vi.fn();
+// Read when called, not when mocked: vi.mock runs before this file's own lines.
+vi.mock("@/lib/email/response-emails", () => ({
+  sendResponseEmailsLater: (...args: unknown[]) => later(...args),
+}));
+
 import { POST } from "./route";
 
 const IPHONE =
@@ -97,5 +103,15 @@ describe("POST /p/[slug]/share", () => {
   it("says when today's limit is reached", async () => {
     rpc.mockResolvedValue({ data: false, error: null });
     expect((await post({ name: "Ana", email: "ana@example.com" })).status).toBe(429);
+  });
+
+  it("emails the maker after storing the details, and not when nothing was stored", async () => {
+    later.mockReset();
+    await post({ name: "Ana", email: "ana@example.com" });
+    expect(later).toHaveBeenCalledWith(expect.anything(), "CARD1");
+    later.mockReset();
+    rpc.mockResolvedValue({ data: false, error: null });
+    await post({ name: "Ana", email: "ana@example.com" });
+    expect(later).not.toHaveBeenCalled();
   });
 });

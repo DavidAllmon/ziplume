@@ -12,6 +12,12 @@ vi.mock("@/lib/supabase/public", () => ({ getPublicPage: vi.fn(async () => event
 
 import { getPublicPage } from "@/lib/supabase/public";
 
+const later = vi.fn();
+// Read when called, not when mocked: vi.mock runs before this file's own lines.
+vi.mock("@/lib/email/response-emails", () => ({
+  sendResponseEmailsLater: (...args: unknown[]) => later(...args),
+}));
+
 import { GET, POST } from "./route";
 
 const context = { params: Promise.resolve({ slug: "EVT1" }) } as never;
@@ -98,5 +104,15 @@ describe("/p/[slug]/rsvp", () => {
       expect((await post(body)).status, JSON.stringify(body)).toBe(400);
     }
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("emails the maker about a new RSVP, and not for an email already on the list", async () => {
+    later.mockReset();
+    await post(ok);
+    expect(later).toHaveBeenCalledWith(expect.anything(), "EVT1");
+    later.mockReset();
+    answers({ submit_rsvp: "already" });
+    await post(ok);
+    expect(later).not.toHaveBeenCalled();
   });
 });

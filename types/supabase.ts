@@ -49,6 +49,7 @@ export interface Database {
           active_until: string | null;
           has_password: boolean;
           is_private: boolean;
+          notify_responses: boolean;
         };
         Insert: {
           user_id?: string;
@@ -62,6 +63,7 @@ export interface Database {
           status?: QrStatus;
           folder_id?: string | null;
           is_private?: boolean;
+          notify_responses?: boolean;
           active_from?: string | null;
           active_until?: string | null;
         };
@@ -75,6 +77,7 @@ export interface Database {
           status?: QrStatus;
           folder_id?: string | null;
           is_private?: boolean;
+          notify_responses?: boolean;
           active_from?: string | null;
           active_until?: string | null;
         };
@@ -353,6 +356,24 @@ export interface Database {
       };
       rsvp_places_left: { Args: { p_slug: string }; Returns: number | null };
       rsvp_guests: { Args: { p_code: string }; Returns: number };
+      set_response_emails: { Args: { p_code: string; p_on: boolean }; Returns: undefined };
+      claim_response_emails: {
+        Args: { p_slug: string };
+        Returns: {
+          id: number;
+          /** "feedback", "share" or "rsvp". */
+          kind: string;
+          code_id: string;
+          code_name: string;
+          owner_id: string;
+          to_email: string;
+          to_name: string | null;
+          received_at: string;
+          /** What the visitor sent; null when the response has been deleted since. */
+          details: Json | null;
+        }[];
+      };
+      finish_response_email: { Args: { p_id: number; p_sent: boolean }; Returns: undefined };
       code_analytics: {
         Args: { p_code: string; p_from: string; p_to: string; p_tz?: string };
         Returns: Json;

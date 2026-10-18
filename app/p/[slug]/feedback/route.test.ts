@@ -16,6 +16,12 @@ const page = {
 };
 vi.mock("@/lib/supabase/public", () => ({ getPublicPage: vi.fn(async () => page) }));
 
+const later = vi.fn();
+// Read when called, not when mocked: vi.mock runs before this file's own lines.
+vi.mock("@/lib/email/response-emails", () => ({
+  sendResponseEmailsLater: (...args: unknown[]) => later(...args),
+}));
+
 import { POST } from "./route";
 
 const post = (body: unknown) =>
@@ -85,5 +91,15 @@ describe("POST /p/[slug]/feedback", () => {
     // The two-question page (the default here) can't take one rating.
     expect((await post({ rating: 4 })).status).toBe(400);
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("emails the maker after storing the answers", async () => {
+    later.mockReset();
+    await post({ answers: [4, 1] });
+    expect(later).toHaveBeenCalledWith(expect.anything(), "FB1");
+    later.mockReset();
+    rpc.mockResolvedValue({ data: false, error: null });
+    await post({ answers: [4, 1] });
+    expect(later).not.toHaveBeenCalled();
   });
 });
