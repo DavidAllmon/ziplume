@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { mkdirSync, writeFileSync } from "node:fs";
 
 import {
+  DESIGNER,
   AUTH_DIR,
   MAKER,
   OWNER,
@@ -33,7 +34,7 @@ export default async function globalSetup(config: FullConfig) {
   });
 
   const { data: existing } = await admin.auth.admin.listUsers({ perPage: 1000 });
-  for (const person of [OWNER, VIEWER, MAKER, PAT, QUINN, RAY, SKY, PAGES]) {
+  for (const person of [OWNER, VIEWER, MAKER, PAT, QUINN, RAY, SKY, PAGES, DESIGNER]) {
     const old = existing?.users.find((user) => user.email === person.email);
     if (old) await admin.auth.admin.deleteUser(old.id);
   }
@@ -56,6 +57,7 @@ export default async function globalSetup(config: FullConfig) {
   const rayId = await create(RAY);
   const skyId = await create(SKY);
   const pagesId = await create(PAGES);
+  await create(DESIGNER);
   const { error: pagesError } = await admin.from("qr_codes").insert(
     [
       ...[...PHONE_PAGES, ...LOOK_PAGES].map((page) => ({
@@ -242,7 +244,7 @@ export default async function globalSetup(config: FullConfig) {
 
   const baseURL = config.projects[0]!.use.baseURL!;
   const browser = await chromium.launch();
-  for (const person of [OWNER, VIEWER, MAKER, PAT, QUINN, RAY, SKY]) {
+  for (const person of [OWNER, VIEWER, MAKER, PAT, QUINN, RAY, SKY, DESIGNER]) {
     const page = await browser.newPage({ baseURL });
     await page.goto("login");
     await page.getByLabel("Email", { exact: true }).fill(person.email);

@@ -52,6 +52,14 @@ export const SKY = {
   state: `${AUTH_DIR}/sky.json`,
 };
 
+/** Sets a default template in the Templates tests, so no other test's new codes start from it. */
+export const DESIGNER = {
+  email: "designer@example.com",
+  password: "designer-e2e-pass-2026",
+  name: "Dana Designer",
+  state: `${AUTH_DIR}/designer.json`,
+};
+
 export interface Seed {
   ownerId: string;
   viewerId: string;
