@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "@/components/ui/Toast";
 
-import { saveTemplate, setDefaultTemplate } from "./api";
-import { NewTemplatePage } from "./NewTemplatePage";
+import { saveTemplate, setDefaultTemplate, updateTemplate } from "./api";
+import { TemplateEditor } from "./TemplateEditor";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -16,6 +16,7 @@ vi.mock("./api", () => ({
     droppedLogo: false,
   })),
   setDefaultTemplate: vi.fn(async () => ({ ok: true, value: null })),
+  updateTemplate: vi.fn(),
 }));
 vi.mock("@/features/generator/preview/QrView", () => ({ QrView: () => null }));
 vi.mock("@/features/auth/useSession", () => ({
@@ -25,11 +26,11 @@ vi.mock("@/features/auth/useSession", () => ({
 const show = () =>
   render(
     <ToastProvider>
-      <NewTemplatePage />
+      <TemplateEditor />
     </ToastProvider>,
   );
 
-describe("NewTemplatePage", () => {
+describe("TemplateEditor, new", () => {
   it("is the Design panel alone, without a second Save box", () => {
     show();
     expect(screen.getByRole("heading", { name: "QR code design" })).toBeInTheDocument();
@@ -67,5 +68,60 @@ describe("NewTemplatePage", () => {
     expect(saveTemplate).not.toHaveBeenCalled();
     // Nor does it offer a way off the page that would lose the design.
     expect(screen.queryByRole("link", { name: "Manage templates" })).toBeNull();
+  });
+});
+
+describe("TemplateEditor, editing", () => {
+  const brand = {
+    id: "t1",
+    user_id: "u1",
+    name: "Brand",
+    design: { fgColor: "#BE123C" },
+    is_default: true,
+    created_at: "",
+    updated_at: "",
+  };
+
+  it("starts from the template, and saves changes in place", async () => {
+    const user = userEvent.setup();
+    vi.mocked(setDefaultTemplate).mockClear();
+    vi.mocked(updateTemplate).mockResolvedValue({
+      ok: true,
+      value: { ...brand, name: "Brand 2" } as never,
+    });
+    render(
+      <ToastProvider>
+        <TemplateEditor template={brand as never} />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "Edit template" })).toBeInTheDocument();
+    const name = screen.getByRole("textbox", { name: /^Name/ });
+    expect(name).toHaveValue("Brand");
+    expect(screen.getByRole("switch", { name: "Use for new codes" })).toBeChecked();
+    await user.clear(name);
+    await user.type(name, "Brand 2");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(updateTemplate).toHaveBeenCalledWith(
+      "t1",
+      "Brand 2",
+      expect.objectContaining({ fgColor: "#BE123C" }),
+    );
+    // Still the default, so the default isn't touched.
+    expect(setDefaultTemplate).not.toHaveBeenCalled();
+    expect(push).toHaveBeenCalledWith("/templates");
+  });
+
+  it("stops it being the default when that's switched off", async () => {
+    const user = userEvent.setup();
+    vi.mocked(updateTemplate).mockResolvedValue({ ok: true, value: brand as never });
+    vi.mocked(setDefaultTemplate).mockClear();
+    render(
+      <ToastProvider>
+        <TemplateEditor template={brand as never} />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByRole("switch", { name: "Use for new codes" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(setDefaultTemplate).toHaveBeenCalledWith(null);
   });
 });

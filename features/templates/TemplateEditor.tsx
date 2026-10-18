@@ -16,22 +16,30 @@ import { generatorReducer } from "@/features/generator/state/reducer";
 import { sanitizeDesign } from "@/features/generator/state/sanitize";
 import type { DesignState, GeneratorAction } from "@/features/generator/state/types";
 import type { RenderOptions } from "@/lib/qr/renderer";
+import type { DesignTemplateRow } from "@/types/supabase";
 
-import { saveTemplate, setDefaultTemplate } from "./api";
+import { saveTemplate, setDefaultTemplate, updateTemplate } from "./api";
 
 const SAMPLE = "https://ziplume.com";
 
-/** "New template" (redesign spec 4.5): the Design panel alone, with a name and Save. */
-export function NewTemplatePage() {
+/**
+ * New template (redesign spec 4.5), or editing a saved one: the Design panel alone, with a name
+ * and Save.
+ */
+export function TemplateEditor({ template }: { template?: DesignTemplateRow } = {}) {
   const router = useRouter();
   const toast = useToast();
   const nameId = useId();
   const nameRef = useRef<HTMLInputElement>(null);
-  const [state, dispatchCode] = useReducer(generatorReducer, undefined, initialState);
+  const [state, dispatchCode] = useReducer(generatorReducer, template, (saved) =>
+    saved
+      ? generatorReducer(initialState(), { type: "applyDesign", design: saved.design })
+      : initialState(),
+  );
   // The style last applied, for Reset to style.
   const [style, setStyle] = useState<DesignState>(() => state.design);
-  const [name, setName] = useState("");
-  const [makeDefault, setMakeDefault] = useState(false);
+  const [name, setName] = useState(template?.name ?? "");
+  const [makeDefault, setMakeDefault] = useState(template?.is_default ?? false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -53,26 +61,38 @@ export function NewTemplatePage() {
       return;
     }
     setSaving(true);
-    const result = await saveTemplate(name, state.design);
+    const result = template
+      ? await updateTemplate(template.id, name, state.design)
+      : await saveTemplate(name, state.design);
     if (!result.ok) {
       setSaving(false);
       return toast(result.error, "error");
     }
-    if (makeDefault) {
-      const set = await setDefaultTemplate(result.value.id);
+    // Only a change to "Use for new codes" touches the default.
+    if (makeDefault !== (template?.is_default ?? false)) {
+      const set = await setDefaultTemplate(makeDefault ? result.value.id : null);
       if (!set.ok) toast(set.error, "error");
     }
     toast(
       result.droppedLogo
         ? `Saved “${result.value.name}”. The logo was too large to store and was left out.`
-        : `Saved “${result.value.name}”`,
+        : template
+          ? `Saved changes to “${result.value.name}”`
+          : `Saved “${result.value.name}”`,
     );
     router.push("/templates");
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="New template" description="Design it once, then use it for any code." />
+      <PageHeader
+        title={template ? "Edit template" : "New template"}
+        description={
+          template
+            ? "Codes already made with it keep their design."
+            : "Design it once, then use it for any code."
+        }
+      />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <DesignSection
           design={state.design}
@@ -119,7 +139,7 @@ export function NewTemplatePage() {
                   onChange={setMakeDefault}
                 />
                 <Button type="submit" disabled={saving}>
-                  {saving ? "Saving…" : "Save template"}
+                  {saving ? "Saving…" : template ? "Save changes" : "Save template"}
                 </Button>
               </form>
             </div>
