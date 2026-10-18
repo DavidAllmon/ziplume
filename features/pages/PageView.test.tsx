@@ -1032,3 +1032,42 @@ describe("Audio track players", () => {
     );
   });
 });
+
+describe("Things visitors send back", () => {
+  it("draws each form only when the page turns it on, inert in the preview", () => {
+    const { unmount } = view("vcard", { ...PAGE_DEFAULTS.vcard(), firstName: "Ana" });
+    expect(screen.queryByText("Share your details")).toBeNull();
+    unmount();
+    const card = view("vcard", { ...PAGE_DEFAULTS.vcard(), firstName: "Ana", shareDetails: true });
+    expect(screen.getByText("Share your details")).toHaveAttribute("aria-disabled");
+    card.unmount();
+
+    const coupon = view("coupon", { ...PAGE_DEFAULTS.coupon(), offer: "20% OFF", markUsed: true });
+    expect(screen.getByText("Mark as used")).toHaveAttribute("aria-disabled");
+    coupon.unmount();
+    const plain = view("coupon", { ...PAGE_DEFAULTS.coupon(), offer: "20% OFF" });
+    expect(screen.queryByText("Mark as used")).toBeNull();
+    plain.unmount();
+
+    view("event", {
+      ...PAGE_DEFAULTS.event(),
+      title: "Launch",
+      start: "2099-01-10T13:00",
+      timeZone: "America/New_York",
+      rsvp: true,
+    });
+    expect(screen.getByRole("heading", { name: "RSVP" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send RSVP" })).toBeDisabled();
+  });
+
+  it("draws an older page without the new fields as before", () => {
+    // Drawn as given: an event saved before RSVPs has neither field.
+    const { rsvp: _rsvp, rsvpCapacity: _places, ...old } = PAGE_DEFAULTS.event();
+    view(
+      "event",
+      { ...old, title: "Old", start: "2099-01-10T13:00", timeZone: "America/New_York" },
+      false,
+    );
+    expect(screen.queryByRole("heading", { name: "RSVP" })).toBeNull();
+  });
+});
