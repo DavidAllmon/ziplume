@@ -2657,3 +2657,156 @@ describe("default templates", () => {
     expect(await defaults()).toEqual(["Brand"]);
   });
 });
+
+describe("workspace analytics", () => {
+  const FAY = "7c7c7c7c-7c7c-4c7c-8c7c-7c7c7c7c7c7c"; // owner
+  const GUS = "7d7d7d7d-7d7d-4d7d-8d7d-7d7d7d7d7d7d"; // viewer on Fay's team
+  const HAZ = "7e7e7e7e-7e7e-4e7e-8e7e-7e7e7e7e7e7e"; // outsider
+  const by =
+    (id: string) =>
+    <T>(sql: string, params?: unknown[]) =>
+      as<T>("authenticated", id, sql, params);
+  const asFay = by(FAY);
+  const asGus = by(GUS);
+  const asHaz = by(HAZ);
+  const ids = {} as Record<"menu" | "flyer" | "secret" | "gus", string>;
+  const make = async (who: ReturnType<typeof by>, slug: string, isPrivate = false) =>
+    (
+      await who<{ id: string }>(
+        `insert into public.qr_codes (name, qr_type, is_dynamic, slug, destination, content, is_private)
+         values ($1, 'url', true, $2, 'https://example.com', '{"url":"https://example.com"}', $3)
+         returning id`,
+        [`${slug} code`, slug, isPrivate],
+      )
+    )[0]!.id;
+  const scan = (
+    code: string,
+    at: string,
+    visitor: string,
+    country: string | null,
+    device = "mobile",
+  ) =>
+    asService(
+      "insert into public.scan_events (code_id, scanned_at, visitor_hash, country, device_type) values ($1, $2, $3, $4, $5)",
+      [code, at, visitor, country, device],
+    );
+  const FROM = "2030-01-01T00:00:00Z";
+  const TO = "2030-02-01T00:00:00Z";
+  const stats = async (who: ReturnType<typeof by>, owner: string | null) =>
+    (
+      await who<{ s: Record<string, unknown> }>(
+        "select public.workspace_analytics($1, $2, $3, 'America/New_York') as s",
+        [owner, FROM, TO],
+      )
+    )[0]!.s as {
+      total: number;
+      unique: number;
+      daily: { day: string; scans: number; unique: number }[];
+      countries: { label: string; scans: number }[];
+      devices: { label: string; scans: number }[];
+      codes: { id: string; name: string; owner: string; scans: number; unique: number }[];
+    };
+
+  beforeAll(async () => {
+    await db.query(
+      `insert into auth.users (id, email) values
+         ($1, 'fay@example.com'), ($2, 'gus@example.com'), ($3, 'haz@example.com')`,
+      [FAY, GUS, HAZ],
+    );
+    await asService(
+      "insert into public.team_members (owner_id, member_id, role) values ($1, $2, 'viewer')",
+      [FAY, GUS],
+    );
+    ids.menu = await make(asFay, "FAYMENU");
+    ids.flyer = await make(asFay, "FAYFLYER");
+    ids.secret = await make(asFay, "FAYSECRET", true);
+    ids.gus = await make(asGus, "GUSCARD");
+    // 03:00 UTC on Jan 10 is still Jan 9 in New York.
+    await scan(ids.menu, "2030-01-10T03:00:00Z", "v1", "US");
+    await scan(ids.menu, "2030-01-10T15:00:00Z", "v1", "US");
+    await scan(ids.flyer, "2030-01-10T16:00:00Z", "v1", "CA", "desktop");
+    await scan(ids.flyer, "2030-01-11T16:00:00Z", "v2", null);
+    await scan(ids.secret, "2030-01-12T16:00:00Z", "v3", "US");
+    await scan(ids.gus, "2030-01-12T16:00:00Z", "v4", "GB");
+    // Outside the range.
+    await scan(ids.menu, "2029-12-31T12:00:00Z", "v9", "US");
+  });
+
+  it("sum a workspace's scans by day, country, device and code, in the viewer's zone", async () => {
+    const s = await stats(asFay, FAY);
+    expect(s.total).toBe(5);
+    // v1 scanned two codes on Jan 10 (New York), but is one visitor that day.
+    expect(s.daily).toEqual([
+      { day: "2030-01-09", scans: 1, unique: 1 },
+      { day: "2030-01-10", scans: 2, unique: 1 },
+      { day: "2030-01-11", scans: 1, unique: 1 },
+      { day: "2030-01-12", scans: 1, unique: 1 },
+    ]);
+    expect(s.unique).toBe(3);
+    expect(s.countries).toEqual([
+      { label: "US", scans: 3 },
+      { label: "??", scans: 1 },
+      { label: "CA", scans: 1 },
+    ]);
+    expect(s.devices).toEqual([
+      { label: "mobile", scans: 4 },
+      { label: "desktop", scans: 1 },
+    ]);
+    expect(s.codes.map((c) => [c.name, c.scans, c.unique, c.owner])).toEqual([
+      // Two scans each: a tie goes by name.
+      ["FAYFLYER code", 2, 2, FAY],
+      ["FAYMENU code", 2, 1, FAY],
+      ["FAYSECRET code", 1, 1, FAY],
+    ]);
+  });
+
+  it("follow the codes each person can see: no private codes for teammates, nothing for outsiders", async () => {
+    const seen = await stats(asGus, FAY);
+    expect(seen.total).toBe(4);
+    expect(seen.codes.map((c) => c.name)).not.toContain("FAYSECRET code");
+    const outsider = await stats(asHaz, FAY);
+    expect(outsider).toMatchObject({ total: 0, unique: 0, daily: [], codes: [] });
+    // Everyone: every code the viewer can see, their own included.
+    const everyone = await stats(asGus, null);
+    expect(everyone.total).toBe(5);
+    expect(everyone.codes.map((c) => c.owner).sort()).toEqual([FAY, FAY, GUS].sort());
+    await expect(asAnon("select public.workspace_analytics(null, now(), now())")).rejects.toThrow(
+      /permission denied/,
+    );
+  });
+
+  it("list at most 20 top codes", async () => {
+    for (let n = 0; n < 22; n++) {
+      const id = await make(asFay, `FAYBULK${n}`);
+      await scan(id, "2030-01-20T12:00:00Z", `b${n}`, null);
+    }
+    expect((await stats(asFay, FAY)).codes).toHaveLength(20);
+  });
+
+  it("page through every scan for the CSV, newest first", async () => {
+    const page = (before: number | null, limit: number) =>
+      asFay<{ id: number; code_name: string; code_slug: string; country: string | null }>(
+        "select * from public.workspace_scans($1, $2, $3, $4, $5)",
+        [FAY, FROM, TO, before, limit],
+      );
+    const first = await page(null, 10);
+    expect(first).toHaveLength(10);
+    expect(first[0]!.id).toBeGreaterThan(first[1]!.id);
+    const rest = await page(first.at(-1)!.id, 1000);
+    expect(first.length + rest.length).toBe(5 + 22);
+    expect(rest.every((r) => r.id < first.at(-1)!.id)).toBe(true);
+    expect([...first, ...rest].find((r) => r.code_slug === "FAYMENU")?.code_name).toBe(
+      "FAYMENU code",
+    );
+    // Never more than 1,000 in one call, and teammates still don't see private codes.
+    expect(await page(null, 5000)).toHaveLength(27);
+    const gus = await asGus<{ code_slug: string }>(
+      "select code_slug from public.workspace_scans($1, $2, $3)",
+      [FAY, FROM, TO],
+    );
+    expect(gus.map((r) => r.code_slug)).not.toContain("FAYSECRET");
+    await expect(
+      asAnon("select * from public.workspace_scans(null, now(), now())"),
+    ).rejects.toThrow(/permission denied/);
+  });
+});
