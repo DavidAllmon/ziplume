@@ -68,3 +68,15 @@ export function reviewLabel(url: string): string | null {
   const site = SITES.find(([pattern]) => pattern.test(host))?.[1];
   return site ? `Share it on ${site}` : "Leave us a review";
 }
+
+const FACE_WORDS = ["Very bad", "Bad", "Okay", "Good", "Excellent"];
+
+/** One answer in words, for an email: "4 out of 5 stars", "Good (4 out of 5)", "Thumbs up". */
+export function answerText(answer: FeedbackAnswer): string {
+  if (answer.style === "stars") return `${answer.value} out of 5 stars`;
+  if (answer.style === "faces") {
+    return `${FACE_WORDS[answer.value - 1] ?? answer.value} (${answer.value} out of 5)`;
+  }
+  if (answer.style === "thumbs") return answer.value ? "Thumbs up" : "Thumbs down";
+  return `${answer.value} out of 10`;
+}

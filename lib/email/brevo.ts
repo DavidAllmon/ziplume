@@ -15,6 +15,8 @@ export interface OutgoingEmail {
   html: string;
   text: string;
   replyTo?: { email: string; name?: string };
+  /** Extra mail headers, such as List-Unsubscribe. */
+  headers?: Record<string, string>;
 }
 
 export type SendResult = { ok: true } | { ok: false; error: string };
@@ -43,6 +45,7 @@ export async function sendEmail(
         htmlContent: message.html,
         textContent: message.text,
         ...(message.replyTo ? { replyTo: message.replyTo } : {}),
+        ...(message.headers ? { headers: message.headers } : {}),
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });

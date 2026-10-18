@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAnswers, reviewLabel, validValue } from "./feedback";
+import { answerText, buildAnswers, reviewLabel, validValue } from "./feedback";
 import { sanitizePage } from "./sanitize";
 import { PAGE_DEFAULTS } from "./types";
 import { validatePage } from "./validate";
@@ -86,5 +86,15 @@ describe("feedback questions", () => {
       { text: "How was your meal?", style: "faces" },
       { text: "Back?", style: "thumbs" },
     ]);
+  });
+});
+
+describe("answerText", () => {
+  it("says each answer in words for an email", () => {
+    expect(answerText({ question: "Q", style: "stars", value: 4 })).toBe("4 out of 5 stars");
+    expect(answerText({ question: "Q", style: "faces", value: 4 })).toBe("Good (4 out of 5)");
+    expect(answerText({ question: "Q", style: "thumbs", value: 1 })).toBe("Thumbs up");
+    expect(answerText({ question: "Q", style: "thumbs", value: 0 })).toBe("Thumbs down");
+    expect(answerText({ question: "Q", style: "scale", value: 9 })).toBe("9 out of 10");
   });
 });
