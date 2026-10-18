@@ -2059,7 +2059,10 @@ describe("visitor responses", () => {
   const asHal = by(HAL);
   const asIvy = by(IVY);
   const asJoy = by(JOY);
-  const ids: Record<string, string> = {};
+  const ids = {} as Record<
+    "card" | "cardOff" | "coupon" | "ended" | "event" | "open" | "secret",
+    string
+  >;
   const make = async (
     who: ReturnType<typeof by>,
     slug: string,

@@ -153,6 +153,41 @@ export interface Database {
         Update: never;
         Relationships: [];
       };
+      // What visitors send back (spec 15, 29 and 33). Their visitor hashes aren't readable.
+      contact_shares: {
+        Row: {
+          id: number;
+          code_id: string;
+          created_at: string;
+          name: string;
+          phone: string | null;
+          email: string | null;
+          note: string | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      coupon_redemptions: {
+        Row: { id: number; code_id: string; created_at: string };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      event_rsvps: {
+        Row: {
+          id: number;
+          code_id: string;
+          created_at: string;
+          name: string;
+          email: string;
+          guests: number;
+          note: string | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       scan_events: {
         Row: {
           id: number;
@@ -288,6 +323,36 @@ export interface Database {
         };
         Returns: boolean;
       };
+      submit_contact_share: {
+        Args: {
+          p_slug: string;
+          p_name: string;
+          p_phone: string | null;
+          p_email: string | null;
+          p_note: string | null;
+          p_visitor_hash: string;
+        };
+        Returns: boolean;
+      };
+      record_coupon_use: {
+        Args: { p_slug: string; p_phone_hash: string; p_visitor_hash: string };
+        /** "used", "already", "limited" or "closed". */
+        Returns: string;
+      };
+      submit_rsvp: {
+        Args: {
+          p_slug: string;
+          p_name: string;
+          p_email: string;
+          p_guests: number;
+          p_note: string | null;
+          p_visitor_hash: string;
+        };
+        /** "listed", "already", "full", "limited", "invalid" or "closed". */
+        Returns: string;
+      };
+      rsvp_places_left: { Args: { p_slug: string }; Returns: number | null };
+      rsvp_guests: { Args: { p_code: string }; Returns: number };
       code_analytics: {
         Args: { p_code: string; p_from: string; p_to: string; p_tz?: string };
         Returns: Json;
@@ -301,6 +366,9 @@ export interface Database {
 export type QrCodeRow = Database["public"]["Tables"]["qr_codes"]["Row"];
 export type DesignTemplateRow = Database["public"]["Tables"]["design_templates"]["Row"];
 export type FeedbackRow = Database["public"]["Tables"]["feedback_responses"]["Row"];
+export type ContactShareRow = Database["public"]["Tables"]["contact_shares"]["Row"];
+export type CouponUseRow = Database["public"]["Tables"]["coupon_redemptions"]["Row"];
+export type RsvpRow = Database["public"]["Tables"]["event_rsvps"]["Row"];
 export type FolderRow = Database["public"]["Tables"]["folders"]["Row"];
 export type ApiKeyRow = Database["public"]["Tables"]["api_keys"]["Row"];
 export type TeamInviteRow = Database["public"]["Tables"]["team_invites"]["Row"];

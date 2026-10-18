@@ -84,6 +84,7 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     showEmail: { kind: "bool", fallback: true },
     showWhatsapp: { kind: "bool", fallback: true },
     showDirections: { kind: "bool", fallback: true },
+    shareDetails: bool,
   },
   business: {
     name: str(),
@@ -157,6 +158,7 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
     image: media,
     scan: { kind: "enum", values: ["text", "qr", "barcode"] },
     badge: str(12),
+    markUsed: bool,
   },
   event: {
     title: str(),
@@ -182,6 +184,8 @@ const SCHEMAS: Record<PageTypeId, Record<string, Spec>> = {
       max: LIMITS.hosts,
       item: { photo: media, name: str(80), role: str(80) },
     },
+    rsvp: bool,
+    rsvpCapacity: str(5),
   },
   feedback: {
     business: str(),

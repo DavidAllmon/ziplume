@@ -152,6 +152,8 @@ export interface VcardPage extends Themed {
   showEmail: boolean;
   showWhatsapp: boolean;
   showDirections: boolean;
+  /** Adds "Share your details": visitors send back their name, phone or email (spec item 15). */
+  shareDetails: boolean;
 }
 
 export interface BusinessPage extends Themed {
@@ -202,6 +204,8 @@ export interface CouponPage extends Themed {
   scan: "text" | "qr" | "barcode";
   /** A short stamp on the coupon's corner, like NEW (spec item 28, ruling 1). */
   badge: string;
+  /** Adds "Mark as used", once per phone, for the till (spec item 29). */
+  markUsed: boolean;
 }
 
 export interface AgendaItem {
@@ -237,6 +241,10 @@ export interface EventPage extends Themed {
   agenda: AgendaItem[];
   /** Up to 12 (spec item 32). */
   hosts: Host[];
+  /** Adds the RSVP form (spec item 33). */
+  rsvp: boolean;
+  /** The most guests in all, as digits; "" for no limit. */
+  rsvpCapacity: string;
 }
 
 export interface FeedbackPage extends Themed {
@@ -438,6 +446,7 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       showEmail: true,
       showWhatsapp: true,
       showDirections: true,
+      shareDetails: false,
     }),
   business: () =>
     withLook("business", {
@@ -485,6 +494,7 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       image: null,
       scan: "text",
       badge: "",
+      markUsed: false,
     }),
   event: () =>
     withLook("event", {
@@ -504,6 +514,8 @@ export const PAGE_DEFAULTS: { [K in PageTypeId]: () => PageContentMap[K] } = {
       joinUrl: "",
       agenda: [],
       hosts: [],
+      rsvp: false,
+      rsvpCapacity: "",
     }),
   feedback: () =>
     withLook("feedback", {
