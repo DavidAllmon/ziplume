@@ -241,6 +241,7 @@ const CARDS: Record<PageTypeId, string[]> = {
     "Phone numbers",
     "Email addresses",
     "Quick buttons",
+    "Share your details",
     "Websites and address",
     "Social icons",
   ],
@@ -255,8 +256,8 @@ const CARDS: Record<PageTypeId, string[]> = {
     "Social icons",
   ],
   menu: ["Header", "Sections and dishes", "Currency and note"],
-  coupon: ["Header", "Offer", "Button", "Terms"],
-  event: ["Header", "When", "Where", "Details", "Agenda", "Hosts and speakers", "Tickets"],
+  coupon: ["Header", "Offer", "At the till", "Button", "Terms"],
+  event: ["Header", "When", "Where", "Details", "Agenda", "Hosts and speakers", "Tickets", "RSVPs"],
   feedback: ["Header", "Questions", "After sending"],
   pdf: ["PDFs", "Details", "Opening"],
   images: ["Details", "Images"],
@@ -1144,5 +1145,46 @@ describe("Feedback editor extras", () => {
     expect(screen.getByText(/Shows as Share it on Google/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add question" }));
     expect(screen.queryByRole("button", { name: "Add question" })).toBeNull();
+  });
+});
+
+describe("Things visitors send back, in the editor", () => {
+  function Editor({ type }: { type: "vcard" | "coupon" | "event" }) {
+    const [page, setPage] = useState<unknown>(() => PAGE_DEFAULTS[type]());
+    return (
+      <>
+        <PageEditor
+          type={type}
+          page={page as never}
+          errors={{}}
+          onUpdate={(update) => setPage((p: unknown) => update(p as never))}
+        />
+        <output aria-label="Page">{JSON.stringify(page)}</output>
+      </>
+    );
+  }
+  const saved = () => JSON.parse(screen.getByRole("status", { name: "Page" }).textContent!);
+
+  it("turns on Share your details", async () => {
+    const user = userEvent.setup();
+    render(<Editor type="vcard" />);
+    await user.click(screen.getByRole("switch", { name: /^Share your details button/ }));
+    expect(saved().shareDetails).toBe(true);
+  });
+
+  it("turns on Mark as used", async () => {
+    const user = userEvent.setup();
+    render(<Editor type="coupon" />);
+    await user.click(screen.getByRole("switch", { name: /^Mark as used button/ }));
+    expect(saved().markUsed).toBe(true);
+  });
+
+  it("turns on RSVPs, then asks for the places", async () => {
+    const user = userEvent.setup();
+    render(<Editor type="event" />);
+    expect(screen.queryByRole("textbox", { name: /^Places/ })).toBeNull();
+    await user.click(screen.getByRole("switch", { name: /^RSVP form/ }));
+    await user.type(screen.getByRole("textbox", { name: /^Places/ }), "50");
+    expect(saved()).toMatchObject({ rsvp: true, rsvpCapacity: "50" });
   });
 });

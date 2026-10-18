@@ -205,6 +205,14 @@ export function VcardEditor({ page, set, errors }: EditorProps<VcardPage>) {
           onChange={(showDirections) => set({ showDirections })}
         />
       </FormCard>
+      <FormCard title="Share your details" note="Visitors send you theirs">
+        <ToggleField
+          label="Share your details button"
+          description="Visitors can send you their name with a phone number or email. You’ll find them on this code’s page."
+          checked={page.shareDetails}
+          onChange={(shareDetails) => set({ shareDetails })}
+        />
+      </FormCard>
       <FormCard title="Websites and address">
         <SortableList
           label="Websites"

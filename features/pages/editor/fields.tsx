@@ -64,7 +64,7 @@ interface TextFieldProps {
   optional?: boolean;
   placeholder?: string;
   type?: "text" | "url" | "email" | "tel" | "date" | "datetime-local" | "time";
-  inputMode?: "text" | "url" | "email" | "tel" | "decimal";
+  inputMode?: "text" | "url" | "email" | "tel" | "decimal" | "numeric";
   autoComplete?: string;
   /** See Field. */
   hideLabel?: boolean;
