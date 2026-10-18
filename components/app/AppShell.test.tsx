@@ -218,3 +218,18 @@ describe("Templates in the navigation", () => {
     ).toHaveAttribute("href", "/templates");
   });
 });
+
+describe("Analytics in the navigation", () => {
+  it("is in the sidebar and the phone's tabs", () => {
+    renderShell();
+    const sidebar = within(screen.getByRole("complementary", { name: "Sidebar" }));
+    expect(sidebar.getByRole("link", { name: "Analytics" })).toHaveAttribute("href", "/analytics");
+    const tabs = screen
+      .getAllByRole("navigation", { name: "Main" })
+      .find((nav) => nav.hasAttribute("data-tabbar"))!;
+    expect(within(tabs).getByRole("link", { name: "Analytics" })).toHaveAttribute(
+      "href",
+      "/analytics",
+    );
+  });
+});

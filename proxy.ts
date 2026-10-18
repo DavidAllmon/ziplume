@@ -6,7 +6,7 @@ import { editRedirect } from "@/lib/redirects";
 import { refreshSession } from "@/lib/supabase/proxy";
 
 /** The pages that read the signed-in session; only these refresh it. */
-const SESSION_PATHS = /^\/(?:$|(?:codes|templates|team|settings|account)(?:\/|$))/;
+const SESSION_PATHS = /^\/(?:$|(?:codes|analytics|templates|team|settings|account)(?:\/|$))/;
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

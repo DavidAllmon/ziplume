@@ -53,10 +53,11 @@ describe("on the site address", () => {
       "/settings/security",
       "/templates",
       "/templates/new",
+      "/analytics",
     ]) {
       await proxy(request(`https://ziplume.com${path}`, "ziplume.com"));
     }
-    expect(refreshSession).toHaveBeenCalledTimes(7);
+    expect(refreshSession).toHaveBeenCalledTimes(8);
   });
 
   it("skips the session for short links, hosted pages, files and the pass-through", async () => {
