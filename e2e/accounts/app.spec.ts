@@ -17,6 +17,7 @@ const PAGES = [
   "codes/new?type=event",
   "codes/new?type=links#look",
   "codes/bulk",
+  "analytics",
   "templates",
   "templates/new",
   "codes/{menu}",

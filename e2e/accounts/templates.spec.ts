@@ -100,4 +100,24 @@ test.describe("Templates", () => {
     await expectNoSidewaysScroll(page);
     await expectAxeClean(page);
   });
+
+  test("a template's design is edited in place, and new codes use the change", async ({ page }) => {
+    await page.goto("templates");
+    await page.getByRole("button", { name: "Actions for Brand 2" }).click();
+    await page.getByRole("menuitem", { name: "Edit" }).click();
+    await expect(page.getByRole("heading", { name: "Edit template" })).toBeVisible();
+    await page.getByRole("button", { name: /^Colors/ }).click();
+    const color = page.getByRole("textbox", { name: "Code color", exact: true });
+    await color.fill("#0B6E8C");
+    await color.press("Tab");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page).toHaveURL(/\/templates$/);
+
+    await page.goto("codes/new?type=text");
+    await page.getByRole("tab", { name: "QR code" }).click();
+    await page.getByRole("button", { name: /^Colors/ }).click();
+    await expect(page.getByRole("textbox", { name: "Code color", exact: true })).toHaveValue(
+      "#0B6E8C",
+    );
+  });
 });
