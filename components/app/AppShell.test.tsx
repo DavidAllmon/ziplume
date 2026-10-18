@@ -205,3 +205,16 @@ describe("AppShell", () => {
     expect(container.querySelector("[data-app-shell]")).not.toHaveAttribute("data-editor");
   });
 });
+
+describe("Templates in the navigation", () => {
+  it("is in the sidebar after Codes, and in More on phones", async () => {
+    const user = userEvent.setup();
+    renderShell();
+    const sidebar = within(screen.getByRole("complementary", { name: "Sidebar" }));
+    expect(sidebar.getByRole("link", { name: "Templates" })).toHaveAttribute("href", "/templates");
+    await user.click(screen.getByRole("button", { name: "More" }));
+    expect(
+      within(screen.getByRole("dialog", { name: "More" })).getByRole("link", { name: "Templates" }),
+    ).toHaveAttribute("href", "/templates");
+  });
+});

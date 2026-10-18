@@ -20,7 +20,7 @@ import type { DesignState, GeneratorAction } from "../state/types";
 
 const SAMPLE = "Ziplume";
 
-function StylePreview({ design }: { design: DesignState }) {
+export function DesignPreview({ design }: { design: DesignState }) {
   const options: RenderOptions = useMemo(() => ({ ...design, data: SAMPLE, size: 240 }), [design]);
   return (
     <span
@@ -35,9 +35,11 @@ function StylePreview({ design }: { design: DesignState }) {
 interface TemplatesSectionProps {
   design: DesignState;
   dispatch: (action: GeneratorAction) => void;
+  /** The "Save design" box; off where the page has its own Save (New template). */
+  canSave?: boolean;
 }
 
-export function TemplatesSection({ design, dispatch }: TemplatesSectionProps) {
+export function TemplatesSection({ design, dispatch, canSave = true }: TemplatesSectionProps) {
   return (
     <>
       <div className="flex flex-col gap-2">
@@ -56,19 +58,19 @@ export function TemplatesSection({ design, dispatch }: TemplatesSectionProps) {
               onClick={() => dispatch({ type: "applyDesign", design: style.design })}
               className="flex flex-col gap-1.5 rounded-control border border-border bg-surface p-1.5 text-xs font-medium text-fg-muted focus-ring transition-colors hover:border-field-border hover:text-fg"
             >
-              <StylePreview design={style.design} />
+              <DesignPreview design={style.design} />
               {style.name}
             </button>
           ))}
         </div>
         <p className="text-sm text-fg-muted">Applying a style keeps your logo.</p>
       </div>
-      {accountsEnabled && <MyTemplates design={design} dispatch={dispatch} />}
+      {accountsEnabled && <MyTemplates design={design} dispatch={dispatch} canSave={canSave} />}
     </>
   );
 }
 
-function MyTemplates({ design, dispatch }: TemplatesSectionProps) {
+function MyTemplates({ design, dispatch, canSave }: TemplatesSectionProps) {
   const { user, loading } = useSession();
   const toast = useToast();
   const [templates, setTemplates] = useState<DesignTemplateRow[] | null>(null);
@@ -133,9 +135,17 @@ function MyTemplates({ design, dispatch }: TemplatesSectionProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <span id="my-templates" className="text-sm font-medium text-fg">
-        My templates
-      </span>
+      <div className="flex items-center justify-between gap-2">
+        <span id="my-templates" className="text-sm font-medium text-fg">
+          My templates
+        </span>
+        <Link
+          href="/templates"
+          className="text-sm font-medium text-link underline-offset-4 hover:underline"
+        >
+          Manage templates
+        </Link>
+      </div>
       {templates === null ? (
         <p className="text-sm text-fg-muted">Loading…</p>
       ) : templates.length === 0 ? (
@@ -154,8 +164,11 @@ function MyTemplates({ design, dispatch }: TemplatesSectionProps) {
                   onClick={() => dispatch({ type: "applyDesign", design: saved })}
                   className="flex flex-col gap-1.5 rounded-md text-left text-xs font-medium text-fg focus-ring"
                 >
-                  <StylePreview design={saved} />
+                  <DesignPreview design={saved} />
                   <span className="truncate px-0.5">{template.name}</span>
+                  {template.is_default && (
+                    <span className="px-0.5 text-[11px] font-semibold text-fg-muted">Default</span>
+                  )}
                 </button>
                 <IconButton
                   label={`Delete ${template.name}`}
@@ -172,19 +185,21 @@ function MyTemplates({ design, dispatch }: TemplatesSectionProps) {
           })}
         </ul>
       )}
-      <form onSubmit={onSave} className="flex gap-2">
-        <TextInput
-          aria-label="Template name"
-          placeholder="Template name, e.g. Brand"
-          value={name}
-          maxLength={60}
-          onChange={(event) => setName(event.target.value)}
-        />
-        <Button type="submit" variant="outline" disabled={busy !== null} className="shrink-0">
-          {busy === "save" && <Loader2 aria-hidden className="animate-spin" />}
-          Save design
-        </Button>
-      </form>
+      {canSave !== false && (
+        <form onSubmit={onSave} className="flex gap-2">
+          <TextInput
+            aria-label="Template name"
+            placeholder="Template name, e.g. Brand"
+            value={name}
+            maxLength={60}
+            onChange={(event) => setName(event.target.value)}
+          />
+          <Button type="submit" variant="outline" disabled={busy !== null} className="shrink-0">
+            {busy === "save" && <Loader2 aria-hidden className="animate-spin" />}
+            Save design
+          </Button>
+        </form>
+      )}
     </div>
   );
 }

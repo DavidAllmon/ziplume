@@ -34,12 +34,15 @@ export function DesignSection({
   dispatch,
   onResetToStyle,
   matchColor,
+  saveTemplates = true,
 }: {
   design: DesignState;
   dispatch: (action: GeneratorAction) => void;
   onResetToStyle: () => void;
   /** A hosted page's color, for "Match my page"; absent for other codes. */
   matchColor?: string | null;
+  /** Shows the "Save design" box under your templates. */
+  saveTemplates?: boolean;
 }) {
   const logo = design.logo
     ? "Your image"
@@ -79,7 +82,7 @@ export function DesignSection({
           summary="Styles and your templates"
           defaultOpen
         >
-          <TemplatesSection design={design} dispatch={dispatch} />
+          <TemplatesSection design={design} dispatch={dispatch} canSave={saveTemplates} />
         </Section>
         <Section title="Colors" icon={<Palette />} summary={<Swatches design={design} />}>
           <ColorsSection design={design} dispatch={dispatch} />
