@@ -19,7 +19,7 @@ vi.mock("@/lib/email/response-links", () => ({ offLinkCode: vi.fn() }));
 
 import { offLinkCode } from "@/lib/email/response-links";
 
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 const CODE = lookup.id;
 const stop = (body: string) =>
@@ -57,6 +57,17 @@ describe("POST /email/responses-off/stop", () => {
   it("changes nothing for a link that isn't signed for the code", async () => {
     vi.mocked(offLinkCode).mockResolvedValue(null);
     expect((await stop("from=page")).status).toBe(403);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("sends a mail app that opens the address in a browser to the page, changing nothing", async () => {
+    const response = GET(
+      new Request(`https://ziplume.com/email/responses-off/stop?c=${CODE}&t=tok`) as never,
+    );
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toMatch(
+      new RegExp(`/email/responses-off\\?c=${CODE}&t=tok$`),
+    );
     expect(update).not.toHaveBeenCalled();
   });
 });

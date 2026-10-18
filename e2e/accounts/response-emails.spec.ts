@@ -1,7 +1,9 @@
 import { createHmac } from "node:crypto";
 
-import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test, type Page } from "@playwright/test";
 
+import { expectNoSidewaysScroll } from "../phone-fit";
 import { MAKER, seed } from "./fixtures";
 
 // The test server's own secret (scripts/accounts-e2e.mjs), so the test can sign an off link.
@@ -11,8 +13,13 @@ const offLink = (code: string, owner: string) =>
     .update(`response-emails-off:${code}:${owner}`)
     .digest("base64url")}`;
 
-// The switch is shared state, so a retry would start from a different place.
-test.describe.configure({ retries: 0 });
+// The switch is shared state, so these run in order, and a retry would start from a different place.
+test.describe.configure({ mode: "serial", retries: 0 });
+
+async function expectAxeClean(page: Page) {
+  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(results.violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
+}
 
 test.describe("Email me new responses", () => {
   test.use({ storageState: MAKER.state });
@@ -48,5 +55,20 @@ test.describe("Email me new responses", () => {
 
     await page.reload();
     await expect(page.getByRole("switch", { name: "Email me new responses" })).not.toBeChecked();
+  });
+
+  test("the off page and the switch fit a small phone and pass axe", async ({ page }) => {
+    const { makerFeedbackId, makerId } = seed();
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.goto(`codes/${makerFeedbackId}`);
+    await expect(page.getByRole("switch", { name: "Email me new responses" })).toBeVisible();
+    await expectNoSidewaysScroll(page);
+    await expectAxeClean(page);
+    for (const owner of [makerId, "00000000-0000-4000-8000-000000000000"]) {
+      await page.goto(offLink(makerFeedbackId, owner));
+      await expect(page.locator("main h1")).toBeVisible();
+      await expectNoSidewaysScroll(page);
+      await expectAxeClean(page);
+    }
   });
 });

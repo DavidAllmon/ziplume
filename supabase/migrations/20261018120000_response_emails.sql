@@ -195,3 +195,53 @@ revoke all on function public.claim_response_emails(text) from public, anon, aut
 revoke all on function public.finish_response_email(bigint, boolean) from public, anon, authenticated;
 grant execute on function public.claim_response_emails(text) to service_role;
 grant execute on function public.finish_response_email(bigint, boolean) to service_role;
+
+-- Invites now share the site's daily budget with response emails: together they stop at 250, so
+-- neither can use up the room Brevo's 300 a day leaves for sign-up and password emails. The same
+-- lock as queue_response_email, so an invite and a response can't both slip under it. Otherwise as
+-- in 20261014190000_ziplume_names.
+create or replace function public.record_invite_send(p_invite uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_invite public.team_invites;
+begin
+  if auth.uid() is null or not public.mfa_satisfied() then
+    raise exception 'Sign in to send invites' using errcode = '42501';
+  end if;
+  -- One owner's sends are counted one at a time, so two requests can't both slip under a limit.
+  perform pg_advisory_xact_lock(hashtextextended(auth.uid()::text, 0));
+  perform pg_advisory_xact_lock(hashtextextended('response_emails', 0));
+  select * into v_invite
+    from public.team_invites
+   where id = p_invite and owner_id = auth.uid()
+     for update;
+  if v_invite.id is null or v_invite.accepted_at is not null or v_invite.expires_at <= now() then
+    raise exception 'This invite is no longer valid' using errcode = '22023';
+  end if;
+  if v_invite.send_count >= 5 then
+    raise exception 'This invite has been emailed 5 times already' using errcode = '54000';
+  end if;
+  if (select count(*) from public.invite_sends s
+       where s.owner_id = auth.uid() and s.sent_at > now() - interval '1 hour') >= 20 then
+    raise exception 'You have sent 20 invites in the last hour' using errcode = '54000';
+  end if;
+  if (select count(*) from public.invite_sends s
+       where s.owner_id = auth.uid() and s.sent_at > now() - interval '1 day') >= 50 then
+    raise exception 'You have sent 50 invites today' using errcode = '54000';
+  end if;
+  if (select count(*) from public.invite_sends s where s.sent_at > now() - interval '1 day') >= 200
+     or (select count(*) from public.invite_sends s where s.sent_at > now() - interval '1 day')
+        + (select count(*) from public.response_emails e
+            where e.created_at > now() - interval '1 day') >= 250 then
+    raise exception 'Ziplume has sent all the invite emails it can today' using errcode = '54000';
+  end if;
+  insert into public.invite_sends (owner_id, invite_id) values (auth.uid(), v_invite.id);
+  update public.team_invites
+     set last_sent_at = now(), send_count = send_count + 1
+   where id = v_invite.id;
+end;
+$$;

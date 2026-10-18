@@ -43,6 +43,16 @@ describe("responseEmail", () => {
     expect(text).toContain('Note: <img src=x onerror="alert(1)">\nSecond line');
   });
 
+  it("puts each label over its value, so long questions and notes fit a phone", () => {
+    const { html } = responseEmail({
+      ...base,
+      details: { ...base.details, note: "First line\nSecond line" },
+    });
+    expect(html).not.toContain("nowrap");
+    // Line breaks survive mail apps that ignore pre-line (Outlook).
+    expect(html).toContain("First line<br />Second line");
+  });
+
   it("links to the code's page and to turning the emails off, in both versions", () => {
     const { html, text } = responseEmail(base);
     expect(html).toContain('href="https://ziplume.example/codes/c1"');

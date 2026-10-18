@@ -13,10 +13,8 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="flex flex-1 flex-col bg-bg">
       <main className="grid flex-1 place-items-center px-4 py-10">
-        <div className="flex max-w-md flex-col gap-4 rounded-[1.5rem] border border-border bg-surface p-8 text-center shadow-card">
-          <h1 className="font-display text-xl font-bold [overflow-wrap:anywhere] text-fg">
-            {title}
-          </h1>
+        <div className="flex max-w-md min-w-0 flex-col gap-4 rounded-[1.5rem] border border-border bg-surface p-8 text-center [overflow-wrap:anywhere] shadow-card">
+          <h1 className="font-display text-xl font-bold text-fg">{title}</h1>
           {children}
         </div>
       </main>

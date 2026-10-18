@@ -41,3 +41,16 @@ export async function POST(request: NextRequest) {
   }
   return reply("Emails about new responses are off.", 200);
 }
+
+/**
+ * A mail app that opens the unsubscribe address in a browser, instead of posting to it, gets the
+ * page, which asks first: a GET never changes anything.
+ */
+export function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const query = new URLSearchParams({
+    c: url.searchParams.get("c") ?? "",
+    t: url.searchParams.get("t") ?? "",
+  });
+  return NextResponse.redirect(`${SITE_URL}/email/responses-off?${query}`, 303);
+}

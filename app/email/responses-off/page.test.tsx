@@ -51,4 +51,18 @@ describe("the response emails off page", () => {
     await open(CODE, "bad");
     expect(screen.getByRole("heading", { name: "This link doesn’t work" })).toBeInTheDocument();
   });
+
+  it("wraps a long code name instead of scrolling sideways on a phone", async () => {
+    vi.mocked(offLinkCode).mockResolvedValue({
+      id: CODE,
+      name: "x".repeat(120),
+      on: false,
+      ownerId: "o",
+    });
+    await open(CODE, "tok");
+    // The whole card wraps, the name in its sentence included.
+    expect(screen.getByRole("heading", { name: "Emails are off" }).parentElement).toHaveClass(
+      "[overflow-wrap:anywhere]",
+    );
+  });
 });

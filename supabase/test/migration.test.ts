@@ -2543,6 +2543,27 @@ describe("response emails", () => {
     await asService("delete from public.invite_sends");
   });
 
+  it("stop invites too once the site's invite and response emails reach 250", async () => {
+    const [invite] = await asMoe<{ id: string }>(
+      "insert into public.team_invites (email, role) values ('zoe@example.com', 'viewer') returning id",
+    );
+    await asService(
+      `insert into public.response_emails (owner_id, code_id, kind, response_id)
+       select $1, $2, 'share', 1000000 + n from generate_series(1, 250) n`,
+      [MOE, ids.moe],
+    );
+    try {
+      await expect(asMoe("select public.record_invite_send($1)", [invite!.id])).rejects.toThrow(
+        /Ziplume has sent all the invite emails it can today/,
+      );
+    } finally {
+      await asService("delete from public.response_emails where response_id > 1000000");
+    }
+    // Under the shared limit, the invite goes.
+    await asMoe("select public.record_invite_send($1)", [invite!.id]);
+    await asService("delete from public.invite_sends");
+  });
+
   it("switch off when a code moves to someone else", async () => {
     await switchOn(asLex, ids.lex);
     await asKai("select public.remove_member($1, true)", [LEX]);

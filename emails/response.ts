@@ -73,17 +73,19 @@ export function responseEmail(input: ResponseEmailInput): EmailContent {
     timeStyle: "short",
     timeZone: "UTC",
   })} UTC`;
+  // Each label over its value: a question can be 200 characters, which no side-by-side column
+  // survives on a phone. Line breaks become <br />, since some mail apps ignore pre-line.
   const rows = lines
     .map(
       ([label, value]) =>
-        `<tr><td style="padding:6px 16px 6px 0;vertical-align:top;font-size:14px;color:#45506a;white-space:nowrap;">${e(label)}</td><td style="padding:6px 0;vertical-align:top;font-size:14px;color:#0a1330;white-space:pre-line;word-break:break-word;">${e(value)}</td></tr>`,
+        `<p style="margin:0 0 2px;font-size:13px;line-height:1.5;color:#45506a;word-break:break-word;">${e(label)}</p><p style="margin:0 0 14px;font-size:15px;line-height:1.5;color:#0a1330;word-break:break-word;">${e(value).replace(/\n/g, "<br />")}</p>`,
     )
     .join("");
   const html = emailLayout({
     title: e(subject),
     body:
       paragraph(`${INTRO[input.kind]} It arrived ${e(when)}.`) +
-      `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">${rows}</table>`,
+      `<div style="margin:0 0 24px;">${rows}</div>`,
     button: { label: "See all responses", href: e(input.codeUrl) },
     note: `You get these emails because you turned on “Email me new responses” for this code. <a href="${e(input.offUrl)}" style="color:#0b6e8c;">Turn them off</a>.`,
     siteUrl: new URL(input.codeUrl).origin,
