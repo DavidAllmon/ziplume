@@ -35,11 +35,27 @@ test.describe("Analytics as the owner", () => {
   test("fits a small phone with Custom open, and passes axe", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
     await page.goto("analytics");
-    await expect(page.getByRole("link", { name: "Spring menu" })).toBeVisible();
-    await page.getByRole("radio", { name: "Custom dates" }).check({ force: true });
+    const menu = page.getByRole("link", { name: "Spring menu" });
+    await expect(menu).toBeVisible();
+    // Every range is a 44 px target with its whole label inside it.
+    for (const radio of await page.getByRole("radio").all()) {
+      const box = (await radio.boundingBox())!;
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(await radio.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    }
+    await page.getByRole("radio", { name: "Custom dates" }).check();
     await expect(page.getByLabel("From")).toBeVisible();
     await expectNoSidewaysScroll(page);
     await expectAxeClean(page);
+
+    // A top code's whole row opens it, not just its name.
+    const row = page.locator("li", { has: menu });
+    const box = (await row.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    // Its far corner, away from the name; scrolled into view first.
+    await row.click({ position: { x: box.width - 4, y: box.height - 4 } });
+    await expect(page).toHaveURL(new RegExp(`/codes/${seed().menuId}/analytics$`));
   });
 });
 

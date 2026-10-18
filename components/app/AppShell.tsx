@@ -110,9 +110,12 @@ export function AppShell({
     ? { ...user, name: profile.display_name?.trim() || null, avatarUrl: profile.avatar_url }
     : user;
   const team = teams.find((t) => t.ownerId === searchParams.get("workspace")) ?? null;
-  // Everyone's codes, in a team (teams spec 5). Folders belong to one person, so none show there.
+  // Everyone's codes, in a team (teams spec 5), and their analytics. Folders belong to one person,
+  // so none show there.
   const everyone =
-    pathname === "/codes" && searchParams.get("view") === "everyone" && teams.length > 0;
+    (pathname === "/codes" || pathname === "/analytics") &&
+    searchParams.get("view") === "everyone" &&
+    teams.length > 0;
   // The code editor brings its own bars on phones and keeps the sidebar a rail on tablets.
   const editor = isEditorPage(pathname, searchParams);
   const ownerId = team?.ownerId ?? null;

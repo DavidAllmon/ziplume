@@ -98,4 +98,12 @@ describe("GET /analytics/export", () => {
     });
     expect((await get("range=custom&from=2030-01-09&to=2030-01-01&tz=UTC")).status).toBe(400);
   });
+
+  it("names the file from the range it used, never from the link", async () => {
+    const hostile = encodeURIComponent(`x"; filename*=UTF-8''report.bat; x="`);
+    const response = await get(`range=${hostile}&tz=UTC`);
+    expect(response.headers.get("content-disposition")).toMatch(
+      /^attachment; filename="ziplume-scans-all-\d{4}-\d{2}-\d{2}\.csv"$/,
+    );
+  });
 });

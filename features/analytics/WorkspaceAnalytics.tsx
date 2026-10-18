@@ -75,9 +75,14 @@ export function WorkspaceAnalytics({
 
   const bounds = useMemo(() => {
     const zone = timeZone ?? "UTC";
-    return range === "custom"
-      ? customBounds(fromDay, toDay, zone, now)
-      : rangeBounds(range, now, new Date(since), zone);
+    const first = new Date(since);
+    if (range !== "custom") return rangeBounds(range, now, first, zone);
+    // Like the presets, a range starts no earlier than the first trackable code: years of empty
+    // days before it would crowd the chart.
+    const custom = customBounds(fromDay, toDay, zone, now);
+    return custom && custom.from < first && first < custom.to
+      ? { from: first, to: custom.to }
+      : custom;
   }, [range, fromDay, toDay, now, since, timeZone]);
   const requestKey = `${range}|${fromDay}|${toDay}|${timeZone}`;
 
@@ -152,7 +157,9 @@ export function WorkspaceAnalytics({
               value={range}
               onChange={setRange}
               options={RANGE_OPTIONS}
-              className="min-w-0 flex-1 sm:flex-none"
+              // Phones get a row of its own in two rows of three, so each range stays a 44 px
+              // target with room for "Custom".
+              className="min-w-0 basis-full max-sm:grid-flow-row max-sm:grid-cols-3 sm:flex-none sm:basis-auto"
             />
             <a href={exportHref} download className={buttonClasses("outline", "md")}>
               <Download aria-hidden /> CSV

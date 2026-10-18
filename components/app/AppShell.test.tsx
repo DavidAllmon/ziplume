@@ -126,6 +126,17 @@ describe("AppShell", () => {
     ).toHaveAttribute("href", "/codes?view=everyone");
   });
 
+  it("keeps Everyone on the Analytics page", () => {
+    pathname = "/analytics";
+    search = new URLSearchParams("view=everyone");
+    renderShell();
+    expect(screen.getAllByRole("button", { name: /Switch team/ })[0]!).toHaveAccessibleName(
+      "Switch team (showing Everyone’s codes)",
+    );
+    expect(new Set(hrefs("Analytics"))).toEqual(new Set(["/analytics?view=everyone"]));
+    expect(new Set(hrefs("Codes"))).toEqual(new Set(["/codes?view=everyone"]));
+  });
+
   it("shows no Everyone to someone on their own", async () => {
     search = new URLSearchParams("view=everyone");
     render(

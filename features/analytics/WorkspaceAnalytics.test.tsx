@@ -95,6 +95,27 @@ describe("WorkspaceAnalytics", () => {
     );
   });
 
+  it("starts a custom range no earlier than the workspace's first trackable code", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2030-03-01T12:00:00Z"));
+    const user = userEvent.setup();
+    show();
+    await screen.findByText("Spring menu");
+    await user.click(screen.getByRole("radio", { name: "Custom dates" }));
+    const calls = rpc.mock.calls.length;
+    // Years before anything existed would fill the chart with empty days.
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "2010-01-01" } });
+    await vi.waitFor(() => expect(rpc.mock.calls.length).toBeGreaterThan(calls));
+    expect(rpc.mock.lastCall![1]).toMatchObject({ p_from: "2030-01-01T00:00:00.000Z" });
+  });
+
+  it("makes each top code's whole row a phone-sized link that looks like one", async () => {
+    show();
+    const link = await screen.findByRole("link", { name: "Spring menu" });
+    expect(link).toHaveClass("text-link", "after:absolute", "after:inset-0");
+    expect(link.closest("li")).toHaveClass("relative", "min-h-11");
+  });
+
   it("points to Create when the workspace has no trackable codes", () => {
     show({ hasCodes: false });
     expect(screen.getByText("No trackable codes yet")).toBeInTheDocument();

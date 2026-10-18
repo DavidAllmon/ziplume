@@ -71,14 +71,17 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const rangeParam = search.get("range");
 
+  // The file is named from this, never from the raw link.
+  const range: RangeKey | "custom" =
+    rangeParam === "custom" || RANGES.some((r) => r.value === rangeParam)
+      ? (rangeParam as RangeKey | "custom")
+      : "all";
+
   let bounds: { from: Date; to: Date } | null;
-  if (rangeParam === "custom") {
+  if (range === "custom") {
     bounds = customBounds(search.get("from") ?? "", search.get("to") ?? "", timeZone, now);
     if (!bounds) return text("Pick a start on or before the end.", 400);
   } else {
-    const range: RangeKey = RANGES.some((r) => r.value === rangeParam)
-      ? (rangeParam as RangeKey)
-      : "all";
     let first = supabase
       .from("qr_codes")
       .select("created_at")
@@ -160,7 +163,7 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const filename = `ziplume-scans-${rangeParam === "custom" ? "custom" : (rangeParam ?? "all")}-${dayInZone(now, timeZone)}.csv`;
+  const filename = `ziplume-scans-${range}-${dayInZone(now, timeZone)}.csv`;
   return new Response(stream, {
     headers: {
       "content-type": "text/csv; charset=utf-8",

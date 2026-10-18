@@ -33,7 +33,14 @@ export function BreakdownList({
     <div className="flex flex-col gap-2.5">
       <ul className="flex flex-col gap-2.5">
         {shown.map((item) => (
-          <li key={item.key} className="flex flex-col gap-1">
+          <li
+            key={item.key}
+            className={
+              item.href
+                ? "relative flex min-h-11 flex-col justify-center gap-1"
+                : "flex flex-col gap-1"
+            }
+          >
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <span className="min-w-0 truncate text-fg">
                 {item.icon && (
@@ -42,7 +49,11 @@ export function BreakdownList({
                   </span>
                 )}
                 {item.href ? (
-                  <Link href={item.href} className="underline-offset-4 hover:underline">
+                  // The whole row is the target: a phone-sized tap anywhere on it.
+                  <Link
+                    href={item.href}
+                    className="text-link underline-offset-4 after:absolute after:inset-0 hover:underline"
+                  >
                     {item.label}
                   </Link>
                 ) : (
