@@ -2165,7 +2165,16 @@ describe("visitor responses", () => {
     expect((await share("GILCARD2", "Cy", null, "cy@x.com", "share-2"))[0]?.ok).toBe(false); // doesn't ask
     expect((await share("GILCOUP", "Cy", null, "cy@x.com", "share-2"))[0]?.ok).toBe(false); // a coupon
     expect((await share("GILCARD", "Dee", null, "dee@x.com"))[0]?.ok).toBe(true); // third today
-    expect((await share("GILCARD", "Eve", null, "eve@x.com"))[0]?.ok).toBe(false); // fourth today
+    // Many people on one venue's Wi-Fi look like one visitor, so the daily limit is 50, not 3.
+    const flood = await make(asGil, "GILFLOOD", "vcard", { firstName: "Gil", shareDetails: true });
+    for (let n = 1; n <= 50; n++) {
+      expect(
+        (await share("GILFLOOD", `Guest ${n}`, null, `g${n}@x.com`, "venue"))[0]?.ok,
+        String(n),
+      ).toBe(true);
+    }
+    expect((await share("GILFLOOD", "Late", null, "late@x.com", "venue"))[0]?.ok).toBe(false);
+    await asGil("delete from public.qr_codes where id = $1", [flood]);
     await asGil("update public.qr_codes set status = 'paused' where id = $1", [ids.card]);
     expect((await share("GILCARD", "Fay", null, "fay@x.com", "share-3"))[0]?.ok).toBe(false);
     await asGil("update public.qr_codes set status = 'active' where id = $1", [ids.card]);
@@ -2219,6 +2228,8 @@ describe("visitor responses", () => {
     expect((await rsvp("GILEVT", "Ben", "ben@example.com", 1, "rsvp-2"))[0]?.status).toBe("listed");
     expect(await left("GILEVT")).toBe(0);
     expect((await rsvp("GILEVT", "Cy", "cy@example.com", 1, "rsvp-3"))[0]?.status).toBe("full");
+    // An email on the list gets the answer a new one would, so the list can't be read by trying.
+    expect((await rsvp("GILEVT", "Ana", "ana@example.com", 1))[0]?.status).toBe("full");
     for (const [name, email, guests] of [
       ["Cy", "not an email", 1],
       ["Cy", "cy@example.com", 0],
@@ -2229,13 +2240,18 @@ describe("visitor responses", () => {
         "invalid",
       );
     }
-    // Without a limit, up to ten guests each; three RSVPs a day from one visitor.
-    for (const n of [1, 2, 3]) {
-      expect((await rsvp("GILOPEN", "Guest", `g${n}@example.com`, 10, "rsvp-5"))[0]?.status).toBe(
-        "listed",
-      );
+    // Without a limit, up to ten guests each. Many people on one venue's Wi-Fi look like one
+    // visitor, so the daily limit is 50 RSVPs from one visitor, not 3.
+    for (let n = 1; n <= 50; n++) {
+      expect(
+        (await rsvp("GILOPEN", "Guest", `g${n}@example.com`, 10, "rsvp-5"))[0]?.status,
+        String(n),
+      ).toBe("listed");
     }
-    expect((await rsvp("GILOPEN", "Guest", "g4@example.com", 1, "rsvp-5"))[0]?.status).toBe(
+    expect((await rsvp("GILOPEN", "Guest", "g51@example.com", 1, "rsvp-5"))[0]?.status).toBe(
+      "limited",
+    );
+    expect((await rsvp("GILOPEN", "Guest", "g1@example.com", 1, "rsvp-5"))[0]?.status).toBe(
       "limited",
     );
     // Fewer places than guests already listed: full, never below none.

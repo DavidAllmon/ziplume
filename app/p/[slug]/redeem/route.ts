@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { type NextRequest } from "next/server";
 
-import { json, visitorPost } from "@/lib/pages/visitor-post";
+import { closed, json, visitorPost } from "@/lib/pages/visitor-post";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/p/[s
   const { slug } = await params;
   const post = await visitorPost(request, slug, "coupon");
   if (post instanceof Response) return post;
-  if (!post.page.content.markUsed) return json({ error: "not_found" }, 404);
+  if (!post.page.content.markUsed) return closed();
 
   const phone = post.body.phone;
   if (typeof phone !== "string" || !/^[0-9a-f]{32}$/.test(phone)) {

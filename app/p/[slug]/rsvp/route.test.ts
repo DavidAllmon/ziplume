@@ -61,8 +61,17 @@ describe("/p/[slug]/rsvp", () => {
       p_note: null,
       p_visitor_hash: expect.stringMatching(/^[0-9a-f]{32}$/),
     });
+    // The same answer as a new RSVP, so nobody can find out who's coming by trying emails.
     answers({ submit_rsvp: "already" });
-    expect(await (await post(ok)).json()).toEqual({ ok: true, already: true });
+    expect(await (await post(ok)).json()).toEqual({ ok: true });
+  });
+
+  it("says RSVPs are closed when the form was turned off with a tab still open", async () => {
+    vi.mocked(getPublicPage).mockResolvedValueOnce({ ...event, content: { rsvp: false } } as never);
+    const response = await post(ok);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: "closed" });
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("says how many places are left when there aren't enough", async () => {

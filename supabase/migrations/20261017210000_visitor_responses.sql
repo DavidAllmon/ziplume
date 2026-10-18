@@ -121,7 +121,8 @@ revoke all on function public.rsvp_capacity(jsonb) from public, anon, authentica
 
 -- Called by the app server with a daily-salted visitor hash. Stores a visitor's details when the
 -- page is an open Contact page that asks for them: a name, and a phone or an email. Each visitor
--- may share three times per page per day. Returns whether the details were stored.
+-- may share 50 times per page per day: people on one venue's Wi-Fi often share a visitor hash.
+-- Returns whether the details were stored.
 create function public.submit_contact_share(
   p_slug text,
   p_name text,
@@ -157,7 +158,7 @@ begin
    where s.code_id = v_id
      and s.visitor_hash = p_visitor_hash
      and s.created_at > now() - interval '1 day';
-  if v_recent >= 3 then
+  if v_recent >= 50 then
     return false;
   end if;
 
@@ -239,9 +240,9 @@ end;
 $$;
 
 -- Called by the app server with a daily-salted visitor hash. Returns 'listed', 'already' (this
--- email is on the list), 'full' (fewer places left than guests), 'limited' (three a day from one
--- visitor), 'invalid' (a missing name, a bad email, or guests outside 1 to 10) or 'closed' (not
--- an open event taking RSVPs).
+-- email is on the list), 'full' (fewer places left than guests), 'limited' (50 a day from one
+-- visitor, since people on one venue's Wi-Fi often share a hash), 'invalid' (a missing name, a bad
+-- email, or guests outside 1 to 10) or 'closed' (not an open event taking RSVPs).
 create function public.submit_rsvp(
   p_slug text,
   p_name text,
@@ -280,19 +281,12 @@ begin
     return 'invalid';
   end if;
 
-  if exists (
-    select 1 from public.event_rsvps r
-     where r.code_id = v_id and lower(r.email) = lower(v_email)
-  ) then
-    return 'already';
-  end if;
-
   select count(*) into v_recent
     from public.event_rsvps r
    where r.code_id = v_id
      and r.visitor_hash = p_visitor_hash
      and r.created_at > now() - interval '1 day';
-  if v_recent >= 3 then
+  if v_recent >= 50 then
     return 'limited';
   end if;
 
@@ -303,6 +297,15 @@ begin
     if v_taken + p_guests > v_capacity then
       return 'full';
     end if;
+  end if;
+
+  -- Checked last, so an email on the list gets the answer a new one would: nobody can find out
+  -- who's coming by trying addresses.
+  if exists (
+    select 1 from public.event_rsvps r
+     where r.code_id = v_id and lower(r.email) = lower(v_email)
+  ) then
+    return 'already';
   end if;
 
   insert into public.event_rsvps (code_id, name, email, guests, note, visitor_hash)

@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 
 import { shareErrors } from "@/lib/pages/responses";
-import { json, text, visitorPost } from "@/lib/pages/visitor-post";
+import { closed, json, text, visitorPost } from "@/lib/pages/visitor-post";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/p/[s
   const { slug } = await params;
   const post = await visitorPost(request, slug, "vcard");
   if (post instanceof Response) return post;
-  if (!post.page.content.shareDetails) return json({ error: "not_found" }, 404);
+  if (!post.page.content.shareDetails) return closed();
 
   const { body } = post;
   const input = {

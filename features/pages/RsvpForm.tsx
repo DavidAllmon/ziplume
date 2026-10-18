@@ -21,11 +21,11 @@ import { VisitorField } from "./VisitorField";
 const ORDER = ["name", "email", "guests", "note"] as const;
 const heading = "mb-3 font-page-heading text-lg font-bold text-fg";
 
-function Listed({ already }: { already?: boolean }) {
+function Listed() {
   return (
     <p role="status" className="flex items-center gap-2 font-semibold text-fg">
       <CalendarCheck aria-hidden className="size-5 text-(--page-accent)" />
-      {already ? "You’re already on the list" : "You’re on the list"}
+      You’re on the list
     </p>
   );
 }
@@ -43,14 +43,15 @@ export function RsvpForm({
   const guestsId = useId();
   const now = useMinute();
   const capacity = rsvpCapacity(event.rsvpCapacity);
-  // Places left: from the server once it answers; until then (and in the preview) the limit.
-  const [fetched, setFetched] = useState<number | null | undefined>(undefined);
-  const left = capacity === null ? null : (fetched ?? capacity);
+  // Places left: the server's answer wins, even when the page was opened with no limit; until it
+  // answers (and in the preview), the page's own limit.
+  const [fetched, setFetched] = useState<number | undefined>(undefined);
+  const left = fetched !== undefined ? fetched : capacity;
   const [raw, remember] = useRemembered(preview ? null : `ziplume:rsvp:${slug.toUpperCase()}`);
   const [input, setInput] = useState<RsvpInput>({ name: "", email: "", guests: 1, note: "" });
   const [tried, setTried] = useState(false);
   const [state, setState] = useState<
-    "idle" | "sending" | "done" | "already" | "fewer" | "error" | "limited" | "closed"
+    "idle" | "sending" | "done" | "fewer" | "error" | "limited" | "closed"
   >("idle");
 
   useEffect(() => {
@@ -92,14 +93,10 @@ export function RsvpForm({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ...input, guests, website }),
       });
-      const body = (await response.json().catch(() => ({}))) as {
-        already?: boolean;
-        error?: string;
-        left?: unknown;
-      };
+      const body = (await response.json().catch(() => ({}))) as { error?: string; left?: unknown };
       if (response.ok) {
         remember(JSON.stringify({ guests }));
-        setState(body.already ? "already" : "done");
+        setState("done");
       } else if (body.error === "full" && typeof body.left === "number") {
         setFetched(body.left);
         setState(body.left > 0 ? "fewer" : "idle");
@@ -114,8 +111,8 @@ export function RsvpForm({
   }
 
   let body: ReactNode;
-  if (state === "done" || state === "already" || raw !== null) {
-    body = <Listed already={state === "already"} />;
+  if (state === "done" || raw !== null) {
+    body = <Listed />;
   } else if (now !== null && times && now >= times.end.getTime()) {
     body = <p className="text-fg-muted">RSVPs have closed.</p>;
   } else if (left === 0) {
@@ -192,7 +189,8 @@ export function RsvpForm({
         )}
         {state === "limited" && (
           <p role="alert" className="text-center text-sm text-fg-muted">
-            Thanks, you’ve already sent RSVPs today.
+            Too many RSVPs came from this network today, so yours wasn’t sent. Please try again
+            later, or on mobile data.
           </p>
         )}
         {state === "closed" && (

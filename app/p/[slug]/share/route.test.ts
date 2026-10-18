@@ -62,7 +62,10 @@ describe("POST /p/[slug]/share", () => {
       ...card,
       content: { shareDetails: false },
     } as never);
-    expect((await post(ok)).status).toBe(404);
+    // Turned off (or paused) with a tab still open: closed, not "try again".
+    const off = await post(ok);
+    expect(off.status).toBe(409);
+    expect(await off.json()).toEqual({ error: "closed" });
     vi.mocked(getPublicPage).mockResolvedValueOnce({ ...card, type: "coupon" } as never);
     expect((await post(ok)).status).toBe(404);
     vi.mocked(getPublicPage).mockResolvedValueOnce({ ...card, locked: true } as never);
@@ -71,11 +74,24 @@ describe("POST /p/[slug]/share", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("quietly ignores bots and the honeypot", async () => {
+  it("quietly ignores the honeypot", async () => {
     const ok = { name: "Ana", email: "ana@example.com" };
     expect((await post({ ...ok, website: "spam.example" })).status).toBe(200);
-    expect((await post(ok, { "user-agent": "curl/8.0" })).status).toBe(200);
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("takes details from a chat app's own browser, which the scan bot check would skip", async () => {
+    const telegram =
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36 Telegram-Android/11.2.3";
+    const response = await post(
+      { name: "Ana", email: "ana@example.com" },
+      { "user-agent": telegram },
+    );
+    expect(response.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith(
+      "submit_contact_share",
+      expect.objectContaining({ p_name: "Ana" }),
+    );
   });
 
   it("says when today's limit is reached", async () => {

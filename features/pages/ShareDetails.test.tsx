@@ -58,6 +58,27 @@ describe("ShareDetails", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("says plainly when nothing was sent: too many from this network, or the form was turned off", async () => {
+    const user = userEvent.setup();
+    const send = async (status: number) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => new Response("{}", { status })),
+      );
+      const view = render(<ShareDetails slug="CARD1" owner="Ana" />);
+      await user.click(screen.getByRole("button", { name: "Share your details" }));
+      await user.type(screen.getByRole("textbox", { name: /^Name/ }), "Ben");
+      await user.type(screen.getByRole("textbox", { name: /^Email/ }), "ben@example.com");
+      await user.click(screen.getByRole("button", { name: /^Send$/ }));
+      const alert = await screen.findByRole("alert");
+      const text = alert.textContent;
+      view.unmount();
+      return text;
+    };
+    expect(await send(429)).toMatch(/weren’t sent.*mobile data/);
+    expect(await send(409)).toMatch(/turned off/);
+  });
+
   it("stays shut in the editor's preview", async () => {
     const user = userEvent.setup();
     render(<ShareDetails slug="CARD1" owner="Ana" preview />);

@@ -62,7 +62,7 @@ describe("POST /p/[slug]/redeem", () => {
       ...coupon,
       content: { markUsed: false },
     } as never);
-    expect((await post({ phone: PHONE })).status).toBe(404);
+    expect((await post({ phone: PHONE })).status).toBe(409);
     expect(rpc).not.toHaveBeenCalled();
   });
 });

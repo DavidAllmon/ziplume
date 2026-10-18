@@ -26,7 +26,9 @@ export function ShareDetails({
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState(EMPTY);
   const [tried, setTried] = useState(false);
-  const [state, setState] = useState<"idle" | "sending" | "done" | "error" | "limited">("idle");
+  const [state, setState] = useState<"idle" | "sending" | "done" | "error" | "limited" | "closed">(
+    "idle",
+  );
   // Once they've tried to send, the errors follow what's typed.
   const errors = tried ? shareErrors(input) : {};
   const set = (patch: Partial<ShareInput>) => setInput((old) => ({ ...old, ...patch }));
@@ -49,7 +51,15 @@ export function ShareDetails({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ...input, website }),
       });
-      setState(response.ok ? "done" : response.status === 429 ? "limited" : "error");
+      setState(
+        response.ok
+          ? "done"
+          : response.status === 429
+            ? "limited"
+            : response.status === 409
+              ? "closed"
+              : "error",
+      );
     } catch {
       setState("error");
     }
@@ -142,7 +152,13 @@ export function ShareDetails({
             )}
             {state === "limited" && (
               <p role="alert" className="text-center text-sm text-fg-muted">
-                Thanks, your details have already been sent today.
+                Too many people on this network shared details today, so yours weren’t sent. Please
+                try again later, or on mobile data.
+              </p>
+            )}
+            {state === "closed" && (
+              <p role="alert" className="text-center text-sm text-fg-muted">
+                Sharing details is turned off on this page, so yours weren’t sent.
               </p>
             )}
           </form>

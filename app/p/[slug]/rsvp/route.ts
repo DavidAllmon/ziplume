@@ -2,7 +2,7 @@ import { type NextRequest } from "next/server";
 
 import { isValidSlug } from "@/lib/dynamic/slug";
 import { rsvpErrors } from "@/lib/pages/responses";
-import { json, text, visitorPost } from "@/lib/pages/visitor-post";
+import { closed, json, text, visitorPost } from "@/lib/pages/visitor-post";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getPublicPage } from "@/lib/supabase/public";
 
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/p/[s
   const { slug } = await params;
   const post = await visitorPost(request, slug, "event");
   if (post instanceof Response) return post;
-  if (!post.page.content.rsvp) return json({ error: "not_found" }, 404);
+  if (!post.page.content.rsvp) return closed();
 
   const { body } = post;
   const input = {
@@ -53,10 +53,10 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/p/[s
   });
   if (error) return json({ error: "unavailable" }, 503);
   switch (data) {
+    // The same answer either way, so nobody can find out who's coming by trying emails.
     case "listed":
-      return json({ ok: true }, 200);
     case "already":
-      return json({ ok: true, already: true }, 200);
+      return json({ ok: true }, 200);
     case "limited":
       return json({ error: "limited" }, 429);
     case "invalid":
@@ -66,6 +66,6 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/p/[s
       return json({ error: "full", left: places.data ?? 0 }, 409);
     }
     default:
-      return json({ error: "closed" }, 409);
+      return closed();
   }
 }

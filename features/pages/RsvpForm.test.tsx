@@ -94,6 +94,30 @@ describe("RsvpForm", () => {
     expect(screen.getByText("RSVPs have closed.")).toBeInTheDocument();
   });
 
+  it("says the event is full when places were set after the page was opened", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      server(null, new Response(JSON.stringify({ error: "full", left: 0 }), { status: 409 })),
+    );
+    // Opened while the event had no limit.
+    render(<RsvpForm slug="EVT1" event={event()} />);
+    await user.type(screen.getByRole("textbox", { name: /^Name/ }), "Ana");
+    await user.type(screen.getByRole("textbox", { name: /^Email/ }), "ana@example.com");
+    await user.click(screen.getByRole("button", { name: "Send RSVP" }));
+    expect(await screen.findByText("This event is full.")).toBeInTheDocument();
+  });
+
+  it("says plainly when nothing was sent because this network sent too many today", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", server(null, new Response("{}", { status: 429 })));
+    render(<RsvpForm slug="EVT1" event={event()} />);
+    await user.type(screen.getByRole("textbox", { name: /^Name/ }), "Ana");
+    await user.type(screen.getByRole("textbox", { name: /^Email/ }), "ana@example.com");
+    await user.click(screen.getByRole("button", { name: "Send RSVP" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/wasn’t sent.*mobile data/);
+  });
+
   it("sends nothing from the editor's preview", async () => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);

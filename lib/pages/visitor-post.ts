@@ -15,6 +15,9 @@ export const json = (body: unknown, status: number) =>
 /** A visitor's text field, trimmed; anything that isn't text is empty. */
 export const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
+/** A form turned off (or a page paused, which reads as off) after the visitor opened it. */
+export const closed = () => json({ error: "closed" }, 409);
+
 export interface VisitorPost<K extends PageTypeId> {
   page: Extract<PublicPage, { type: K }>;
   body: Record<string, unknown>;
@@ -29,8 +32,10 @@ export interface VisitorPost<K extends PageTypeId> {
  * - it's a JSON object;
  * - the honeypot is empty;
  * - the page is of the right type, and unlocked if it has a password.
- * Bots and the honeypot get a quiet success, so they learn nothing. Returns the response to send
- * when one of these settles it.
+ * The honeypot gets a quiet success, so it learns nothing. Unlike scans, there's no bot check:
+ * its pattern matches chat apps' own browsers (Telegram on Android names itself), whose visitors
+ * would lose what they sent, and crawlers don't post forms. Returns the response to send when
+ * one of these settles it.
  */
 export async function visitorPost<K extends PageTypeId>(
   request: NextRequest,
@@ -64,6 +69,5 @@ export async function visitorPost<K extends PageTypeId>(
   if (page.type !== type) return json({ error: "not_found" }, 404);
 
   const visitor = scanContext(request.headers, secret);
-  if (visitor.isBot) return json({ ok: true }, 200);
   return { page: page as Extract<PublicPage, { type: K }>, body, admin, visitor, secret };
 }
