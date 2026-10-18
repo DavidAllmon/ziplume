@@ -95,7 +95,8 @@ test.describe("Templates", () => {
     await expectNoSidewaysScroll(page);
     await expectAxeClean(page);
     await page.getByRole("menuitem", { name: "Rename" }).click();
-    await expect(page.getByRole("dialog")).toBeVisible();
+    // The dialog's root is a zero-size wrapper; its heading is what shows.
+    await expect(page.getByRole("heading", { name: "Rename template" })).toBeVisible();
     await expectNoSidewaysScroll(page);
     await expectAxeClean(page);
   });
