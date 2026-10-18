@@ -3,7 +3,7 @@
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { type CouponPage } from "@/lib/pages/types";
 
-import { AreaField, MediaField, TextField } from "../fields";
+import { AreaField, MediaField, TextField, ToggleField } from "../fields";
 import { FormCard } from "../FormCard";
 import { Labeled } from "../Labeled";
 import type { EditorProps } from "./shared";
@@ -99,6 +99,14 @@ export function CouponEditor({ page, set, errors }: EditorProps<CouponPage>) {
           onChange={(validUntil) => set({ validUntil })}
           path="validUntil"
           errors={errors}
+        />
+      </FormCard>
+      <FormCard title="At the till">
+        <ToggleField
+          label="Mark as used button"
+          description="Each phone can mark the coupon used once. You’ll see how many were used on this code’s page."
+          checked={page.markUsed}
+          onChange={(markUsed) => set({ markUsed })}
         />
       </FormCard>
       <FormCard title="Button">

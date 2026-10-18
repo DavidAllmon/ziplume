@@ -219,6 +219,27 @@ export function EventEditor({ page, set, errors }: EditorProps<EventPage>) {
           />
         </div>
       </FormCard>
+      <FormCard title="RSVPs">
+        <ToggleField
+          label="RSVP form"
+          description="Visitors tell you they’re coming, with how many guests. You’ll find the list on this code’s page."
+          checked={page.rsvp}
+          onChange={(rsvp) => set({ rsvp })}
+        />
+        {page.rsvp && (
+          <TextField
+            path="rsvpCapacity"
+            errors={errors}
+            label="Places"
+            optional
+            inputMode="numeric"
+            placeholder="50"
+            hint="The most guests in all. Leave it empty for no limit."
+            value={page.rsvpCapacity}
+            onChange={(rsvpCapacity) => set({ rsvpCapacity })}
+          />
+        )}
+      </FormCard>
     </>
   );
 }

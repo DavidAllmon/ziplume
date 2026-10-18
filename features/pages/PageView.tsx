@@ -64,9 +64,12 @@ import { CouponDeadline, EventCountdown, JoinButton } from "./Countdowns";
 import { LinkIconMark } from "./LinkIcon";
 import { DietMark } from "./DietMark";
 import { FeedbackForm } from "./FeedbackForm";
+import { MarkUsed } from "./MarkUsed";
 import { MusicIcon } from "./MusicIcon";
 import { OneAtATime } from "./OneAtATime";
+import { RsvpForm } from "./RsvpForm";
 import { ScanCode } from "./ScanCode";
+import { ShareDetails } from "./ShareDetails";
 import { TapToPlay } from "./TapToPlay";
 import { Carousel } from "./Carousel";
 import { Gallery, ViewerGroup, ViewerThumb, type ViewerImage } from "./Viewer";
@@ -270,6 +273,9 @@ function VcardView({ page, slug, preview }: ViewProps<VcardPage>) {
       <PageLink href={`/p/${encodeURIComponent(slug)}/contact.vcf`} download preview={preview}>
         <UserPlus aria-hidden /> Save contact
       </PageLink>
+      {page.shareDetails && (
+        <ShareDetails slug={slug} owner={page.firstName.trim() || name} preview={preview} />
+      )}
       <QuickActions actions={actions} preview={preview} />
       <PageCard>
         {page.bio.trim() && <Prose text={page.bio} className="mb-3" />}
@@ -608,7 +614,7 @@ function DishPrice({ item, currency }: { item: MenuItem; currency: string }) {
   return item.price.trim() ? <p className={style}>{priceText(item.price, currency)}</p> : null;
 }
 
-function CouponView({ page, preview }: ViewProps<CouponPage>) {
+function CouponView({ page, slug, preview }: ViewProps<CouponPage>) {
   const look = page.look;
   const code = page.code.trim();
   const badge = page.badge?.trim();
@@ -648,6 +654,7 @@ function CouponView({ page, preview }: ViewProps<CouponPage>) {
           </div>
         )}
         <CouponDeadline validUntil={page.validUntil} />
+        {page.markUsed && <MarkUsed slug={slug} validUntil={page.validUntil} preview={preview} />}
         {page.buttonUrl.trim() && (
           <PageLink href={safeHref(page.buttonUrl)} preview={preview}>
             {page.buttonLabel.trim() || "Redeem now"}
@@ -785,6 +792,11 @@ function EventView({ page, slug, pageUrl, preview }: ViewProps<EventPage>) {
           )}
         </div>
       </PageCard>
+      {page.rsvp && (
+        <PageCard>
+          <RsvpForm slug={slug} event={page} preview={preview} />
+        </PageCard>
+      )}
       {page.description.trim() && (
         <PageCard>
           <h2 className="mb-2 font-page-heading text-lg font-bold text-fg">About this event</h2>

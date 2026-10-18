@@ -45,11 +45,11 @@ export default function PrivacyPage() {
           <strong>Design templates:</strong> designs you save to reuse later.
         </li>
         <li>
-          <strong>Teams:</strong> people you invite can see your codes, analytics and feedback
-          (viewers) or also change them (editors). An invite keeps the email address you entered
-          until it’s used, revoked or expires after 14 days. When you invite someone by email,
-          Ziplume sends the invite for you through Brevo; it shows your name and photo. Teams you
-          join can see your name and email address.
+          <strong>Teams:</strong> people you invite can see your codes, analytics and what visitors
+          send (viewers) or also change them (editors). An invite keeps the email address you
+          entered until it’s used, revoked or expires after 14 days. When you invite someone by
+          email, Ziplume sends the invite for you through Brevo; it shows your name and photo. Teams
+          you join can see your name and email address.
         </li>
         <li>
           <strong>API keys:</strong> only a one-way hash of each key is stored, with the name you
@@ -65,11 +65,24 @@ export default function PrivacyPage() {
         </li>
       </ul>
 
-      <h2>Feedback pages</h2>
+      <h2>What visitors send</h2>
       <p>
-        When someone answers a feedback page, Ziplume stores their rating, any comment and any
-        contact details they choose to give, plus the same daily-salted visitor hash used for scans
-        (to stop repeat submissions). Only the page’s owner can see responses.
+        When someone answers a feedback page, shares their details from a Contact page, marks a
+        coupon used, or RSVPs to an event, Ziplume stores what they send:
+      </p>
+      <ul>
+        <li>ratings and comments;</li>
+        <li>a name with a phone number or email, and a note;</li>
+        <li>the time a coupon was used;</li>
+        <li>or a name, email, number of guests and note.</li>
+      </ul>
+      <p>
+        It also stores the same daily-salted visitor hash used for scans, to stop repeat
+        submissions; only Ziplume’s server can read it. A visitor’s phone remembers, in its own
+        browser storage, the coupons it marked used and the events it RSVPed to. For a coupon, that
+        includes a random ID, of which Ziplume keeps only a one-way hash. The page’s owner and their
+        team can see and delete what visitors send, except on codes the owner keeps private. The
+        page’s owner decides what to do with details visitors share.
       </p>
 
       <h2>Scans of dynamic codes</h2>
@@ -98,8 +111,9 @@ export default function PrivacyPage() {
       <h2>Keeping and deleting data</h2>
       <p>
         Your account and codes are kept until you delete them. Deleting your account (Account →
-        Delete account) permanently removes it, every saved code, uploaded file, feedback response
-        and all scan history right away. Backups are rotated and expire within about three months.
+        Delete account) permanently removes it, every saved code, uploaded file, everything visitors
+        sent and all scan history right away. Backups are rotated and expire within about three
+        months.
       </p>
 
       <h2>Contact</h2>

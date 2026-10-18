@@ -854,3 +854,38 @@ describe("music links copied on a phone", () => {
     );
   });
 });
+
+describe("Things visitors send back", () => {
+  it("reads older Contact, Coupon and Event pages with nothing to send", () => {
+    expect(sanitizePage("vcard", { firstName: "Old" }).shareDetails).toBe(false);
+    expect(sanitizePage("coupon", { offer: "Old" }).markUsed).toBe(false);
+    expect(sanitizePage("event", { title: "Old" })).toMatchObject({
+      rsvp: false,
+      rsvpCapacity: "",
+    });
+    expect(sanitizePage("event", { title: "New", rsvp: "yes", rsvpCapacity: 50 })).toMatchObject({
+      rsvp: false,
+      rsvpCapacity: "",
+    });
+    expect(sanitizePage("event", { rsvp: true, rsvpCapacity: "1234567" }).rsvpCapacity).toBe(
+      "12345",
+    );
+  });
+
+  it("checks an event's places only while it takes RSVPs", () => {
+    const event = {
+      ...PAGE_DEFAULTS.event(),
+      title: "Launch",
+      start: "2030-01-10T13:00",
+      timeZone: "America/New_York",
+    };
+    for (const rsvpCapacity of ["lots", "0", "2.5"]) {
+      expect(validatePage("event", { ...event, rsvp: true, rsvpCapacity }), rsvpCapacity).toEqual({
+        rsvpCapacity: "Enter a number of places, like 50",
+      });
+    }
+    expect(validatePage("event", { ...event, rsvp: true, rsvpCapacity: "" })).toEqual({});
+    expect(validatePage("event", { ...event, rsvp: true, rsvpCapacity: "50" })).toEqual({});
+    expect(validatePage("event", { ...event, rsvp: false, rsvpCapacity: "lots" })).toEqual({});
+  });
+});

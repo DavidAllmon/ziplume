@@ -2,6 +2,7 @@ import type { PageTypeId } from "@/lib/qr/types";
 import { isTimeZone, zonedTimeToUtc } from "@/lib/time/zone";
 
 import { overLimit } from "./sanitize";
+import { rsvpCapacity } from "./responses";
 import { barcodeProblem } from "./scan";
 import type { LinkItem, PageContentMap, SocialItem } from "./types";
 import { linkHref } from "./links";
@@ -171,6 +172,10 @@ const VALIDATORS: { [K in PageTypeId]: (page: PageContentMap[K]) => PageErrors }
     if (p.online) {
       if (!p.joinUrl.trim()) errors.joinUrl = "Add the link to join";
       else checkUrl(errors, "joinUrl", p.joinUrl);
+    }
+    // Like the join link, the places are only checked while the form is on.
+    if (p.rsvp && p.rsvpCapacity.trim() && rsvpCapacity(p.rsvpCapacity) === null) {
+      errors.rsvpCapacity = "Enter a number of places, like 50";
     }
     p.agenda.forEach((a, i) => {
       if ((a.time || a.note.trim()) && !a.title.trim()) {

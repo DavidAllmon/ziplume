@@ -322,6 +322,13 @@ export default function DevelopersPage() {
         <code>scale</code> for 0 to 10) and a <code>reviewUrl</code>, offered to everyone after
         sending. A single <code>question</code> still works, as one star question.
       </p>
+      <p>
+        Contact pages take <code>shareDetails</code> (true adds Share your details) and coupons take{" "}
+        <code>markUsed</code> (true adds Mark as used). Events take <code>rsvp</code> (true adds the
+        RSVP form) and <code>rsvpCapacity</code>: the most guests in all, as digits like{" "}
+        <code>&quot;50&quot;</code>, or empty for no limit. What visitors send appears on the code’s
+        page in the app.
+      </p>
       <Code>{`{
   "type": "links",
   "name": "Bio links",

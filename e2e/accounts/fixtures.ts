@@ -69,6 +69,10 @@ export interface Seed {
   skyId: string;
   /** Maker's feedback page (MAKER-FEEDBACK): stars, thumbs and 0 to 10. */
   makerFeedbackId: string;
+  /** Maker's pages that take visitors' details, coupon uses and RSVPs (4 places). */
+  makerCardId: string;
+  makerCouponId: string;
+  makerDinnerId: string;
 }
 
 /** Ids created by the global setup. Read it inside tests, not at import time. */
@@ -385,6 +389,43 @@ export const PHONE_PAGES: { type: string; slug: string; content: Record<string, 
       askContact: true,
       thanks: "Thank you!",
       reviewUrl: "https://g.page/r/abc/review",
+    },
+  },
+  {
+    // Every visitor form, for the phone and axe sweeps (spec items 15, 29 and 33).
+    type: "vcard",
+    slug: "PHONE-CONTACT-SHARE",
+    content: {
+      firstName: "Sam",
+      lastName: "Share",
+      phones: [{ label: "Mobile", number: "+1 555 010 2031" }],
+      emails: [],
+      socials: [],
+      shareDetails: true,
+    },
+  },
+  {
+    type: "coupon",
+    slug: "PHONE-COUPON-USE",
+    content: {
+      business: "Phone Cafe",
+      offer: "FREE COFFEE",
+      code: "COFFEE",
+      validUntil: "2099-12-31",
+      markUsed: true,
+    },
+  },
+  {
+    type: "event",
+    slug: "PHONE-EVENT-RSVP",
+    content: {
+      title: "Phone dinner",
+      start: "2099-12-05T18:00",
+      end: "2099-12-05T21:00",
+      timeZone: "America/New_York",
+      location: "100 Main Street, Springfield",
+      rsvp: true,
+      rsvpCapacity: "40",
     },
   },
   {

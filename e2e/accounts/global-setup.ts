@@ -155,6 +155,52 @@ export default async function globalSetup(config: FullConfig) {
     .select("id")
     .single();
   if (feedbackError || !makerFeedback) throw feedbackError ?? new Error("Couldn't create feedback");
+  // Maker's pages that take what visitors send back, so tests can send it and read it.
+  const { data: makerPages, error: makerPagesError } = await admin
+    .from("qr_codes")
+    .insert([
+      {
+        user_id: makerId,
+        name: "Maker card",
+        qr_type: "vcard",
+        is_dynamic: true,
+        slug: "MAKER-CARD",
+        content: {
+          firstName: "Max",
+          lastName: "Maker",
+          phones: [],
+          emails: [{ label: "Work", address: "max@example.com" }],
+          socials: [],
+          shareDetails: true,
+        },
+      },
+      {
+        user_id: makerId,
+        name: "Maker coupon",
+        qr_type: "coupon",
+        is_dynamic: true,
+        slug: "MAKER-COUPON",
+        content: { business: "Maker Cafe", offer: "FREE COFFEE", code: "COFFEE", markUsed: true },
+      },
+      {
+        user_id: makerId,
+        name: "Maker dinner",
+        qr_type: "event",
+        is_dynamic: true,
+        slug: "MAKER-DINNER",
+        content: {
+          title: "Maker dinner",
+          start: "2099-12-05T18:00",
+          end: "2099-12-05T21:00",
+          timeZone: "America/New_York",
+          rsvp: true,
+          rsvpCapacity: "4",
+        },
+      },
+    ])
+    .select("id, slug");
+  if (makerPagesError || !makerPages) throw makerPagesError ?? new Error("Couldn't create pages");
+  const makerPage = (slug: string) => makerPages.find((p) => p.slug === slug)!.id;
   const { error: teamsError } = await admin.from("team_members").insert([
     { owner_id: patId, member_id: quinnId, role: "editor" },
     { owner_id: rayId, member_id: skyId, role: "viewer" },
@@ -187,6 +233,9 @@ export default async function globalSetup(config: FullConfig) {
     rayId,
     skyId,
     makerFeedbackId: makerFeedback.id,
+    makerCardId: makerPage("MAKER-CARD"),
+    makerCouponId: makerPage("MAKER-COUPON"),
+    makerDinnerId: makerPage("MAKER-DINNER"),
   };
   mkdirSync(AUTH_DIR, { recursive: true });
   writeFileSync(SEED_FILE, JSON.stringify(seeded));

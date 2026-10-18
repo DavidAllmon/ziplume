@@ -2045,3 +2045,311 @@ describe("private codes from the editor", () => {
     expect(row!.is_private).toBe(false);
   });
 });
+
+describe("visitor responses", () => {
+  const GIL = "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a"; // owner
+  const HAL = "5b5b5b5b-5b5b-4b5b-8b5b-5b5b5b5b5b5b"; // editor on Gil's team
+  const IVY = "5c5c5c5c-5c5c-4c5c-8c5c-5c5c5c5c5c5c"; // viewer on Gil's team
+  const JOY = "5d5d5d5d-5d5d-4d5d-8d5d-5d5d5d5d5d5d"; // outsider
+  const by =
+    (id: string) =>
+    <T>(sql: string, params?: unknown[]) =>
+      as<T>("authenticated", id, sql, params);
+  const asGil = by(GIL);
+  const asHal = by(HAL);
+  const asIvy = by(IVY);
+  const asJoy = by(JOY);
+  const ids = {} as Record<
+    "card" | "cardOff" | "coupon" | "ended" | "event" | "open" | "secret",
+    string
+  >;
+  const make = async (
+    who: ReturnType<typeof by>,
+    slug: string,
+    type: string,
+    content: object,
+    isPrivate = false,
+  ) =>
+    (
+      await who<{ id: string }>(
+        `insert into public.qr_codes (name, qr_type, is_dynamic, slug, content, is_private)
+         values ($1, $2, true, $1, $3::jsonb, $4) returning id`,
+        [slug, type, JSON.stringify(content), isPrivate],
+      )
+    )[0]!.id;
+  const hash = (n: number) => n.toString(16).padStart(64, "0");
+  const share = (
+    slug: string,
+    name: string,
+    phone: string | null,
+    email: string | null,
+    visitor = "share-1",
+  ) =>
+    asService<{ ok: boolean }>(
+      "select public.submit_contact_share($1, $2, $3, $4, 'Met at the fair', $5) as ok",
+      [slug, name, phone, email, visitor],
+    );
+  const use = (slug: string, phone: string, visitor = "use-1") =>
+    asService<{ status: string }>("select public.record_coupon_use($1, $2, $3) as status", [
+      slug,
+      phone,
+      visitor,
+    ]);
+  const rsvp = (slug: string, name: string, email: string, guests: number, visitor = "rsvp-1") =>
+    asService<{ status: string }>("select public.submit_rsvp($1, $2, $3, $4, null, $5) as status", [
+      slug,
+      name,
+      email,
+      guests,
+      visitor,
+    ]);
+  const left = async (slug: string) =>
+    (
+      await asService<{ left: number | null }>("select public.rsvp_places_left($1) as left", [slug])
+    )[0]?.left;
+  const setContent = (id: string, patch: object) =>
+    asGil("update public.qr_codes set content = content || $2::jsonb where id = $1", [
+      id,
+      JSON.stringify(patch),
+    ]);
+
+  beforeAll(async () => {
+    await db.query(
+      `insert into auth.users (id, email) values
+         ($1, 'gil@example.com'), ($2, 'hal@example.com'), ($3, 'ivy@example.com'), ($4, 'joy@example.com')`,
+      [GIL, HAL, IVY, JOY],
+    );
+    await asService(
+      "insert into public.team_members (owner_id, member_id, role) values ($1, $2, 'editor'), ($1, $3, 'viewer')",
+      [GIL, HAL, IVY],
+    );
+    ids.card = await make(asGil, "GILCARD", "vcard", { firstName: "Gil", shareDetails: true });
+    ids.cardOff = await make(asGil, "GILCARD2", "vcard", { firstName: "Gil" });
+    ids.coupon = await make(asGil, "GILCOUP", "coupon", { offer: "20% OFF", markUsed: true });
+    ids.ended = await make(asGil, "GILOLD", "coupon", {
+      offer: "Old",
+      markUsed: true,
+      validUntil: "2020-01-01",
+    });
+    ids.event = await make(asGil, "GILEVT", "event", {
+      title: "Launch",
+      rsvp: true,
+      rsvpCapacity: "4",
+    });
+    ids.open = await make(asGil, "GILOPEN", "event", {
+      title: "Open",
+      rsvp: true,
+      rsvpCapacity: "",
+    });
+    ids.secret = await make(asHal, "HALEVT", "event", { title: "Hal's", rsvp: true }, true);
+  });
+
+  it("take shared details only from the server, for open pages that ask for them", async () => {
+    await expect(
+      asAnon("select public.submit_contact_share('GILCARD', 'A', null, 'a@x.com', null, 'v')"),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      asGil("select public.submit_contact_share('GILCARD', 'A', null, 'a@x.com', null, 'v')"),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      asAnon(
+        "insert into public.contact_shares (code_id, name, email, visitor_hash) values ($1, 'A', 'a@x.com', 'v')",
+        [ids.card],
+      ),
+    ).rejects.toThrow(/permission denied/);
+
+    expect((await share("gilcard", " Ana Rivera ", null, "ana@example.com"))[0]?.ok).toBe(true);
+    expect((await share("GILCARD", "Ben", "+1 555 0100", null))[0]?.ok).toBe(true);
+    expect((await share("GILCARD", "  ", "+1 555 0100", null, "share-2"))[0]?.ok).toBe(false); // no name
+    expect((await share("GILCARD", "Cy", null, null, "share-2"))[0]?.ok).toBe(false); // no way to reach them
+    expect((await share("GILCARD2", "Cy", null, "cy@x.com", "share-2"))[0]?.ok).toBe(false); // doesn't ask
+    expect((await share("GILCOUP", "Cy", null, "cy@x.com", "share-2"))[0]?.ok).toBe(false); // a coupon
+    expect((await share("GILCARD", "Dee", null, "dee@x.com"))[0]?.ok).toBe(true); // third today
+    // Many people on one venue's Wi-Fi look like one visitor, so the daily limit is 50, not 3.
+    const flood = await make(asGil, "GILFLOOD", "vcard", { firstName: "Gil", shareDetails: true });
+    for (let n = 1; n <= 50; n++) {
+      expect(
+        (await share("GILFLOOD", `Guest ${n}`, null, `g${n}@x.com`, "venue"))[0]?.ok,
+        String(n),
+      ).toBe(true);
+    }
+    expect((await share("GILFLOOD", "Late", null, "late@x.com", "venue"))[0]?.ok).toBe(false);
+    await asGil("delete from public.qr_codes where id = $1", [flood]);
+    await asGil("update public.qr_codes set status = 'paused' where id = $1", [ids.card]);
+    expect((await share("GILCARD", "Fay", null, "fay@x.com", "share-3"))[0]?.ok).toBe(false);
+    await asGil("update public.qr_codes set status = 'active' where id = $1", [ids.card]);
+
+    expect(
+      await asGil("select name, phone, email, note from public.contact_shares order by id"),
+    ).toEqual([
+      { name: "Ana Rivera", phone: null, email: "ana@example.com", note: "Met at the fair" },
+      { name: "Ben", phone: "+1 555 0100", email: null, note: "Met at the fair" },
+      { name: "Dee", phone: null, email: "dee@x.com", note: "Met at the fair" },
+    ]);
+  });
+
+  it("count one use per phone, and none once the offer has ended", async () => {
+    await expect(
+      asAnon("select public.record_coupon_use('GILCOUP', $1, 'v')", [hash(1)]),
+    ).rejects.toThrow(/permission denied/);
+    expect((await use("GILCOUP", hash(1)))[0]?.status).toBe("used");
+    expect((await use("GILCOUP", hash(1)))[0]?.status).toBe("already");
+    expect((await use("GILCOUP", hash(2)))[0]?.status).toBe("used");
+    expect((await use("GILCOUP", "not-a-hash"))[0]?.status).toBe("closed");
+    expect((await use("GILOLD", hash(3)))[0]?.status).toBe("closed"); // ended in 2020
+    expect((await use("GILCARD", hash(3)))[0]?.status).toBe("closed"); // not a coupon
+    // A date that doesn't exist is no end date, rather than an error.
+    await setContent(ids.coupon, { validUntil: "2030-02-30" });
+    expect((await use("GILCOUP", hash(4)))[0]?.status).toBe("used");
+    await asGil("update public.qr_codes set status = 'paused' where id = $1", [ids.coupon]);
+    expect((await use("GILCOUP", hash(5)))[0]?.status).toBe("closed");
+    await asGil("update public.qr_codes set status = 'active' where id = $1", [ids.coupon]);
+    // A script making up phones is held to 100 a day from one visitor.
+    for (let n = 100; n < 200; n++) {
+      expect((await use("GILCOUP", hash(n), "script"))[0]?.status, String(n)).toBe("used");
+    }
+    expect((await use("GILCOUP", hash(200), "script"))[0]?.status).toBe("limited");
+    expect(
+      (await asGil<{ n: number }>("select count(*)::int as n from public.coupon_redemptions"))[0]
+        ?.n,
+    ).toBe(103);
+  });
+
+  it("take RSVPs up to the event's places, one per email", async () => {
+    await expect(
+      asAnon("select public.submit_rsvp('GILEVT', 'A', 'a@x.com', 1, null, 'v')"),
+    ).rejects.toThrow(/permission denied/);
+    expect(await left("GILEVT")).toBe(4);
+    expect(await left("GILOPEN")).toBeNull(); // no limit
+    expect((await rsvp("GILEVT", "Ana", "ana@example.com", 3))[0]?.status).toBe("listed");
+    expect((await rsvp("GILEVT", "Ana", "ANA@example.com", 1))[0]?.status).toBe("already");
+    expect((await rsvp("GILEVT", "Ben", "ben@example.com", 2, "rsvp-2"))[0]?.status).toBe("full");
+    expect(await left("GILEVT")).toBe(1);
+    expect((await rsvp("GILEVT", "Ben", "ben@example.com", 1, "rsvp-2"))[0]?.status).toBe("listed");
+    expect(await left("GILEVT")).toBe(0);
+    expect((await rsvp("GILEVT", "Cy", "cy@example.com", 1, "rsvp-3"))[0]?.status).toBe("full");
+    // An email on the list gets the answer a new one would, so the list can't be read by trying.
+    expect((await rsvp("GILEVT", "Ana", "ana@example.com", 1))[0]?.status).toBe("full");
+    for (const [name, email, guests] of [
+      ["Cy", "not an email", 1],
+      ["Cy", "cy@example.com", 0],
+      ["Cy", "cy@example.com", 11],
+      [" ", "cy@example.com", 1],
+    ] as const) {
+      expect((await rsvp("GILOPEN", name, email, guests, "rsvp-4"))[0]?.status, email).toBe(
+        "invalid",
+      );
+    }
+    // Without a limit, up to ten guests each. Many people on one venue's Wi-Fi look like one
+    // visitor, so the daily limit is 50 RSVPs from one visitor, not 3.
+    for (let n = 1; n <= 50; n++) {
+      expect(
+        (await rsvp("GILOPEN", "Guest", `g${n}@example.com`, 10, "rsvp-5"))[0]?.status,
+        String(n),
+      ).toBe("listed");
+    }
+    expect((await rsvp("GILOPEN", "Guest", "g51@example.com", 1, "rsvp-5"))[0]?.status).toBe(
+      "limited",
+    );
+    expect((await rsvp("GILOPEN", "Guest", "g1@example.com", 1, "rsvp-5"))[0]?.status).toBe(
+      "limited",
+    );
+    // Fewer places than guests already listed: full, never below none.
+    await setContent(ids.event, { rsvpCapacity: "2" });
+    expect(await left("GILEVT")).toBe(0);
+    // Places that aren't a number are no limit.
+    await setContent(ids.event, { rsvpCapacity: "lots" });
+    expect(await left("GILEVT")).toBeNull();
+    await setContent(ids.event, { rsvpCapacity: " 4 " });
+    expect(await left("GILEVT")).toBe(0);
+    // RSVPs turned off with a tab still open.
+    await setContent(ids.open, { rsvp: false });
+    expect((await rsvp("GILOPEN", "Guest", "g5@example.com", 1, "rsvp-6"))[0]?.status).toBe(
+      "closed",
+    );
+    expect(await left("GILOPEN")).toBeNull();
+  });
+
+  it("show the team what visitors sent, but not visitor hashes, and keep private codes private", async () => {
+    expect(
+      (await asIvy<{ name: string }>("select name from public.contact_shares order by id")).map(
+        (r) => r.name,
+      ),
+    ).toEqual(["Ana Rivera", "Ben", "Dee"]);
+    for (const table of ["contact_shares", "coupon_redemptions", "event_rsvps"]) {
+      expect(await asJoy(`select id from public.${table}`), table).toEqual([]);
+    }
+    await expect(asGil("select visitor_hash from public.contact_shares")).rejects.toThrow(
+      /permission denied/,
+    );
+    await expect(asGil("select phone_hash from public.coupon_redemptions")).rejects.toThrow(
+      /permission denied/,
+    );
+    await expect(asGil("select visitor_hash from public.event_rsvps")).rejects.toThrow(
+      /permission denied/,
+    );
+    // Counts need no hidden column.
+    expect(
+      (
+        await asIvy<{ n: number }>(
+          "select count(*)::int as n from public.coupon_redemptions where code_id = $1",
+          [ids.coupon],
+        )
+      )[0]?.n,
+    ).toBe(103);
+    expect(
+      (await asIvy<{ n: number }>("select public.rsvp_guests($1) as n", [ids.event]))[0]?.n,
+    ).toBe(4);
+    expect(
+      (await asJoy<{ n: number }>("select public.rsvp_guests($1) as n", [ids.event]))[0]?.n,
+    ).toBe(0);
+    // A private code's RSVPs are its maker's alone, even from the team's owner.
+    await asService(
+      "select public.submit_rsvp('HALEVT', 'Zed', 'zed@example.com', 2, null, 'priv')",
+    );
+    expect(
+      await asGil("select id from public.event_rsvps where code_id = $1", [ids.secret]),
+    ).toEqual([]);
+    expect(
+      (await asHal<{ n: number }>("select public.rsvp_guests($1) as n", [ids.secret]))[0]?.n,
+    ).toBe(2);
+    expect(
+      (await asGil<{ n: number }>("select public.rsvp_guests($1) as n", [ids.secret]))[0]?.n,
+    ).toBe(0);
+    // Viewers can't delete; editors can, which frees the places; nobody deletes coupon uses.
+    await asIvy("delete from public.event_rsvps where code_id = $1", [ids.event]);
+    expect(
+      (await asGil<{ n: number }>("select public.rsvp_guests($1) as n", [ids.event]))[0]?.n,
+    ).toBe(4);
+    await asHal("delete from public.event_rsvps where code_id = $1 and email = 'ben@example.com'", [
+      ids.event,
+    ]);
+    expect(
+      (await asGil<{ n: number }>("select public.rsvp_guests($1) as n", [ids.event]))[0]?.n,
+    ).toBe(3);
+    expect(await left("GILEVT")).toBe(1);
+    await expect(asGil("delete from public.coupon_redemptions")).rejects.toThrow(
+      /permission denied/,
+    );
+    await asHal("delete from public.contact_shares where name = 'Dee'");
+    expect(await asGil("select name from public.contact_shares where name = 'Dee'")).toEqual([]);
+    // Deleting the code takes what visitors sent with it.
+    await asGil("delete from public.qr_codes where id = $1", [ids.cardOff]);
+    await asGil("delete from public.qr_codes where id = $1", [ids.card]);
+    expect(
+      await asService("select id from public.contact_shares where code_id = $1", [ids.card]),
+    ).toEqual([]);
+  });
+
+  it("hide what visitors sent from password-only sessions of two-step accounts", async () => {
+    await db.query("insert into auth.mfa_factors (user_id, status) values ($1, 'verified')", [IVY]);
+    for (const table of ["coupon_redemptions", "event_rsvps"]) {
+      expect(await asIvy(`select id from public.${table}`), table).toEqual([]);
+      expect(
+        (await as("authenticated", IVY, `select id from public.${table}`, [], "aal2")).length,
+        table,
+      ).toBeGreaterThan(0);
+    }
+    await db.query("delete from auth.mfa_factors where user_id = $1", [IVY]);
+  });
+});
