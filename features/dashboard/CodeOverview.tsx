@@ -40,6 +40,7 @@ import { CouponUses } from "./CouponUses";
 import { EventRsvps } from "./EventRsvps";
 import { FeedbackResponses } from "./FeedbackResponses";
 import { formatCount, relativeTime } from "./format";
+import { ResponseEmails, takesResponses } from "./ResponseEmails";
 
 /** When a trackable code works, in words: "Always", "From …", "Until …" or "… to …". */
 export function activeWindow(
@@ -64,6 +65,7 @@ export function CodeOverview({
   back,
   editHref,
   fromTeammate,
+  emailReady = false,
 }: {
   code: QrCodeRow;
   canEdit: boolean;
@@ -75,6 +77,8 @@ export function CodeOverview({
   editHref: string;
   /** A teammate's code: Duplicate copies it into your own codes. */
   fromTeammate: boolean;
+  /** This server can send email (BREVO_API_KEY is set). */
+  emailReady?: boolean;
 }) {
   const isPage = isPageType(initial.qr_type);
   // What the page shows today, for the small preview (checked the same way /p checks it).
@@ -320,6 +324,13 @@ export function CodeOverview({
             </Card>
           )}
 
+          {!fromTeammate && takesResponses(code.qr_type, code.content, code.notify_responses) && (
+            <ResponseEmails
+              codeId={code.id}
+              initial={code.notify_responses}
+              emailReady={emailReady}
+            />
+          )}
           {code.qr_type === "feedback" && (
             <FeedbackResponses codeId={code.id} content={code.content} />
           )}

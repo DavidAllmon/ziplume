@@ -2353,3 +2353,227 @@ describe("visitor responses", () => {
     await db.query("delete from auth.mfa_factors where user_id = $1", [IVY]);
   });
 });
+
+describe("response emails", () => {
+  const KAI = "6a6a6a6a-6a6a-4a6a-8a6a-6a6a6a6a6a6a"; // owner
+  const LEX = "6b6b6b6b-6b6b-4b6b-8b6b-6b6b6b6b6b6b"; // editor on Kai's team
+  const MOE = "6c6c6c6c-6c6c-4c6c-8c6c-6c6c6c6c6c6c"; // another owner
+  const by =
+    (id: string) =>
+    <T>(sql: string, params?: unknown[]) =>
+      as<T>("authenticated", id, sql, params);
+  const asKai = by(KAI);
+  const asLex = by(LEX);
+  const asMoe = by(MOE);
+  const ids = {} as Record<"feedback" | "card" | "event" | "moe" | "lex", string>;
+  const make = async (who: ReturnType<typeof by>, slug: string, type: string, content: object) =>
+    (
+      await who<{ id: string }>(
+        `insert into public.qr_codes (name, qr_type, is_dynamic, slug, content)
+         values ($1, $2, true, $3, $4::jsonb) returning id`,
+        [`${slug} page`, type, slug, JSON.stringify(content)],
+      )
+    )[0]!.id;
+  const switchOn = (who: ReturnType<typeof by>, id: string, on = true) =>
+    who("select public.set_response_emails($1, $2)", [id, on]);
+  const queued = async (owner: string) =>
+    (
+      await asService<{ n: number }>(
+        "select count(*)::int as n from public.response_emails where owner_id = $1",
+        [owner],
+      )
+    )[0]!.n;
+  const share = (slug: string, visitor: string, name = "Ana") =>
+    asService<{ ok: boolean }>(
+      "select public.submit_contact_share($1, $2, null, 'ana@example.com', 'Call me', $3) as ok",
+      [slug, name, visitor],
+    );
+  const claim = (slug: string) =>
+    asService<{
+      id: number;
+      kind: string;
+      code_name: string;
+      owner_id: string;
+      to_email: string;
+      to_name: string | null;
+      details: Record<string, unknown> | null;
+    }>("select * from public.claim_response_emails($1)", [slug]);
+
+  beforeAll(async () => {
+    await db.query(
+      `insert into auth.users (id, email, raw_user_meta_data) values
+         ($1, 'kai@example.com', '{"full_name":"Kai"}'), ($2, 'lex@example.com', '{}'),
+         ($3, 'moe@example.com', '{}')`,
+      [KAI, LEX, MOE],
+    );
+    await asService(
+      "insert into public.team_members (owner_id, member_id, role) values ($1, $2, 'editor')",
+      [KAI, LEX],
+    );
+    // The invite tests above sent invites today; this block starts the site's count afresh.
+    await asService("delete from public.invite_sends");
+    ids.feedback = await make(asKai, "KAIFB", "feedback", {
+      questions: [{ text: "How was it?", style: "stars" }],
+    });
+    ids.card = await make(asKai, "KAICARD", "vcard", { firstName: "Kai", shareDetails: true });
+    ids.event = await make(asKai, "KAIEVT", "event", { title: "Party", rsvp: true });
+    ids.moe = await make(asMoe, "MOECARD", "vcard", { firstName: "Moe", shareDetails: true });
+    ids.lex = await make(asLex, "LEXFB", "feedback", {});
+  });
+
+  it("can be switched on only by the code's maker, through the function", async () => {
+    await switchOn(asKai, ids.feedback);
+    expect(
+      (
+        await asKai<{ on: boolean }>(
+          "select notify_responses as on from public.qr_codes where id = $1",
+          [ids.feedback],
+        )
+      )[0]?.on,
+    ).toBe(true);
+    // An editor can change the page, but the emails are the maker's.
+    await expect(switchOn(asLex, ids.card)).rejects.toThrow(/maker/);
+    await expect(
+      asKai("update public.qr_codes set notify_responses = true where id = $1", [ids.card]),
+    ).rejects.toThrow(/permission denied/);
+    await expect(asAnon("select public.set_response_emails($1, true)", [ids.card])).rejects.toThrow(
+      /permission denied/,
+    );
+    await db.query("insert into auth.mfa_factors (user_id, status) values ($1, 'verified')", [KAI]);
+    await expect(switchOn(asKai, ids.card)).rejects.toThrow(/Sign in/);
+    await db.query("delete from auth.mfa_factors where user_id = $1", [KAI]);
+  });
+
+  it("queue one email per response while the switch is on, and keep the log on the server", async () => {
+    // Off: stored, not queued.
+    expect((await share("KAICARD", "q-1"))[0]?.ok).toBe(true);
+    expect(await queued(KAI)).toBe(0);
+    await switchOn(asKai, ids.card);
+    await switchOn(asKai, ids.event);
+    expect((await share("KAICARD", "q-1", "Ben"))[0]?.ok).toBe(true);
+    await asService(
+      "select public.submit_rsvp('KAIEVT', 'Cy', 'cy@example.com', 2, 'Vegan', 'q-1')",
+    );
+    await asService(
+      `select public.submit_feedback_answers('KAIFB', '[{"question":"How was it?","style":"stars","value":5}]'::jsonb, 'Lovely', null, 'q-1')`,
+    );
+    // The older one-rating form queues too.
+    await asService("select public.submit_feedback('KAIFB', 4, null, null, 'q-2')");
+    expect(
+      (
+        await asService<{ kind: string; status: string }>(
+          "select kind, status from public.response_emails where owner_id = $1 order by id",
+          [KAI],
+        )
+      ).map((r) => `${r.kind}:${r.status}`),
+    ).toEqual(["share:pending", "rsvp:pending", "feedback:pending", "feedback:pending"]);
+    await expect(asKai("select id from public.response_emails")).rejects.toThrow(
+      /permission denied/,
+    );
+    await expect(asAnon("select * from public.claim_response_emails('KAICARD')")).rejects.toThrow(
+      /permission denied/,
+    );
+    await expect(asKai("select public.finish_response_email(1, true)")).rejects.toThrow(
+      /permission denied/,
+    );
+  });
+
+  it("hand each waiting email out once, to the maker, with what was sent", async () => {
+    const [rsvp] = await claim("kaievt");
+    expect(rsvp).toMatchObject({
+      kind: "rsvp",
+      code_name: "KAIEVT page",
+      owner_id: KAI,
+      to_email: "kai@example.com",
+      to_name: "Kai",
+      details: { name: "Cy", email: "cy@example.com", guests: 2, note: "Vegan" },
+    });
+    expect(await claim("KAIEVT")).toEqual([]);
+    await asService("select public.finish_response_email($1, true)", [rsvp!.id]);
+    const feedback = await claim("KAIFB");
+    expect(feedback.map((f) => f.details)).toEqual([
+      {
+        rating: 5,
+        answers: [{ question: "How was it?", style: "stars", value: 5 }],
+        comment: "Lovely",
+        contact: null,
+      },
+      { rating: 4, answers: null, comment: null, contact: null },
+    ]);
+    for (const f of feedback)
+      await asService("select public.finish_response_email($1, false)", [f.id]);
+    expect(
+      (
+        await asService<{ status: string; sent: boolean }>(
+          "select status, sent_at is not null as sent from public.response_emails where owner_id = $1 order by id",
+          [KAI],
+        )
+      ).map((r) => `${r.status}:${r.sent}`),
+    ).toEqual(["pending:false", "sent:true", "failed:false", "failed:false"]);
+    // Switched off before it went: it stays unsent.
+    await switchOn(asKai, ids.card, false);
+    expect(await claim("KAICARD")).toEqual([]);
+    await switchOn(asKai, ids.card);
+    // A response deleted before its email went: nothing to say.
+    await asService(
+      "select public.submit_rsvp('KAIEVT', 'Dee', 'dee@example.com', 1, null, 'q-3')",
+    );
+    await asKai("delete from public.event_rsvps where email = 'dee@example.com'");
+    expect((await claim("KAIEVT"))[0]?.details).toBeNull();
+  });
+
+  it("stop at 50 a day per account, and at 250 for the whole site with invites", async () => {
+    let visitor = 0;
+    while ((await queued(KAI)) < 50) {
+      expect((await share("KAICARD", `cap-${visitor++}`))[0]?.ok).toBe(true);
+    }
+    // Stored, but not emailed.
+    expect((await share("KAICARD", `cap-${visitor++}`))[0]?.ok).toBe(true);
+    expect(await queued(KAI)).toBe(50);
+
+    await switchOn(asMoe, ids.moe);
+    expect((await share("MOECARD", "moe-1"))[0]?.ok).toBe(true);
+    expect(await queued(MOE)).toBe(1);
+    await asService(
+      "insert into public.invite_sends (owner_id) select $1 from generate_series(1, 250)",
+      [MOE],
+    );
+    expect((await share("MOECARD", "moe-2"))[0]?.ok).toBe(true);
+    expect(await queued(MOE)).toBe(1);
+    await asService("delete from public.invite_sends");
+  });
+
+  it("stop invites too once the site's invite and response emails reach 250", async () => {
+    const [invite] = await asMoe<{ id: string }>(
+      "insert into public.team_invites (email, role) values ('zoe@example.com', 'viewer') returning id",
+    );
+    await asService(
+      `insert into public.response_emails (owner_id, code_id, kind, response_id)
+       select $1, $2, 'share', 1000000 + n from generate_series(1, 250) n`,
+      [MOE, ids.moe],
+    );
+    try {
+      await expect(asMoe("select public.record_invite_send($1)", [invite!.id])).rejects.toThrow(
+        /Ziplume has sent all the invite emails it can today/,
+      );
+    } finally {
+      await asService("delete from public.response_emails where response_id > 1000000");
+    }
+    // Under the shared limit, the invite goes.
+    await asMoe("select public.record_invite_send($1)", [invite!.id]);
+    await asService("delete from public.invite_sends");
+  });
+
+  it("switch off when a code moves to someone else", async () => {
+    await switchOn(asLex, ids.lex);
+    await asKai("select public.remove_member($1, true)", [LEX]);
+    expect(
+      (
+        await asKai<{ user_id: string; on: boolean }>(
+          "select user_id, notify_responses as on from public.qr_codes where id = $1",
+          [ids.lex],
+        )
+      )[0],
+    ).toEqual({ user_id: KAI, on: false });
+  });
+});

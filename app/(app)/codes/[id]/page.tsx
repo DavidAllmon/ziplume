@@ -5,6 +5,7 @@ import { withWorkspace } from "@/components/app/nav";
 
 import { CodeOverview } from "@/features/dashboard/CodeOverview";
 import { requireUser } from "@/lib/auth/server";
+import { emailConfigured } from "@/lib/email/brevo";
 import { personLabel } from "@/lib/teams/access";
 import { codesHref, personAccess } from "@/lib/teams/server";
 
@@ -36,6 +37,7 @@ export default async function CodePage({ params, searchParams }: PageProps<"/cod
       }}
       editHref={withWorkspace(`/codes/${id}/edit`, own ? null : code.user_id)}
       fromTeammate={!own}
+      emailReady={emailConfigured()}
     />
   );
 }

@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 
 import { isValidSlug } from "@/lib/dynamic/slug";
+import { sendResponseEmailsLater } from "@/lib/email/response-emails";
 import { rsvpErrors } from "@/lib/pages/responses";
 import { closed, json, text, visitorPost } from "@/lib/pages/visitor-post";
 import { getAdminSupabase } from "@/lib/supabase/admin";
@@ -53,8 +54,10 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/p/[s
   });
   if (error) return json({ error: "unavailable" }, 503);
   switch (data) {
-    // The same answer either way, so nobody can find out who's coming by trying emails.
     case "listed":
+      sendResponseEmailsLater(post.admin, slug);
+      return json({ ok: true }, 200);
+    // The same answer as a new RSVP, so nobody can find out who's coming by trying emails.
     case "already":
       return json({ ok: true }, 200);
     case "limited":

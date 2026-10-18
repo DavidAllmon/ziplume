@@ -147,3 +147,17 @@ describe("activeWindow", () => {
     expect(screen.queryByRole("link", { name: "Edit page" })).toBeNull();
   });
 });
+
+describe("Email me new responses", () => {
+  it("shows the switch to the maker of a feedback page, and not to a teammate or on a menu", () => {
+    const feedback = savedRow({ qr_type: "feedback", is_dynamic: true, content: {} });
+    const { unmount } = renderOverview(feedback);
+    expect(screen.getByRole("switch", { name: "Email me new responses" })).toBeInTheDocument();
+    unmount();
+    const teammate = renderOverview(feedback, true, true);
+    expect(screen.queryByRole("switch", { name: "Email me new responses" })).toBeNull();
+    teammate.unmount();
+    renderOverview(savedRow({ qr_type: "menu", is_dynamic: true, content: {} }));
+    expect(screen.queryByRole("switch", { name: "Email me new responses" })).toBeNull();
+  });
+});

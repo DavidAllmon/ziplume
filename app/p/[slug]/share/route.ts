@@ -1,5 +1,6 @@
 import { type NextRequest } from "next/server";
 
+import { sendResponseEmailsLater } from "@/lib/email/response-emails";
 import { shareErrors } from "@/lib/pages/responses";
 import { closed, json, text, visitorPost } from "@/lib/pages/visitor-post";
 
@@ -32,5 +33,7 @@ export async function POST(request: NextRequest, { params }: RouteContext<"/p/[s
     p_visitor_hash: post.visitor.visitorHash,
   });
   if (error) return json({ error: "unavailable" }, 503);
-  return data ? json({ ok: true }, 200) : json({ error: "limited" }, 429);
+  if (!data) return json({ error: "limited" }, 429);
+  sendResponseEmailsLater(post.admin, slug);
+  return json({ ok: true }, 200);
 }

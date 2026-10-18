@@ -64,4 +64,15 @@ describe("Brevo email", () => {
       error: "network",
     });
   });
+
+  it("passes extra headers, such as one-click unsubscribe", async () => {
+    const fetcher = ok();
+    await sendEmail(
+      { ...message, headers: { "List-Unsubscribe": "<https://x.example/off>" } },
+      { env: { BREVO_API_KEY: "key-123" }, fetcher },
+    );
+    expect(JSON.parse(String(fetcher.mock.calls[0]![1]?.body)).headers).toEqual({
+      "List-Unsubscribe": "<https://x.example/off>",
+    });
+  });
 });
