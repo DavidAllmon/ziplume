@@ -9,6 +9,10 @@ test.use({ storageState: DESIGNER.state });
 test.describe.configure({ mode: "serial", retries: 0 });
 
 async function expectAxeClean(page: Page) {
+  // Menus and dialogs fade in; a half-faded one fails contrast.
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== "running"),
+  );
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
 }
