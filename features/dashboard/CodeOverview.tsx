@@ -34,7 +34,10 @@ import { useInBrowser } from "@/lib/useInBrowser";
 import type { FolderRow, QrCodeRow } from "@/types/supabase";
 
 import { codeRenderOptions, codeSummary, codeType, codeTypeLabel } from "./codeRender";
+import { ContactShares } from "./ContactShares";
 import { CopyButton } from "./CopyButton";
+import { CouponUses } from "./CouponUses";
+import { EventRsvps } from "./EventRsvps";
 import { FeedbackResponses } from "./FeedbackResponses";
 import { formatCount, relativeTime } from "./format";
 
@@ -319,6 +322,13 @@ export function CodeOverview({
 
           {code.qr_type === "feedback" && (
             <FeedbackResponses codeId={code.id} content={code.content} />
+          )}
+          {code.qr_type === "vcard" && (
+            <ContactShares codeId={code.id} content={code.content} canEdit={canEdit} />
+          )}
+          {code.qr_type === "coupon" && <CouponUses codeId={code.id} content={code.content} />}
+          {code.qr_type === "event" && (
+            <EventRsvps codeId={code.id} content={code.content} canEdit={canEdit} />
           )}
 
           <Card>
