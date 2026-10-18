@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/Toast";
 import { createCodes } from "@/features/codes/api";
 import { createFolder, MAX_FOLDER_NAME } from "@/features/folders/api";
 import { DEFAULT_DESIGN } from "@/features/generator/state/defaults";
+import type { DesignState } from "@/features/generator/state/types";
 import { parseBulk, requireWebLinks, type BulkRow } from "@/lib/bulk/rows";
 import { cn } from "@/lib/cn";
 import { codeTypeInfo } from "@/lib/qr/code-types";
@@ -32,6 +33,8 @@ export interface BulkCreatePageProps {
   ownerId: string;
   folders: FolderRow[];
   initialFolderId: string | null;
+  /** Your default template's design; Classic without one. */
+  design?: DesignState | null;
 }
 
 /** Bulk creation inside the app: every ready row becomes a code in your account or team. */
@@ -39,8 +42,10 @@ export function BulkCreatePage({
   ownerId,
   folders: initialFolders,
   initialFolderId,
+  design: defaultDesignProp,
 }: BulkCreatePageProps) {
   const toast = useToast();
+  const design = defaultDesignProp ?? DEFAULT_DESIGN;
   const [type, setType] = useState<QrTypeId>("url");
   const [text, setText] = useState("");
   const [trackable, setTrackable] = useState(true);
@@ -61,8 +66,8 @@ export function BulkCreatePage({
   const inFlight = useRef(false);
 
   const result = useMemo(
-    () => (text.trim() ? parseBulk(type, text, DEFAULT_DESIGN.errorCorrection) : null),
-    [type, text],
+    () => (text.trim() ? parseBulk(type, text, design.errorCorrection) : null),
+    [type, text, design.errorCorrection],
   );
   const asLinks = type === "url" && trackable;
   const rows = useMemo(
@@ -117,7 +122,7 @@ export function BulkCreatePage({
         name: row.name,
         qrType: type,
         content: row.values,
-        design: DEFAULT_DESIGN,
+        design,
         dynamic: asLinks ? { destination: row.payload } : undefined,
       })),
       (count, saved) => {

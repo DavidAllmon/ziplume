@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DEFAULT_DESIGN } from "@/features/generator/state/defaults";
+
 import { clearDraft, draftKey, isBlank, parseDraft, rawDraft, saveDraft } from "./draft";
 import { createReducer, initialCreateState, type CreateAction, type CreateState } from "./state";
 
@@ -93,5 +95,18 @@ describe("drafts", () => {
     });
     expect(rawDraft(USER)).toBeNull();
     getItem.mockRestore();
+  });
+});
+
+describe("drafts with a default template", () => {
+  it("don't count a fresh page that starts from the default as unfinished", () => {
+    const defaults = {
+      type: "url" as const,
+      folderId: null,
+      design: { ...DEFAULT_DESIGN, fgColor: "#BE123C" },
+    };
+    expect(isBlank(initialCreateState(defaults), defaults)).toBe(true);
+    // Against the plain defaults, the same page is a change.
+    expect(isBlank(initialCreateState(defaults), { type: "url", folderId: null })).toBe(false);
   });
 });

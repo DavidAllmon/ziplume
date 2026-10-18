@@ -7,6 +7,7 @@ import type * as CodesApi from "@/features/codes/api";
 import { createCodes, type NewCode, type Result } from "@/features/codes/api";
 import type * as FoldersApi from "@/features/folders/api";
 import { createFolder } from "@/features/folders/api";
+import { DEFAULT_DESIGN } from "@/features/generator/state/defaults";
 import type { FolderRow, QrCodeRow } from "@/types/supabase";
 
 import { BulkCreatePage, type BulkCreatePageProps } from "./BulkCreatePage";
@@ -242,6 +243,19 @@ describe("BulkCreatePage", () => {
       [expect.objectContaining({ label: "Menu" })],
       "png",
       "ziplume-url-codes.zip",
+      expect.any(Function),
+    );
+  });
+
+  it("makes each code in the default template's design", async () => {
+    const user = userEvent.setup();
+    savesAll();
+    const brand = { ...DEFAULT_DESIGN, fgColor: "#BE123C" };
+    renderPage({ design: brand });
+    paste("name,url\nMenu,https://example.com/menu");
+    await user.click(screen.getByRole("button", { name: "Create 1 code" }));
+    expect(createCodes).toHaveBeenCalledWith(
+      [expect.objectContaining({ design: brand })],
       expect.any(Function),
     );
   });

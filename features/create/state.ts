@@ -48,6 +48,8 @@ export interface CreateState {
 export interface CreateDefaults {
   type: CodeTypeId;
   folderId: string | null;
+  /** The person's default template (redesign spec 4.2); Classic without one. */
+  design?: DesignState | null;
 }
 
 export type CreateAction =
@@ -59,7 +61,11 @@ export type CreateAction =
   | { type: "restore"; state: CreateState };
 
 export function initialCreateState(defaults: CreateDefaults): CreateState {
-  const code = { ...initialState(), activeType: defaults.type };
+  const fresh = { ...initialState(), activeType: defaults.type };
+  // Applied like any template, so a template's logo raises scan reliability as it should.
+  const code = defaults.design
+    ? generatorReducer(fresh, { type: "applyDesign", design: defaults.design })
+    : fresh;
   return {
     code,
     settings: { ...DEFAULT_SETTINGS, utm: { ...DEFAULT_SETTINGS.utm } },
