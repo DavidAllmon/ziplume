@@ -81,8 +81,9 @@ export default function PrivacyPage() {
         submissions; only Ziplume’s server can read it. A visitor’s phone remembers, in its own
         browser storage, the coupons it marked used and the events it RSVPed to. For a coupon, that
         includes a random ID, of which Ziplume keeps only a one-way hash. The page’s owner and their
-        team can see and delete what visitors send, except on codes the owner keeps private. The
-        page’s owner decides what to do with details visitors share.
+        team can see and delete what visitors send, except on codes the owner keeps private. If the
+        page’s owner turns on “Email me new responses”, Ziplume also emails them what was sent,
+        through Brevo. The page’s owner decides what to do with details visitors share.
       </p>
 
       <h2>Scans of dynamic codes</h2>
@@ -101,7 +102,8 @@ export default function PrivacyPage() {
           Chicago, USA.
         </li>
         <li>
-          Brevo sends account emails such as confirmations and password resets, and team invites.
+          Brevo sends account emails such as confirmations and password resets, team invites, and
+          emails about new responses.
         </li>
         <li>Google handles sign-in if you choose “Continue with Google”.</li>
         <li>Cloudflare delivers the site and provides approximate scan locations.</li>
