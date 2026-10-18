@@ -89,6 +89,7 @@ export interface Database {
           user_id: string;
           name: string;
           design: Json;
+          is_default: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -356,6 +357,7 @@ export interface Database {
       };
       rsvp_places_left: { Args: { p_slug: string }; Returns: number | null };
       rsvp_guests: { Args: { p_code: string }; Returns: number };
+      set_default_template: { Args: { p_template: string | null }; Returns: undefined };
       set_response_emails: { Args: { p_code: string; p_on: boolean }; Returns: undefined };
       claim_response_emails: {
         Args: { p_slug: string };

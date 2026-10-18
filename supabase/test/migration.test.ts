@@ -2577,3 +2577,83 @@ describe("response emails", () => {
     ).toEqual({ user_id: KAI, on: false });
   });
 });
+
+describe("default templates", () => {
+  const DEB = "7a7a7a7a-7a7a-4a7a-8a7a-7a7a7a7a7a7a";
+  const ELI = "7b7b7b7b-7b7b-4b7b-8b7b-7b7b7b7b7b7b";
+  const asDeb = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", DEB, sql, params);
+  const asEli = <T>(sql: string, params?: unknown[]) => as<T>("authenticated", ELI, sql, params);
+  const make = async (name: string) =>
+    (
+      await asDeb<{ id: string }>(
+        `insert into public.design_templates (name, design) values ($1, '{}'::jsonb) returning id`,
+        [name],
+      )
+    )[0]!.id;
+  const defaults = async () =>
+    (
+      await asDeb<{ name: string }>(
+        "select name from public.design_templates where is_default order by name",
+      )
+    ).map((t) => t.name);
+  let first = "";
+  let second = "";
+
+  beforeAll(async () => {
+    await db.query(
+      "insert into auth.users (id, email) values ($1, 'deb@example.com'), ($2, 'eli@example.com')",
+      [DEB, ELI],
+    );
+    first = await make("Brand");
+    second = await make("Party");
+  });
+
+  it("keep one default per person, switched by the function", async () => {
+    expect(await defaults()).toEqual([]);
+    await asDeb("select public.set_default_template($1)", [first]);
+    expect(await defaults()).toEqual(["Brand"]);
+    await asDeb("select public.set_default_template($1)", [second]);
+    expect(await defaults()).toEqual(["Party"]);
+    await asDeb("select public.set_default_template($1)", [second]);
+    expect(await defaults()).toEqual(["Party"]);
+    await asDeb("select public.set_default_template(null)");
+    expect(await defaults()).toEqual([]);
+    // Only the function sets it.
+    await expect(
+      asDeb("update public.design_templates set is_default = true where id = $1", [first]),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      asDeb(
+        `insert into public.design_templates (name, design, is_default) values ('X', '{}'::jsonb, true)`,
+      ),
+    ).rejects.toThrow(/permission denied/);
+    // Even the server can't store two.
+    await expect(
+      asService("update public.design_templates set is_default = true where id in ($1, $2)", [
+        first,
+        second,
+      ]),
+    ).rejects.toThrow(/design_templates_one_default/);
+  });
+
+  it("only for your own templates, with a full session", async () => {
+    await expect(asEli("select public.set_default_template($1)", [first])).rejects.toThrow(
+      /isn't yours/,
+    );
+    await expect(asAnon("select public.set_default_template($1)", [first])).rejects.toThrow(
+      /permission denied/,
+    );
+    await db.query("insert into auth.mfa_factors (user_id, status) values ($1, 'verified')", [DEB]);
+    await expect(asDeb("select public.set_default_template($1)", [first])).rejects.toThrow(
+      /Sign in/,
+    );
+    await db.query("delete from auth.mfa_factors where user_id = $1", [DEB]);
+    // A template deleted since: refused, and the old default stays.
+    await asDeb("select public.set_default_template($1)", [first]);
+    await asDeb("delete from public.design_templates where id = $1", [second]);
+    await expect(asDeb("select public.set_default_template($1)", [second])).rejects.toThrow(
+      /isn't yours/,
+    );
+    expect(await defaults()).toEqual(["Brand"]);
+  });
+});

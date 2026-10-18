@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { DEFAULT_DESIGN } from "@/features/generator/state/defaults";
+
 import {
   createReducer,
   DEFAULT_SETTINGS,
@@ -118,5 +120,33 @@ describe("settingsErrors when editing", () => {
     expect(settingsErrors({ ...DEFAULT_SETTINGS, slug: "" }, { requireSlug: true }).slug).toBe(
       "Every trackable code needs a link ending",
     );
+  });
+});
+
+describe("the default template", () => {
+  const brand = { ...DEFAULT_DESIGN, fgColor: "#BE123C", dotStyle: "rounded" as const };
+
+  it("starts a new code, and Reset to style returns to it", () => {
+    const state = initialCreateState({ type: "url", folderId: null, design: brand });
+    expect(state.code.design).toEqual(brand);
+    const changed = createReducer(state, {
+      type: "code",
+      action: { type: "setDesign", patch: { fgColor: "#000000" } },
+    });
+    expect(createReducer(changed, { type: "resetToStyle" }).code.design.fgColor).toBe("#BE123C");
+  });
+
+  it("is Classic without one", () => {
+    expect(initialCreateState({ type: "url", folderId: null }).code.design).toEqual(DEFAULT_DESIGN);
+    expect(initialCreateState({ type: "url", folderId: null, design: null }).code.design).toEqual(
+      DEFAULT_DESIGN,
+    );
+  });
+
+  it("brings a template's logo with the raised scan reliability a logo needs", () => {
+    const withLogo = { ...brand, logoIcon: "link" as never, errorCorrection: "M" as const };
+    const state = initialCreateState({ type: "url", folderId: null, design: withLogo });
+    expect(state.code.design.errorCorrection).toBe("H");
+    expect(state.code.ecBeforeLogo).toBe("M");
   });
 });

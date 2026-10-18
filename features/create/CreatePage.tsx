@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/Toast";
 import { createCodeWithSettings, designForStorage } from "@/features/codes/api";
 import type { CodeTypeId } from "@/lib/qr/types";
 import { useInBrowser } from "@/lib/useInBrowser";
+import type { DesignState } from "@/features/generator/state/types";
 import type { FolderRow } from "@/types/supabase";
 
 import { parseDraft, rawDraft } from "./draft";
@@ -27,6 +28,8 @@ export interface CreatePageProps {
   resume?: boolean;
   /** In a team: Private can be set. */
   inTeam: boolean;
+  /** Your default template's design, which a new code starts from. */
+  defaultDesign?: DesignState | null;
 }
 
 /** A saved folder that's gone (or in another workspace) falls back to the page's folder. */
@@ -60,12 +63,13 @@ function CreateEditor({
   initialFolderId,
   resume = false,
   inTeam,
+  defaultDesign,
 }: CreatePageProps) {
   const router = useRouter();
   const toast = useToast();
   const defaults = useMemo(
-    () => ({ type: initialType, folderId: initialFolderId }),
-    [initialType, initialFolderId],
+    () => ({ type: initialType, folderId: initialFolderId, design: defaultDesign ?? null }),
+    [initialType, initialFolderId, defaultDesign],
   );
   // Continue from the gallery: start from the saved draft, read once.
   const [resumed] = useState(() => {

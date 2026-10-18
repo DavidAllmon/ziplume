@@ -3,6 +3,7 @@
 import {
   BookOpen,
   Coffee,
+  LayoutTemplate,
   LogOut,
   MoreHorizontal,
   PanelLeftClose,
@@ -139,6 +140,7 @@ export function AppShell({
   const codesHref = everyone ? "/codes?view=everyone" : withWorkspace("/codes", ownerId);
   const main: NavItem[] = [
     { href: codesHref, label: "Codes", icon: QrCode },
+    { href: "/templates", label: "Templates", icon: LayoutTemplate },
     { href: "/team", label: "Team", icon: Users },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
@@ -146,7 +148,11 @@ export function AppShell({
     { href: "/developers", label: "Help & API docs", icon: BookOpen },
     { href: BUY_ME_A_COFFEE_URL, label: "Support Ziplume", icon: Coffee, external: true },
   ];
-  const more: NavItem[] = [{ href: "/settings", label: "Settings", icon: Settings }, ...help];
+  const more: NavItem[] = [
+    { href: "/templates", label: "Templates", icon: LayoutTemplate },
+    { href: "/settings", label: "Settings", icon: Settings },
+    ...help,
+  ];
   const sideLink = (item: NavItem) => (
     <SideLink
       key={item.label}
