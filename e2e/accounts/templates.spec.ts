@@ -1,10 +1,17 @@
-import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test, type Page } from "@playwright/test";
 
+import { expectNoSidewaysScroll } from "../phone-fit";
 import { DESIGNER } from "./fixtures";
 
 test.use({ storageState: DESIGNER.state });
 // One account's templates, used in order.
 test.describe.configure({ mode: "serial", retries: 0 });
+
+async function expectAxeClean(page: Page) {
+  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(results.violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
+}
 
 test.describe("Templates", () => {
   test("a new template becomes the default, and new codes start from it", async ({ page }) => {
@@ -63,5 +70,33 @@ test.describe("Templates", () => {
     await page.reload();
     await expect(page.getByRole("listitem", { name: "Brand 2", exact: true })).toBeVisible();
     await expect(page.getByText("Default", { exact: true })).toHaveCount(0);
+  });
+
+  test("the grid, its menu and the rename dialog fit a small phone and pass axe", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.goto("templates");
+    const card = page.getByRole("listitem", { name: "Brand 2", exact: true });
+    const actions = card.getByRole("button", { name: "Actions for Brand 2" });
+    await actions.click();
+    await page.getByRole("menuitem", { name: "Set as default" }).click();
+    await expect(card.getByText("Default", { exact: true })).toBeVisible();
+    await expectNoSidewaysScroll(page);
+    // The Default badge leaves the ⋯ button whole and inside its card.
+    const button = (await actions.boundingBox())!;
+    const box = (await card.boundingBox())!;
+    expect(button.width).toBeGreaterThanOrEqual(44);
+    expect(button.x + button.width).toBeLessThanOrEqual(box.x + box.width + 0.5);
+    await expectAxeClean(page);
+
+    await actions.click();
+    await expect(page.getByRole("menuitem", { name: "Rename" })).toBeVisible();
+    await expectNoSidewaysScroll(page);
+    await expectAxeClean(page);
+    await page.getByRole("menuitem", { name: "Rename" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expectNoSidewaysScroll(page);
+    await expectAxeClean(page);
   });
 });

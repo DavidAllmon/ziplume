@@ -15,6 +15,8 @@ vi.mock("./api", () => ({
   deleteTemplate: vi.fn(async () => ({ ok: true, value: null })),
 }));
 vi.mock("@/features/generator/preview/QrView", () => ({ QrView: () => null }));
+const refresh = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 const row = (id: string, name: string, isDefault = false) =>
   ({
@@ -103,5 +105,18 @@ describe("TemplatesPage", () => {
     await user.click(screen.getByRole("menuitem", { name: "Set as default" }));
     expect(await screen.findByText(/couldn't be changed/)).toBeInTheDocument();
     expect(card("Brand").getByText("Default")).toBeInTheDocument();
+  });
+
+  it("refreshes the page's data after each change, so Back can't bring back old cards", async () => {
+    const user = userEvent.setup();
+    refresh.mockClear();
+    vi.mocked(duplicateTemplate).mockResolvedValue({ ok: true, value: row("t3", "Copy of Party") });
+    show([row("t1", "Brand", true), row("t2", "Party")]);
+    await user.click(card("Party").getByRole("button", { name: "Actions for Party" }));
+    await user.click(screen.getByRole("menuitem", { name: "Set as default" }));
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+    await user.click(card("Party").getByRole("button", { name: "Actions for Party" }));
+    await user.click(screen.getByRole("menuitem", { name: "Duplicate" }));
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(2));
   });
 });

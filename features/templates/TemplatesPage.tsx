@@ -3,6 +3,7 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { Copy, MoreHorizontal, Pencil, Plus, Star, StarOff, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { menuItemClass, menuPanelClass } from "@/components/app/nav";
@@ -20,6 +21,9 @@ import { deleteTemplate, duplicateTemplate, renameTemplate, setDefaultTemplate }
 /** Saved designs (redesign spec 4.5). One can be the default that every new code starts from. */
 export function TemplatesPage({ templates: initial }: { templates: DesignTemplateRow[] }) {
   const toast = useToast();
+  const router = useRouter();
+  // After each change the server's copy of this page is refreshed too, so Back can't show it stale.
+  const refresh = () => router.refresh();
   const [templates, setTemplates] = useState(initial);
   const [renaming, setRenaming] = useState<DesignTemplateRow | null>(null);
   const [deleting, setDeleting] = useState<DesignTemplateRow | null>(null);
@@ -29,6 +33,7 @@ export function TemplatesPage({ templates: initial }: { templates: DesignTemplat
     const result = await setDefaultTemplate(template?.id ?? null);
     if (!result.ok) return toast(result.error, "error");
     setTemplates((list) => list.map((t) => ({ ...t, is_default: t.id === template?.id })));
+    refresh();
     toast(
       template ? `New codes now start from “${template.name}”` : "New codes now start from Classic",
     );
@@ -38,6 +43,7 @@ export function TemplatesPage({ templates: initial }: { templates: DesignTemplat
     const result = await duplicateTemplate(template);
     if (!result.ok) return toast(result.error, "error");
     setTemplates((list) => [result.value, ...list]);
+    refresh();
     toast(`Duplicated as “${result.value.name}”`);
   }
 
@@ -48,6 +54,7 @@ export function TemplatesPage({ templates: initial }: { templates: DesignTemplat
     setTemplates((list) => list.map((t) => (t.id === renaming.id ? result.value : t)));
     // The dialog leaves closing to its caller, so it can stay open with an error.
     setRenaming(null);
+    refresh();
   }
 
   async function remove() {
@@ -57,6 +64,7 @@ export function TemplatesPage({ templates: initial }: { templates: DesignTemplat
     setPending(false);
     if (!result.ok) return toast(result.error, "error");
     setTemplates((list) => list.filter((t) => t.id !== deleting.id));
+    refresh();
     toast(`Deleted “${deleting.name}”`);
     setDeleting(null);
   }

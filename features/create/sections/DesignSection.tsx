@@ -82,7 +82,12 @@ export function DesignSection({
           summary="Styles and your templates"
           defaultOpen
         >
-          <TemplatesSection design={design} dispatch={dispatch} canSave={saveTemplates} />
+          <TemplatesSection
+            design={design}
+            dispatch={dispatch}
+            canSave={saveTemplates}
+            manageLink={saveTemplates}
+          />
         </Section>
         <Section title="Colors" icon={<Palette />} summary={<Swatches design={design} />}>
           <ColorsSection design={design} dispatch={dispatch} />

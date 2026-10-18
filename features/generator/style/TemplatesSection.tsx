@@ -37,9 +37,16 @@ interface TemplatesSectionProps {
   dispatch: (action: GeneratorAction) => void;
   /** The "Save design" box; off where the page has its own Save (New template). */
   canSave?: boolean;
+  /** "Manage templates": only in the code editor, which keeps a draft, so leaving loses nothing. */
+  manageLink?: boolean;
 }
 
-export function TemplatesSection({ design, dispatch, canSave = true }: TemplatesSectionProps) {
+export function TemplatesSection({
+  design,
+  dispatch,
+  canSave = true,
+  manageLink = false,
+}: TemplatesSectionProps) {
   return (
     <>
       <div className="flex flex-col gap-2">
@@ -65,12 +72,19 @@ export function TemplatesSection({ design, dispatch, canSave = true }: Templates
         </div>
         <p className="text-sm text-fg-muted">Applying a style keeps your logo.</p>
       </div>
-      {accountsEnabled && <MyTemplates design={design} dispatch={dispatch} canSave={canSave} />}
+      {accountsEnabled && (
+        <MyTemplates
+          design={design}
+          dispatch={dispatch}
+          canSave={canSave}
+          manageLink={manageLink}
+        />
+      )}
     </>
   );
 }
 
-function MyTemplates({ design, dispatch, canSave }: TemplatesSectionProps) {
+function MyTemplates({ design, dispatch, canSave, manageLink }: TemplatesSectionProps) {
   const { user, loading } = useSession();
   const toast = useToast();
   const [templates, setTemplates] = useState<DesignTemplateRow[] | null>(null);
@@ -139,12 +153,14 @@ function MyTemplates({ design, dispatch, canSave }: TemplatesSectionProps) {
         <span id="my-templates" className="text-sm font-medium text-fg">
           My templates
         </span>
-        <Link
-          href="/templates"
-          className="text-sm font-medium text-link underline-offset-4 hover:underline"
-        >
-          Manage templates
-        </Link>
+        {manageLink && (
+          <Link
+            href="/templates"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-link underline-offset-4 hover:underline sm:min-h-0"
+          >
+            Manage templates
+          </Link>
+        )}
       </div>
       {templates === null ? (
         <p className="text-sm text-fg-muted">Loading…</p>

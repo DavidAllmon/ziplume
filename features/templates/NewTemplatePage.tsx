@@ -71,7 +71,7 @@ export function NewTemplatePage() {
   }
 
   return (
-    <form onSubmit={save} noValidate className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <PageHeader title="New template" description="Design it once, then use it for any code." />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <DesignSection
@@ -86,42 +86,46 @@ export function NewTemplatePage() {
               <div className="mx-auto w-full max-w-60 overflow-hidden rounded-xl bg-white p-3 ring-1 ring-black/5">
                 <QrView options={preview} resolution={600} label="Preview of the template" />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor={nameId} className="text-sm font-medium text-fg">
-                  Name
-                </label>
-                <TextInput
-                  ref={nameRef}
-                  id={nameId}
-                  value={name}
-                  maxLength={60}
-                  placeholder="Brand"
-                  aria-invalid={error ? true : undefined}
-                  aria-describedby={error ? `${nameId}-error` : undefined}
-                  onChange={(event) => {
-                    setName(event.target.value);
-                    setError("");
-                  }}
+              {/* Only this card is the form: Enter while designing (a color, the frame's text, a
+                  style's radio) must not save a half-made template. */}
+              <form onSubmit={save} noValidate className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor={nameId} className="text-sm font-medium text-fg">
+                    Name
+                  </label>
+                  <TextInput
+                    ref={nameRef}
+                    id={nameId}
+                    value={name}
+                    maxLength={60}
+                    placeholder="Brand"
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? `${nameId}-error` : undefined}
+                    onChange={(event) => {
+                      setName(event.target.value);
+                      setError("");
+                    }}
+                  />
+                  {error && (
+                    <p id={`${nameId}-error`} className="text-sm text-danger">
+                      {error}
+                    </p>
+                  )}
+                </div>
+                <Toggle
+                  label="Use for new codes"
+                  description="Every code you make will start from this design."
+                  checked={makeDefault}
+                  onChange={setMakeDefault}
                 />
-                {error && (
-                  <p id={`${nameId}-error`} className="text-sm text-danger">
-                    {error}
-                  </p>
-                )}
-              </div>
-              <Toggle
-                label="Use for new codes"
-                description="Every code you make will start from this design."
-                checked={makeDefault}
-                onChange={setMakeDefault}
-              />
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save template"}
-              </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving…" : "Save template"}
+                </Button>
+              </form>
             </div>
           </Card>
         </div>
       </div>
-    </form>
+    </div>
   );
 }

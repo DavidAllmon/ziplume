@@ -45,10 +45,18 @@ describe("on the old address", () => {
 
 describe("on the site address", () => {
   it("refreshes the session on app pages", async () => {
-    for (const path of ["/", "/codes", "/codes/abc/edit", "/team", "/settings/security"]) {
+    for (const path of [
+      "/",
+      "/codes",
+      "/codes/abc/edit",
+      "/team",
+      "/settings/security",
+      "/templates",
+      "/templates/new",
+    ]) {
       await proxy(request(`https://ziplume.com${path}`, "ziplume.com"));
     }
-    expect(refreshSession).toHaveBeenCalledTimes(5);
+    expect(refreshSession).toHaveBeenCalledTimes(7);
   });
 
   it("skips the session for short links, hosted pages, files and the pass-through", async () => {

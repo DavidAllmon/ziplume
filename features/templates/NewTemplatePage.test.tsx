@@ -54,4 +54,18 @@ describe("NewTemplatePage", () => {
     expect(setDefaultTemplate).toHaveBeenCalledWith("t1");
     expect(push).toHaveBeenCalledWith("/templates");
   });
+
+  it("doesn't save when Enter is pressed while designing", async () => {
+    const user = userEvent.setup();
+    vi.mocked(saveTemplate).mockClear();
+    show();
+    await user.type(screen.getByRole("textbox", { name: /^Name/ }), "Brand");
+    await user.click(screen.getByRole("button", { name: /^Colors/ }));
+    const color = screen.getByRole("textbox", { name: "Code color" });
+    await user.clear(color);
+    await user.type(color, "#BE123C{Enter}");
+    expect(saveTemplate).not.toHaveBeenCalled();
+    // Nor does it offer a way off the page that would lose the design.
+    expect(screen.queryByRole("link", { name: "Manage templates" })).toBeNull();
+  });
 });
