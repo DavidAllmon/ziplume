@@ -9,6 +9,10 @@ test.use({ storageState: DESIGNER.state });
 test.describe.configure({ mode: "serial", retries: 0 });
 
 async function expectAxeClean(page: Page) {
+  // Menus and dialogs fade in; a half-faded one fails contrast.
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== "running"),
+  );
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
 }
@@ -99,5 +103,25 @@ test.describe("Templates", () => {
     await expect(page.getByRole("heading", { name: "Rename template" })).toBeVisible();
     await expectNoSidewaysScroll(page);
     await expectAxeClean(page);
+  });
+
+  test("a template's design is edited in place, and new codes use the change", async ({ page }) => {
+    await page.goto("templates");
+    await page.getByRole("button", { name: "Actions for Brand 2" }).click();
+    await page.getByRole("menuitem", { name: "Edit" }).click();
+    await expect(page.getByRole("heading", { name: "Edit template" })).toBeVisible();
+    await page.getByRole("button", { name: /^Colors/ }).click();
+    const color = page.getByRole("textbox", { name: "Code color", exact: true });
+    await color.fill("#0B6E8C");
+    await color.press("Tab");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page).toHaveURL(/\/templates$/);
+
+    await page.goto("codes/new?type=text");
+    await page.getByRole("tab", { name: "QR code" }).click();
+    await page.getByRole("button", { name: /^Colors/ }).click();
+    await expect(page.getByRole("textbox", { name: "Code color", exact: true })).toHaveValue(
+      "#0B6E8C",
+    );
   });
 });

@@ -82,3 +82,24 @@ export async function setDefaultTemplate(id: string | null): Promise<Result<null
     ? { ok: false, error: "The default couldn't be changed. Reload and try again." }
     : { ok: true, value: null };
 }
+
+/** Saves an edited template's name and design; codes already made from it don't change. */
+export async function updateTemplate(
+  id: string,
+  name: string,
+  design: DesignState,
+): Promise<Result<DesignTemplateRow> & { droppedLogo?: boolean }> {
+  const supabase = getBrowserSupabase();
+  if (!supabase) return unavailable;
+  const stored = designForStorage(design);
+  const { data, error } = await supabase
+    .from("design_templates")
+    .update({ name: nameOf(name) || "My template", design: stored.design })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error || !data) {
+    return { ok: false, error: "The template couldn't be saved. It may have been deleted." };
+  }
+  return { ok: true, value: data, droppedLogo: stored.droppedLogo };
+}

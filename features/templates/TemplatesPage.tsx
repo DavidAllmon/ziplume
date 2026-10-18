@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { Copy, MoreHorizontal, Pencil, Plus, Star, StarOff, Trash2 } from "lucide-react";
+import { Copy, MoreHorizontal, Pencil, Plus, SquarePen, Star, StarOff, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -114,6 +114,11 @@ export function TemplatesPage({ templates: initial }: { templates: DesignTemplat
                     transition
                     className={menuPanelClass}
                   >
+                    <MenuItem>
+                      <Link href={`/templates/${template.id}/edit`} className={menuItemClass}>
+                        <SquarePen aria-hidden /> Edit
+                      </Link>
+                    </MenuItem>
                     <MenuItem>
                       {template.is_default ? (
                         <button

@@ -126,6 +126,17 @@ describe("AppShell", () => {
     ).toHaveAttribute("href", "/codes?view=everyone");
   });
 
+  it("keeps Everyone on the Analytics page", () => {
+    pathname = "/analytics";
+    search = new URLSearchParams("view=everyone");
+    renderShell();
+    expect(screen.getAllByRole("button", { name: /Switch team/ })[0]!).toHaveAccessibleName(
+      "Switch team (showing Everyone’s codes)",
+    );
+    expect(new Set(hrefs("Analytics"))).toEqual(new Set(["/analytics?view=everyone"]));
+    expect(new Set(hrefs("Codes"))).toEqual(new Set(["/codes?view=everyone"]));
+  });
+
   it("shows no Everyone to someone on their own", async () => {
     search = new URLSearchParams("view=everyone");
     render(
@@ -216,5 +227,20 @@ describe("Templates in the navigation", () => {
     expect(
       within(screen.getByRole("dialog", { name: "More" })).getByRole("link", { name: "Templates" }),
     ).toHaveAttribute("href", "/templates");
+  });
+});
+
+describe("Analytics in the navigation", () => {
+  it("is in the sidebar and the phone's tabs", () => {
+    renderShell();
+    const sidebar = within(screen.getByRole("complementary", { name: "Sidebar" }));
+    expect(sidebar.getByRole("link", { name: "Analytics" })).toHaveAttribute("href", "/analytics");
+    const tabs = screen
+      .getAllByRole("navigation", { name: "Main" })
+      .find((nav) => nav.hasAttribute("data-tabbar"))!;
+    expect(within(tabs).getByRole("link", { name: "Analytics" })).toHaveAttribute(
+      "href",
+      "/analytics",
+    );
   });
 });

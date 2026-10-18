@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 const fmt = new Intl.NumberFormat("en");
@@ -9,6 +10,8 @@ export interface BreakdownItem {
   label: string;
   icon?: string;
   scans: number;
+  /** Opens this item, e.g. a code's own analytics. */
+  href?: string;
 }
 
 /** A ranked list with proportional bars, e.g. countries or browsers. */
@@ -30,7 +33,14 @@ export function BreakdownList({
     <div className="flex flex-col gap-2.5">
       <ul className="flex flex-col gap-2.5">
         {shown.map((item) => (
-          <li key={item.key} className="flex flex-col gap-1">
+          <li
+            key={item.key}
+            className={
+              item.href
+                ? "relative flex min-h-11 flex-col justify-center gap-1"
+                : "flex flex-col gap-1"
+            }
+          >
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <span className="min-w-0 truncate text-fg">
                 {item.icon && (
@@ -38,7 +48,17 @@ export function BreakdownList({
                     {item.icon}
                   </span>
                 )}
-                {item.label}
+                {item.href ? (
+                  // The whole row is the target: a phone-sized tap anywhere on it.
+                  <Link
+                    href={item.href}
+                    className="text-link underline-offset-4 after:absolute after:inset-0 hover:underline"
+                  >
+                    {item.label}
+                  </Link>
+                ) : (
+                  item.label
+                )}
               </span>
               <span className="shrink-0 text-fg-muted tabular-nums">
                 <strong className="font-semibold text-fg">{fmt.format(item.scans)}</strong>{" "}

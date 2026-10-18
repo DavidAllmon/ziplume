@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  customBounds,
+  parseWorkspaceAnalytics,
   countryFlag,
   countryName,
   csvField,
@@ -102,5 +104,51 @@ describe("analytics shaping", () => {
     expect(csvField('He said "hi", ok')).toBe('"He said ""hi"", ok"');
     expect(csvField("=HYPERLINK(1)")).toBe("'=HYPERLINK(1)");
     expect(csvField(null)).toBe("");
+  });
+});
+
+describe("custom ranges", () => {
+  const now = new Date("2030-03-15T12:00:00Z");
+
+  it("are whole days in the viewer's zone, the end day included", () => {
+    expect(customBounds("2030-03-01", "2030-03-02", "UTC", now)).toEqual({
+      from: new Date("2030-03-01T00:00:00Z"),
+      to: new Date("2030-03-03T00:00:00Z"),
+    });
+    // New York moves its clocks on March 10, 2030.
+    expect(customBounds("2030-03-09", "2030-03-10", "America/New_York", now)).toEqual({
+      from: new Date("2030-03-09T05:00:00Z"),
+      to: new Date("2030-03-11T04:00:00Z"),
+    });
+    expect(customBounds("2030-03-05", "2030-03-05", "UTC", now)).toEqual({
+      from: new Date("2030-03-05T00:00:00Z"),
+      to: new Date("2030-03-06T00:00:00Z"),
+    });
+  });
+
+  it("cut an end in the future to today, and refuse what isn't a range", () => {
+    expect(customBounds("2030-03-14", "2030-04-01", "UTC", now)?.to).toEqual(
+      new Date("2030-03-16T00:00:00Z"),
+    );
+    expect(customBounds("2030-03-10", "2030-03-01", "UTC", now)).toBeNull();
+    expect(customBounds("2030-04-01", "2030-04-02", "UTC", now)).toBeNull();
+    expect(customBounds("", "2030-03-01", "UTC", now)).toBeNull();
+    expect(customBounds("2030-02-30", "2030-03-01", "UTC", now)).toBeNull();
+  });
+});
+
+describe("workspace analytics data", () => {
+  it("reads the totals like a code's, plus its top codes", () => {
+    const data = parseWorkspaceAnalytics({
+      total: 3,
+      unique: 2,
+      daily: [{ day: "2030-01-10", scans: 3, unique: 2 }],
+      countries: [{ label: "US", scans: 3 }],
+      devices: [{ label: "mobile", scans: 3 }],
+      codes: [{ id: "c1", name: "Menu", owner: "u1", scans: "3", unique: 2 }, { name: "no id" }],
+    });
+    expect(data.total).toBe(3);
+    expect(data.codes).toEqual([{ id: "c1", name: "Menu", owner: "u1", scans: 3, unique: 2 }]);
+    expect(parseWorkspaceAnalytics(null)).toMatchObject({ total: 0, codes: [] });
   });
 });

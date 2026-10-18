@@ -119,4 +119,14 @@ describe("TemplatesPage", () => {
     await user.click(screen.getByRole("menuitem", { name: "Duplicate" }));
     await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(2));
   });
+
+  it("offers Edit for each template", async () => {
+    const user = userEvent.setup();
+    show([row("t1", "Brand")]);
+    await user.click(screen.getByRole("button", { name: "Actions for Brand" }));
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toHaveAttribute(
+      "href",
+      "/templates/t1/edit",
+    );
+  });
 });

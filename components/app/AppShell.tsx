@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BarChart3,
   BookOpen,
   Coffee,
   LayoutTemplate,
@@ -109,9 +110,12 @@ export function AppShell({
     ? { ...user, name: profile.display_name?.trim() || null, avatarUrl: profile.avatar_url }
     : user;
   const team = teams.find((t) => t.ownerId === searchParams.get("workspace")) ?? null;
-  // Everyone's codes, in a team (teams spec 5). Folders belong to one person, so none show there.
+  // Everyone's codes, in a team (teams spec 5), and their analytics. Folders belong to one person,
+  // so none show there.
   const everyone =
-    pathname === "/codes" && searchParams.get("view") === "everyone" && teams.length > 0;
+    (pathname === "/codes" || pathname === "/analytics") &&
+    searchParams.get("view") === "everyone" &&
+    teams.length > 0;
   // The code editor brings its own bars on phones and keeps the sidebar a rail on tablets.
   const editor = isEditorPage(pathname, searchParams);
   const ownerId = team?.ownerId ?? null;
@@ -138,8 +142,12 @@ export function AppShell({
   }, [expanded]);
 
   const codesHref = everyone ? "/codes?view=everyone" : withWorkspace("/codes", ownerId);
+  const analyticsHref = everyone
+    ? "/analytics?view=everyone"
+    : withWorkspace("/analytics", ownerId);
   const main: NavItem[] = [
     { href: codesHref, label: "Codes", icon: QrCode },
+    { href: analyticsHref, label: "Analytics", icon: BarChart3 },
     { href: "/templates", label: "Templates", icon: LayoutTemplate },
     { href: "/team", label: "Team", icon: Users },
     { href: "/settings", label: "Settings", icon: Settings },
@@ -279,7 +287,7 @@ export function AppShell({
           data-tabbar
           className={cn(
             "fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] sm:hidden",
-            "grid-cols-4",
+            "grid-cols-5",
           )}
         >
           <Link
@@ -288,6 +296,13 @@ export function AppShell({
             className={tabClass}
           >
             <QrCode aria-hidden /> Codes
+          </Link>
+          <Link
+            href={analyticsHref}
+            aria-current={isCurrent(pathname, analyticsHref) ? "page" : undefined}
+            className={tabClass}
+          >
+            <BarChart3 aria-hidden /> Analytics
           </Link>
           <Link href={newCodeHref({ folderId, ownerId: null })} className={tabClass}>
             <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-fg [&_svg]:size-5">

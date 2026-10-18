@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DEFAULT_DESIGN } from "@/features/generator/state/defaults";
 import type { DesignTemplateRow } from "@/types/supabase";
 
-import { duplicateTemplate, renameTemplate, setDefaultTemplate } from "./api";
+import { duplicateTemplate, renameTemplate, setDefaultTemplate, updateTemplate } from "./api";
 
 const calls: { op: string; args: unknown[] }[] = [];
 let answer: { data: unknown; error: unknown } = { data: null, error: null };
@@ -67,6 +68,24 @@ describe("template data", () => {
     expect(await setDefaultTemplate("t9")).toEqual({
       ok: false,
       error: "The default couldn't be changed. Reload and try again.",
+    });
+  });
+
+  it("saves an edited template's name and design", async () => {
+    expect(
+      (await updateTemplate("t1", "  Brand  ", { ...DEFAULT_DESIGN, fgColor: "#0B6E8C" })).ok,
+    ).toBe(true);
+    const update = calls.find((c) => c.op === "update")!.args[0] as {
+      name: string;
+      design: { fgColor: string };
+    };
+    expect(update.name).toBe("Brand");
+    expect(update.design.fgColor).toBe("#0B6E8C");
+    expect(calls).toContainEqual({ op: "eq", args: ["id", "t1"] });
+    answer = { data: null, error: { message: "gone" } };
+    expect(await updateTemplate("t9", "Brand", DEFAULT_DESIGN)).toEqual({
+      ok: false,
+      error: "The template couldn't be saved. It may have been deleted.",
     });
   });
 });
